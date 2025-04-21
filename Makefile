@@ -1,7 +1,8 @@
 NAME = Webserv
 CXX = c++
 CPPFLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g3 
-SRCS = main.cpp 
+SRCS =	srcs/main.cpp srcs/Parse_configfile/ConfigParser.cpp srcs/Parse_configfile/Location.cpp\
+		srcs/Parse_configfile/Server.cpp
 OBJS = ${SRCS:.cpp=.o}
 RM = rm -f
 
