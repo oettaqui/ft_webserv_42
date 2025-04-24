@@ -4,6 +4,7 @@ ParsRequest::ParsRequest() {
     header_parsed = false;
     is_valid = false;
     is_Complet = false;
+    is_chunked = false;
     postHandler = NULL;
 }
 
@@ -34,7 +35,7 @@ void ParsRequest::parseRequestLine(const std::string& line) {
         path = parts[1];
         version = parts[2];
         is_valid = true;
-
+    
         if ((method != "POST" && method != "GET" && method != "DELETE") && (version != "HTTP/1.1" || !path.empty())){
             is_valid = false;
         }
@@ -102,12 +103,20 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
 
     if (headers.find("Content-Length") != headers.end() && 
         headers.find("Transfer-Encoding") != headers.end()) {
-        if (headers["Transfer-Encoding"].find("chunked") != std::string::npos) {
+            is_valid = false;
+    }
+    if (headers.find("Content-Length") == headers.end() && 
+        headers.find("Transfer-Encoding") != headers.end())
+    {
+        std::string check = "chunked";
+        if (headers["Transfer-Encoding"] != check) {
             is_valid = false;
         }
-    }
-    else if (headers.find("Content-Length") == headers.end() && 
-    headers.find("Transfer-Encoding") != headers.end()){
+        else{
+            is_chunked = true;
+        }
+    }else if (headers.find("Content-Length") == headers.end() && 
+    headers.find("Transfer-Encoding") == headers.end()){
         is_valid = false;
     }
     
@@ -116,6 +125,7 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         it != headers.end(); ++it) {
         if (it->second.empty()) {
             is_valid = false;
+            std::cout << "in this block " << std::endl;
             break;
         }
     }
@@ -169,7 +179,7 @@ void ParsRequest::parse(const std::string& request) {
             return;
         }
 
-        if (method == "POST") {
+        if (method == "POST" && !is_chunked) {
             std::string contentType = "";
             size_t contentLength = 0;
             
@@ -187,7 +197,6 @@ void ParsRequest::parse(const std::string& request) {
                 if (!postHandler)
                 {
                     postHandler = new PostHandler();
-                    // std::cout << "POST object created  \n";
                 }
                 postHandler->initialize(contentType, contentLength, body);
                 
@@ -195,7 +204,12 @@ void ParsRequest::parse(const std::string& request) {
                     is_Complet = true;
                 }
             }
-        } else {
+        } 
+        else if (method == "POST" && is_chunked){
+            std::cout << "is chunked =====  " << std::endl;
+            is_Complet = true;
+
+        }else {
             // For non-POST requests
             is_Complet = true;
         }
@@ -223,3 +237,4 @@ const std::map<std::string, std::string>& ParsRequest::getHeaders() const { retu
 const std::string& ParsRequest::getBody() const { return body; }
 bool ParsRequest::isValid() const { return is_valid; }
 bool ParsRequest::isComplet() const { return is_Complet; }
+bool ParsRequest::isChunked() const { return is_chunked; }
