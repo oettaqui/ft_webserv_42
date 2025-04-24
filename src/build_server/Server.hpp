@@ -16,11 +16,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "./ParsRequest/ParsRequest.hpp"
+#include "../pars_request/ParsRequest.hpp"
 
 
 #define MAX_EVENTS 64
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 65536
 #define MAX_CONN 1000
 #define PORT 8080
 
@@ -33,11 +33,7 @@ class Server{
         struct epoll_event events[MAX_EVENTS];
         std::map<int, ParsRequest* > clients;
         std::map<int, std::string> write_buffers;
-        
-    
-          
 
-        
         void handleNewConnection();
         bool setNonBlocking(int sockfd);
         void handleRead(int fd);

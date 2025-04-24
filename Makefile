@@ -1,7 +1,9 @@
 NAME = Webserv
 CXX = c++
 CPPFLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g3 
-SRCS = main.cpp Server.cpp ParsRequest/ParsRequest.cpp
+SRCS = main.cpp src/build_server/Server.cpp \
+	src/pars_request/ParsRequest.cpp \
+	src/post_handler/PostHandler.cpp
 OBJS = ${SRCS:.cpp=.o}
 RM = rm -f
 

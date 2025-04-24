@@ -94,7 +94,8 @@ const std::string HTML_RESPONSE =
                 std::cout << "Complete request received, preparing response" << std::endl;
                 write_buffers[fd] = HTML_RESPONSE;
                 
-                // Register for write event
+                // here i should check the method 
+                
                 struct epoll_event event;
                 event.events = EPOLLOUT;
                 event.data.fd = fd;
@@ -156,7 +157,6 @@ const std::string HTML_RESPONSE =
         }
         write_buffers.erase(fd);
     }
-
 
 
 
