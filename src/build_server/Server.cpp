@@ -14,6 +14,21 @@ const std::string HTML_RESPONSE =
     "    <h1>Hello World</h1>\r\n"
     "</body>\r\n"
     "</html>\r\n";
+
+
+const std::string HTML_BADREQUEST = 
+"HTTP/1.1 400 Bad Request\r\n"
+"Content-Type: text/html\r\n"
+"Connection: close\r\n\r\n"
+"<!DOCTYPE html>\r\n"
+    "<html>\r\n"
+    "<head>\r\n"
+    "    <title>Bad Request</title>\r\n"
+    "</head>\r\n"
+    "<body>\r\n"
+    "    <h1>Bad Request</h1>\r\n"
+    "</body>\r\n"
+    "</html>\r\n";
     
     Server::Server() : listen_fd(-1), epoll_fd(-1) {}
     
@@ -73,8 +88,8 @@ const std::string HTML_RESPONSE =
     
     void Server::handleRead(int fd) {
         char buffer[BUFFER_SIZE];
-        memset(buffer, 0, BUFFER_SIZE);
-        ssize_t bytes_read = read(fd, buffer, BUFFER_SIZE - 1);
+        // memset(buffer, 0, BUFFER_SIZE);
+        ssize_t bytes_read = read(fd, buffer, BUFFER_SIZE);
     
         if (bytes_read <= 0) {
             if (bytes_read < 0 && errno != EAGAIN) {
@@ -89,6 +104,16 @@ const std::string HTML_RESPONSE =
             req.append(buffer, bytes_read);
             ParsRequest* p = clients[fd];
             p->parse(req);
+            if(!p->isValid())
+            {
+                write_buffers[fd] = HTML_BADREQUEST;
+                std::cout << "isValid " << std::endl;
+                struct epoll_event event;
+                event.events = EPOLLOUT;
+                event.data.fd = fd;
+                epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+                return;
+            }
             
             if (p->isComplet()) {
                 std::cout << "Complete request received, preparing response" << std::endl;
@@ -106,6 +131,7 @@ const std::string HTML_RESPONSE =
     
     void Server::handleWrite(int fd) {
         if (write_buffers.find(fd) == write_buffers.end()) {
+            std::cout << "here " << std::endl;
             return;
         }
         
@@ -152,7 +178,7 @@ const std::string HTML_RESPONSE =
         
         // Clean up resources
         if (clients.find(fd) != clients.end()) {
-            delete clients[fd];  // Free the ParsRequest memory
+            delete clients[fd];
             clients.erase(fd);
         }
         write_buffers.erase(fd);

@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#define MAX_CONTENT_LENGTH 10485760 
 
 #include "../post_handler/PostHandler.hpp"
 

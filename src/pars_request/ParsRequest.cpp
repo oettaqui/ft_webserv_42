@@ -34,6 +34,12 @@ void ParsRequest::parseRequestLine(const std::string& line) {
         path = parts[1];
         version = parts[2];
         is_valid = true;
+
+        if ((method != "POST" && method != "GET" && method != "DELETE") && (version != "HTTP/1.1" || !path.empty())){
+            is_valid = false;
+        }
+    }else{
+        is_valid = false;
     }
 }
 
@@ -62,9 +68,55 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         if (parts.size() == 2) {
             host = parts[0];
             port = parts[1];
-        } else if (parts.size() == 1) {
-            host = parts[0];
-            port = "80"; // Default HTTP port
+        }
+    }
+
+    if (headers.find("Host") == headers.end()) {
+        // and check the port later when i get data from the config file
+        is_valid = false; 
+    }
+    
+    
+    std::map<std::string, std::string>::const_iterator cl = headers.find("Content-Length");
+    if (cl != headers.end()) {
+        const std::string& clValue = cl->second;
+        
+        for (size_t i = 0; i < clValue.length(); i++) {
+            if (!isdigit(clValue[i])) {
+                is_valid = false;
+                break;
+            }
+        }
+        if (is_valid) {
+            long contentLength = strtol(clValue.c_str(), NULL, 10);
+            if (contentLength < 0) {
+                is_valid = false;
+            }
+            // else if (contentLength > MAX_CONTENT_LENGTH) {
+            //     std::cout << "here 5" << std::endl;
+            //     is_valid = false;
+            // }
+        }
+    }
+     
+
+    if (headers.find("Content-Length") != headers.end() && 
+        headers.find("Transfer-Encoding") != headers.end()) {
+        if (headers["Transfer-Encoding"].find("chunked") != std::string::npos) {
+            is_valid = false;
+        }
+    }
+    else if (headers.find("Content-Length") == headers.end() && 
+    headers.find("Transfer-Encoding") != headers.end()){
+        is_valid = false;
+    }
+    
+
+    for (std::map<std::string, std::string>::iterator it = headers.begin(); 
+        it != headers.end(); ++it) {
+        if (it->second.empty()) {
+            is_valid = false;
+            break;
         }
     }
 }
@@ -86,28 +138,37 @@ void ParsRequest::printRequest() const {
 
 void ParsRequest::parse(const std::string& request) {
     requestContent += request;
+
     
-    // If headers are not yet parsed, find and parse them
     if (!header_parsed) {
         size_t header_end = requestContent.find("\r\n\r\n");
         if (header_end == std::string::npos) {
-            return; // Need more data to find header boundary
+            is_valid = false;
+            return;
         }
         
-        // Parse headers
+        
         header_parsed = true;
         std::string header_section = requestContent.substr(0, header_end);
         body = requestContent.substr(header_end + 4);
         
         std::vector<std::string> lines = split(header_section, '\n');
         if (lines.empty()) {
+            is_valid = false;
             return;
         }
         
         parseRequestLine(lines[0]);
+        if (!is_valid){
+            std::cout << "A BAD REQUEST 1" << std::endl;
+            return;
+        }
         parseHeaders(header_section);
-        
-        // Check if this is a POST request and initialize the handler
+        if (!is_valid){
+            std::cout << "A BAD REQUEST 2" << std::endl;
+            return;
+        }
+
         if (method == "POST") {
             std::string contentType = "";
             size_t contentLength = 0;
@@ -122,29 +183,35 @@ void ParsRequest::parse(const std::string& request) {
                 contentLength = std::strtoul(contentLengthIt->second.c_str(), NULL, 10);
             }
             
-            if (contentLength > 0) {
-                postHandler = new PostHandler();
+            if (contentLength > 0 ) {
+                if (!postHandler)
+                {
+                    postHandler = new PostHandler();
+                    // std::cout << "POST object created  \n";
+                }
                 postHandler->initialize(contentType, contentLength, body);
                 
-                // Check if the request is already complete
                 if (postHandler->isRequestComplete()) {
                     is_Complet = true;
                 }
             }
         } else {
-            // For non-POST requests, we're complete after headers are parsed
+            // For non-POST requests
             is_Complet = true;
         }
     } 
-    // If headers already parsed and this is a POST request, pass data to the handler
+
     else if (method == "POST" && postHandler) {
         postHandler->processData(request);
         
-        // Check if we've received all the expected data
+
         if (postHandler->isRequestComplete()) {
             is_Complet = true;
         }
     }
+    // std::cout << "===============\n";
+    // printRequest();
+    // std::cout << "===============\n";
 }
 
 const std::string& ParsRequest::getMethod() const { return method; }
