@@ -18,27 +18,40 @@ private:
     bool isComplete;
     std::map<std::string, std::string> contentTypes;
 
-    // Helper methods
     std::string createUniqueFile(const std::string& extension);
     void storeContentTypes();
+
+
+
+    bool isChunked;
+    int currentChunkSize;
+    int currentChunkBytesRead; 
+    std::string chunkSizeBuffer;
+    enum ChunkState {
+        READING_SIZE,
+        READING_DATA,
+        READING_TRAILING_CRLF,
+        END_OF_CHUNKS
+    };
+    ChunkState chunkState;
     
 public:
     PostHandler();
     ~PostHandler();
     
-    // Initialize with expected content length
-    void initialize(const std::string& contentType, size_t expectedLength, const std::string& initialBody = "");
+
+    void initialize(const std::string& contentType, size_t expectedLength, const std::string& initialBody, bool isChunkedTransfer);
     
-    // Process more data
     void processData(const std::string& data);
+
+    void processChunkedData(const std::string& data);
     
-    // Status checking
+
     bool isRequestComplete() const;
-    
-    // Getters
+
     const std::string& getBody() const;
     const std::string& getFilename() const;
     size_t getCurrentLength() const;
 };
 
-#endif // POST_HANDLER_HPP
+#endif

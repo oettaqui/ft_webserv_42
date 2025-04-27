@@ -23,7 +23,8 @@ void PostHandler::storeContentTypes() {
     
     // Image formats
     contentTypes["image/gif"] = "gif";
-    contentTypes["image/jpeg"] = "jpg";
+    contentTypes["image/jpeg"] = "jpeg";
+    contentTypes["image/jpg"] = "jpg";
     contentTypes["image/png"] = "png";
     contentTypes["image/webp"] = "webp";
     contentTypes["image/svg+xml"] = "svg";
@@ -88,40 +89,38 @@ void PostHandler::storeContentTypes() {
 }
 
 std::string PostHandler::createUniqueFile(const std::string& extension) {
-    // Get current time with microsecond precision
+
     struct timeval tv;
     gettimeofday(&tv, NULL);
     
-    // Convert seconds and microseconds to a string
+
     std::ostringstream filename;
     filename << "file_" << tv.tv_sec << "_" << tv.tv_usec;
     
-    // Add the extension
+
     if (!extension.empty()) {
         filename << "." << extension;
     }
     
-    // Create the file
+
     std::ofstream outfile(filename.str().c_str(), std::ios::binary);
     if (!outfile) {
         std::cerr << "Failed to create file: " << filename.str() << std::endl;
         return "";
     }
-    
-    // Close the file
+    // std::cout << "extension from the function unique " << extension << std::endl;
     outfile.close();
-    
-    // Return the filename
+
     return filename.str();
 }
 
-void PostHandler::initialize(const std::string& contentType, size_t expectedContentLength, const std::string& initialBody) {
+void PostHandler::initialize(const std::string& contentType, size_t expectedContentLength, const std::string& initialBody, bool isChunkedTransfer) {
     this->expectedLength = expectedContentLength;
     this->bodyLength = 0;
     this->isComplete = false;
     this->body = "";
     
-    // Determine the file extension based on content type
+
     std::string extension = "";
     std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
     if (itT != contentTypes.end()) {
@@ -130,13 +129,13 @@ void PostHandler::initialize(const std::string& contentType, size_t expectedCont
         std::cout << "Extension not found for content type: " << contentType << std::endl;
     }
 
-    // Create a unique file
+
     this->filename = createUniqueFile(extension);
     if (!filename.empty()) {
         std::cout << "Created file: " << filename << std::endl;
     }
     
-    // Open the file for writing
+
     if (file.is_open()) {
         file.close();
     }
@@ -145,10 +144,24 @@ void PostHandler::initialize(const std::string& contentType, size_t expectedCont
     if (!file) {
         std::cerr << "Failed to open file for writing: " << filename << std::endl;
     }
+
+    this->isChunked = isChunkedTransfer;
+    if (isChunked) {
+        this->expectedLength = 0;
+        this->chunkState = READING_SIZE;
+        this->currentChunkSize = -1;
+        this->currentChunkBytesRead = 0;
+        this->chunkSizeBuffer = "";
+    }
     
-    // Process initial body content if any
+
     if (!initialBody.empty()) {
-        processData(initialBody);
+        if (isChunked) {
+            processChunkedData(initialBody);
+            // std::cout << "here" << std::endl;
+        } else {
+            processData(initialBody);
+        }
     }
 }
 
@@ -158,21 +171,94 @@ void PostHandler::processData(const std::string& data) {
         return;
     }
     
-    // Write to file
     file << data;
-    
-    // // Update body and length
-    body += data;
 
-    // file.write(data.c_str(), data.length());
+    // body += data;
+
     bodyLength += data.length();
-    
-    // Check if complete
+
     if (bodyLength >= expectedLength) {
         file.flush();
         file.close();
         isComplete = true;
         std::cout << "File upload complete: " << filename << " (" << bodyLength << " bytes)" << std::endl;
+    }
+}
+
+void PostHandler::processChunkedData(const std::string& data) {
+    size_t pos = 0;
+    while (pos < data.length())
+    {
+        switch (chunkState)
+        {
+            case READING_SIZE:{
+                size_t endPos = data.find("\r\n", pos);
+                if (endPos == std::string::npos) {
+                    chunkSizeBuffer.append(data.substr(pos));
+                    pos = data.length();
+                    // std::cout << "chunkSizeBuffer ===> " << chunkSizeBuffer << std::endl;
+                }
+                else{
+                    chunkSizeBuffer.append(data.substr(pos, endPos - pos));
+                    // std::cout << "chunkSizeBuffer +++++> " << chunkSizeBuffer << std::endl;
+                    std::string sizeStr = chunkSizeBuffer;
+
+                    // convert hex to int
+                    std::istringstream ss(sizeStr);
+                    int size;
+                    ss >> std::hex >> size;
+                    // std::cout << "int =>" << size << std::endl;
+
+                    if (size == 0){
+                        chunkState = END_OF_CHUNKS;
+                        isComplete = true;
+                        file.flush();
+                        file.close();
+                        std::cout << "Chunked upload complete: " << filename << " (" << bodyLength << " bytes)" << std::endl;
+                    }else{
+                        currentChunkSize = size;
+                        currentChunkBytesRead = 0;
+                        chunkState = READING_DATA;
+                    }
+                    pos = endPos + 2;
+                    chunkSizeBuffer.clear();
+                }
+                break;
+            }
+            case READING_DATA:{
+
+                int bytesRemaining = currentChunkSize - currentChunkBytesRead;
+                // std::cout << "data lenght " << data.length() << " bytesRemaining " << bytesRemaining << std:: endl;
+                int bytesToRead = std::min((int)(data.length() - pos), bytesRemaining);
+
+                if (bytesToRead > 0)
+                {
+                    file.write(data.c_str() + pos, bytesToRead);
+                    bodyLength += bytesToRead;
+                    currentChunkBytesRead += bytesToRead;
+                    pos += bytesToRead;
+                }
+                if (currentChunkBytesRead >= currentChunkSize)
+                {
+                    chunkState = READING_TRAILING_CRLF;
+                }
+                break;
+
+            }
+            case READING_TRAILING_CRLF: {
+                if (data.length() - pos >= 2) {
+                    pos += 2; 
+                    chunkState = READING_SIZE;
+                } else {
+                    pos = data.length();
+                }
+                break;
+            }
+            case END_OF_CHUNKS:
+                pos = data.length();
+                break;
+        }
+
     }
 }
 

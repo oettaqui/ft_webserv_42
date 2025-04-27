@@ -1,6 +1,6 @@
 #include "./Server.hpp"
 
-// HTML response to send to clients
+
 const std::string HTML_RESPONSE = 
 "HTTP/1.1 200 OK\r\n"
 "Content-Type: text/html\r\n"

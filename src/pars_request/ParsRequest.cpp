@@ -125,7 +125,7 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         it != headers.end(); ++it) {
         if (it->second.empty()) {
             is_valid = false;
-            std::cout << "in this block " << std::endl;
+            // std::cout << "in this block " << std::endl;
             break;
         }
     }
@@ -148,7 +148,9 @@ void ParsRequest::printRequest() const {
 
 void ParsRequest::parse(const std::string& request) {
     requestContent += request;
-
+    std::string contentType = "";
+    size_t contentLength = 0;
+    
     
     if (!header_parsed) {
         size_t header_end = requestContent.find("\r\n\r\n");
@@ -179,9 +181,8 @@ void ParsRequest::parse(const std::string& request) {
             return;
         }
 
+        
         if (method == "POST" && !is_chunked) {
-            std::string contentType = "";
-            size_t contentLength = 0;
             
             std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
             if (contentTypeIt != headers.end()) {
@@ -198,7 +199,7 @@ void ParsRequest::parse(const std::string& request) {
                 {
                     postHandler = new PostHandler();
                 }
-                postHandler->initialize(contentType, contentLength, body);
+                postHandler->initialize(contentType, contentLength, body, is_chunked);
                 
                 if (postHandler->isRequestComplete()) {
                     is_Complet = true;
@@ -206,8 +207,20 @@ void ParsRequest::parse(const std::string& request) {
             }
         } 
         else if (method == "POST" && is_chunked){
-            std::cout << "is chunked =====  " << std::endl;
-            is_Complet = true;
+            std::cout << "at the first time is chunked =====  " << std::endl;
+            std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
+            if (contentTypeIt != headers.end()) {
+                contentType = contentTypeIt->second;
+            }
+            if (!postHandler)
+            {
+                postHandler = new PostHandler();
+            }
+            postHandler->initialize(contentType, 0, body, is_chunked);
+            if (postHandler->isRequestComplete()) {
+                    is_Complet = true;
+            }
+            // is_Complet = true;
 
         }else {
             // For non-POST requests
@@ -216,16 +229,22 @@ void ParsRequest::parse(const std::string& request) {
     } 
 
     else if (method == "POST" && postHandler) {
-        postHandler->processData(request);
-        
-
+        if (is_chunked) {
+            std::cout << "at the second time is chunked =====  " << std::endl;
+            postHandler->processChunkedData(request);
+            std::cout << "here continue" << std::endl;
+        } else {
+            postHandler->processData(request);
+        }
         if (postHandler->isRequestComplete()) {
             is_Complet = true;
         }
     }
+
     // std::cout << "===============\n";
     // printRequest();
     // std::cout << "===============\n";
+
 }
 
 const std::string& ParsRequest::getMethod() const { return method; }
