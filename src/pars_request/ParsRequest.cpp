@@ -5,7 +5,11 @@ ParsRequest::ParsRequest() {
     is_valid = false;
     is_Complet = false;
     is_chunked = false;
+    is_boundary = false;
     postHandler = NULL;
+
+    // 
+    is_index = -1;
 }
 
 ParsRequest::~ParsRequest() {
@@ -99,15 +103,25 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             // }
         }
     }
-     
+    std::cout << "hnaaa" << std::endl;
+    if (headers.find("Content-Type") != headers.end()){
+        std::string boundary = " multipart/form-data";
+        if (headers["Content-Type"] == boundary)
+        {
+            std::cout << "it is a boundary" << std::endl;
+            is_boundary = true;
+        }
+    }
 
     if (headers.find("Content-Length") != headers.end() && 
         headers.find("Transfer-Encoding") != headers.end()) {
+            std::cout << "hnaaa 1" << std::endl;
             is_valid = false;
     }
     if (headers.find("Content-Length") == headers.end() && 
         headers.find("Transfer-Encoding") != headers.end())
     {
+        std::cout << "hnaaa 2" << std::endl;
         std::string check = "chunked";
         if (headers["Transfer-Encoding"] != check) {
             is_valid = false;
@@ -117,9 +131,11 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         }
     }else if (headers.find("Content-Length") == headers.end() && 
     headers.find("Transfer-Encoding") == headers.end()){
-        is_valid = false;
+        // std::cout << "hnaaa 3" << std::endl;
+        if (method == "POST")
+            is_valid = false;
     }
-    
+    // i still need to handl cases like if i have boundary and chunked or somthing like this i don't know yet the cases
 
     for (std::map<std::string, std::string>::iterator it = headers.begin(); 
         it != headers.end(); ++it) {
@@ -223,7 +239,14 @@ void ParsRequest::parse(const std::string& request) {
             // is_Complet = true;
 
         }else {
-            // For non-POST requests
+            std::cout << "*****non-POST requests" <<std::endl;
+            if (method == "GET"){
+                if (path == "/"){
+                    is_index = 0;
+                }else{
+                    is_index = 1;
+                }
+            }
             is_Complet = true;
         }
     } 
@@ -240,6 +263,10 @@ void ParsRequest::parse(const std::string& request) {
             is_Complet = true;
         }
     }
+    // else {
+    //         std::cout << "non-POST requests" <<std::endl;
+    //         is_Complet = true;
+    //     }
 
     // std::cout << "===============\n";
     // printRequest();
@@ -257,3 +284,7 @@ const std::string& ParsRequest::getBody() const { return body; }
 bool ParsRequest::isValid() const { return is_valid; }
 bool ParsRequest::isComplet() const { return is_Complet; }
 bool ParsRequest::isChunked() const { return is_chunked; }
+bool ParsRequest::isBoundary() const { return is_boundary; }
+// 
+
+int ParsRequest::isIndex() const { return is_index; }

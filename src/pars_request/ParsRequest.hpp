@@ -27,6 +27,7 @@ class ParsRequest{
         bool header_parsed;
         bool is_valid;
         bool is_chunked;
+        bool is_boundary;
         bool is_Complet;
         std::vector<std::string> split(const std::string& str, char delim);
 
@@ -34,6 +35,9 @@ class ParsRequest{
         
 
         PostHandler* postHandler;
+
+        // GET
+        int is_index;
 
     public:
         ParsRequest();
@@ -49,9 +53,11 @@ class ParsRequest{
         const std::string& getBody() const;
         bool isValid() const;
         bool isChunked() const;
+        bool isBoundary() const;
         const std::string& portMethod() const;
         const std::string& hostMethod() const;
         bool isComplet() const;
+        int isIndex() const;
 };
 
 #endif

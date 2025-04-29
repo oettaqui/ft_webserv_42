@@ -73,7 +73,7 @@ const std::string HTML_BADREQUEST =
             setNonBlocking(client_fd);
             
             struct epoll_event event;
-            event.events = EPOLLIN;
+            event.events = EPOLLIN ;
             event.data.fd = client_fd;
             if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event) == -1) {
                 std::cerr << "epoll_ctl client_fd: " << strerror(errno) << std::endl;
@@ -104,6 +104,7 @@ const std::string HTML_BADREQUEST =
             req.append(buffer, bytes_read);
             ParsRequest* p = clients[fd];
             p->parse(req);
+            std::cout << "here" << std::endl;
             if(!p->isValid())
             {
                 write_buffers[fd] = HTML_BADREQUEST;
@@ -117,7 +118,64 @@ const std::string HTML_BADREQUEST =
             
             if (p->isComplet()) {
                 std::cout << "Complete request received, preparing response" << std::endl;
-                write_buffers[fd] = HTML_RESPONSE;
+                if (p->isIndex() == 0){
+                    // write_buffers[fd] = HTML_RESPONSE;
+                    std::ifstream file("public/index.html");
+                    if (file.is_open()) {
+                        
+                        std::string content;
+                        std::string line;
+                        while (std::getline(file, line)) {
+                            content += line + "\n";
+                        }
+                        file.close();
+                        
+                        // Add HTTP headers to the content
+                        std::string response = "HTTP/1.1 200 OK\r\n";
+                        response += "Content-Type: text/html\r\n";
+                        response += "Content-Length: ";
+                        std::stringstream ss;
+                        ss << content.length();
+                        response += ss.str();
+                        response += "\r\n";
+                        // + intToString(content.length()) + "\r\n";
+                        response += "\r\n"; // End of headers
+                        response += content;
+                        
+                        // Assign to write buffer
+                        write_buffers[fd] = response;
+                    } else {
+                        // If the file couldn't be opened, send a 404 Not Found response
+                        write_buffers[fd] = "HTTP/1.1 404 Not Found\r\n\r\n";
+                    }
+                }
+                else if (p->isIndex() > 0){
+                    std::string path = "public" + p->getPath();
+                    std::cout << path << std::endl;
+                    std::ifstream file(path.c_str());
+                    if (file.is_open()) {
+                        
+                        std::string content;
+                        std::string line;
+                        while (std::getline(file, line)) {
+                            content += line + "\n";
+                        }
+                        file.close();
+                        std::string response = "HTTP/1.1 200 OK\r\n";
+                        response += "Content-Type: text/html\r\n";
+                        response += "Content-Length: ";
+                        std::stringstream ss;
+                        ss << content.length();
+                        response += ss.str();
+                        response += "\r\n";
+                        response += "\r\n";
+                        response += content;
+                        write_buffers[fd] = response;
+                    // write_buffers[fd] = HTML_RESPONSE;
+                    }
+                }
+                else
+                    write_buffers[fd] = HTML_RESPONSE;
                 
                 // here i should check the method 
                 
@@ -131,7 +189,7 @@ const std::string HTML_BADREQUEST =
     
     void Server::handleWrite(int fd) {
         if (write_buffers.find(fd) == write_buffers.end()) {
-            std::cout << "here " << std::endl;
+            // std::cout << "here w" << std::endl;
             return;
         }
         
