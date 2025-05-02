@@ -10,6 +10,7 @@
 #include <sys/epoll.h>
 #include <errno.h>
 #include <cstdlib>
+#include "../Parse_configfile/ConfigParser.hpp"
 
 #define MAX_EVENTS 10
 #define BUFFER_SIZE 1024
@@ -17,29 +18,18 @@
 
 class WebServer {
     private:
-        int server_fd;            // Listening socket file descriptor
-        int epoll_fd;             // epoll file descriptor
-        struct epoll_event events[MAX_EVENTS];  // Events array for epoll_wait
-        
-        // Sets a socket to non-blocking mode
+        std::vector<int>  server_fds;
+        int epoll_fd;
+        struct epoll_event events[MAX_EVENTS];
         bool setNonBlocking(int sockfd);
-        
-        // Adds a file descriptor to epoll
         bool addToEpoll(int sockfd);
-        
-        // Handles a new connection
-        void handleNewConnection() ;
-        
-        // Handles data from a client
+        void handleNewConnection(int server_fd);
         void handleClientData(int client_fd);
-    
+        void getResponse(int client_fd);
     public:
         WebServer();
-        
         ~WebServer() ;
-        
-        // Initialize the server
-        bool initialize(int port) ;
-        // Run the server
+        bool initialize(std::vector<Server>::const_iterator &server) ;
+        void linking_servers(ConfigParser &parser) ;
         void run();
     };

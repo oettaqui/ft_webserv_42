@@ -52,7 +52,6 @@ bool ConfigParser::parseServer(std::ifstream& file, Server& server) {
         if (line == "}")
             return true;
         if (line.find("location ") == 0) {
-            std::cout << 1 << std::endl;
             if (!parseLocation(file, line, server))
                 return false;
             continue;
