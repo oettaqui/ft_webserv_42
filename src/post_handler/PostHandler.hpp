@@ -42,10 +42,15 @@ public:
 
     void initialize(const std::string& contentType, size_t expectedLength, const std::string& initialBody, bool isChunkedTransfer);
     
+    void initBoundary(const std::string& initBody,  const std::string &boundaryValue);
+
     void processData(const std::string& data);
 
     void processChunkedData(const std::string& data);
+
+    void processBoundaryData(const std::string& data, const std::string &boundaryValue);
     
+    std::string extractFormFieldValue(const std::string& body, const std::string& boundary);
 
     bool isRequestComplete() const;
 

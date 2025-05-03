@@ -103,10 +103,12 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             // }
         }
     }
-    std::cout << "hnaaa" << std::endl;
     if (headers.find("Content-Type") != headers.end()){
-        std::string boundary = " multipart/form-data";
-        if (headers["Content-Type"] == boundary)
+        std::string boundary = "multipart/form-data";
+
+        std::string valueContentType = headers["Content-Type"];
+
+        if (valueContentType.find(boundary) != std::string::npos)
         {
             std::cout << "it is a boundary" << std::endl;
             is_boundary = true;
@@ -137,6 +139,11 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
     }
     // i still need to handl cases like if i have boundary and chunked or somthing like this i don't know yet the cases
 
+    if (is_boundary && is_chunked)
+    {
+        std::cout << "Error is boundary and chunked in the same time !!! " << std::endl;
+        is_valid = false;
+    }
     for (std::map<std::string, std::string>::iterator it = headers.begin(); 
         it != headers.end(); ++it) {
         if (it->second.empty()) {
@@ -166,6 +173,7 @@ void ParsRequest::parse(const std::string& request) {
     requestContent += request;
     std::string contentType = "";
     size_t contentLength = 0;
+    std::string boundaryValue= "";
     
     
     if (!header_parsed) {
@@ -198,7 +206,7 @@ void ParsRequest::parse(const std::string& request) {
         }
 
         
-        if (method == "POST" && !is_chunked) {
+        if (method == "POST" && !is_chunked && !is_boundary) {
             
             std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
             if (contentTypeIt != headers.end()) {
@@ -222,7 +230,7 @@ void ParsRequest::parse(const std::string& request) {
                 }
             }
         } 
-        else if (method == "POST" && is_chunked){
+        else if (method == "POST" && is_chunked && !is_boundary){
             std::cout << "at the first time is chunked =====  " << std::endl;
             std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
             if (contentTypeIt != headers.end()) {
@@ -238,7 +246,29 @@ void ParsRequest::parse(const std::string& request) {
             }
             // is_Complet = true;
 
-        }else {
+        }else if (method == "POST" && !is_chunked && is_boundary){
+
+            std::cout << "here i will hendl the boundary " << std::endl;
+            std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
+            if (contentTypeIt != headers.end()) {
+                contentType = contentTypeIt->second;
+            }
+            
+            std::string boundaryPrefix = "boundary=";
+            size_t posBoundary = contentType.find(boundaryPrefix);
+            if (posBoundary != std::string::npos)
+            {
+                size_t startPos = posBoundary + boundaryPrefix.length();
+                boundaryValue = contentType.substr(startPos);
+                // std::cout << "Boundary value: " << boundaryValue << std::endl;
+            }
+            if (!postHandler)
+            {
+                postHandler = new PostHandler();
+            }
+            postHandler->initBoundary(body, boundaryValue);
+        }
+        else {
             std::cout << "*****non-POST requests" <<std::endl;
             if (method == "GET"){
                 if (path == "/"){
@@ -249,7 +279,7 @@ void ParsRequest::parse(const std::string& request) {
             }
             is_Complet = true;
         }
-    } 
+    }
 
     else if (method == "POST" && postHandler) {
         if (is_chunked) {
@@ -257,6 +287,7 @@ void ParsRequest::parse(const std::string& request) {
             postHandler->processChunkedData(request);
             std::cout << "here continue" << std::endl;
         } else {
+            std::cout << "continue here if the post req is binary or boundary" << std::endl;
             postHandler->processData(request);
         }
         if (postHandler->isRequestComplete()) {

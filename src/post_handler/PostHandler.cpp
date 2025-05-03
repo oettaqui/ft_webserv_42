@@ -1,6 +1,6 @@
 #include "PostHandler.hpp"
 
-PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false) {
+PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false){
     storeContentTypes();
 }
 
@@ -164,6 +164,117 @@ void PostHandler::initialize(const std::string& contentType, size_t expectedCont
         }
     }
 }
+
+void PostHandler::initBoundary(const std::string& initBody, const std::string &boundaryValue){
+    this->bodyLength = 0;
+    this->isComplete = false;
+    this->body = "";
+
+// Example for file request
+//     Content-Disposition: form-data; name=""; filename="ft_transcendence.pdf"
+//     Content-Type: application/pdf
+// 
+//     starting data...
+// Example for just input type text
+//     Content-Disposition: form-data; name="here1"
+//
+//     ffffff1
+    // (void)boundaryValue;
+    if (initBody.find("Content-Type:") != std::string::npos)
+    {
+        std::cout << "This part contains a file or non-text content" << std::endl;
+    }
+    else
+    {
+        // let's work on the text request that finish there data from the first read (1024)
+        std::cout << "This part is likely a simple text field" << std::endl;
+         std::string extension = "txt";
+        this->filename = createUniqueFile(extension);
+        if (!filename.empty()) {
+            std::cout << "Created file: " << filename << std::endl;
+        }
+        
+
+        if (file.is_open()) {
+            file.close();
+        }
+        
+        file.open(filename.c_str(), std::ios::binary);
+        if (!file) {
+            std::cerr << "Failed to open file for writing: " << filename << std::endl;
+        }
+        if (!initBody.empty()) {
+            processBoundaryData(initBody, boundaryValue);
+        }
+         
+    }
+    // std::cout << "body ==> " << initBody << std::endl;
+    // std::cout << "boundary value" << boundaryValue << std::endl;
+    
+
+}
+
+
+
+std::string PostHandler::extractFormFieldValue(const std::string& body, const std::string& boundary) {
+    std::string result = "";
+    std::string tmp = "";
+    std::string tmp1 = "";
+    size_t startPos = 2;
+    size_t end ;
+    std::string terminator = "--" + boundary + "--";
+
+
+    end = body.find(terminator);
+    if (end == std::string::npos){
+        std::cout << "terminator not found " << end << std::endl;
+    }else{
+        // std::cout << "terminator found " << end << std::endl;
+        startPos += boundary.length() + 2;
+        tmp = body.substr(startPos, end - startPos);
+        // std::cout << boundary.length() << std::endl;
+        // std::cout << "first substr ===> " << tmp << std::endl;
+        startPos = tmp.find("\r\n\r\n");
+        if (startPos == std::string::npos)
+        {
+            std::cout << "something went rong " << std::endl;
+        }
+        else{
+            result = tmp.substr(startPos + 4);
+            end = result.find("\n");
+            if (end != std::string::npos)
+            {
+                result = result.substr(0, end - 1);
+            }
+        }
+
+    }
+    return result;
+
+}
+
+void PostHandler::processBoundaryData(const std::string &data, const std::string &boundaryValue){
+    // (void)data;
+    // (void)boundaryValue;
+    if (!file.is_open()) {
+        std::cerr << "Error: File is not open when trying to process data" << std::endl;
+        return;
+    }
+
+    std::string value = extractFormFieldValue(data, boundaryValue);
+    if (value.empty())
+    {
+        std::cout << "i should check the value is empty " << std::endl;
+    }
+    // std::cout << "value ==>" << value << "|" << std::endl;
+    file << value;
+    file.flush();
+    file.close();
+    isComplete = true;
+
+
+}
+
 
 void PostHandler::processData(const std::string& data) {
     if (!file.is_open()) {
