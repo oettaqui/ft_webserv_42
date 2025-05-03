@@ -1,5 +1,34 @@
 #include "WebServer.hpp"
 
+const std::string HTML_RESPONSE = 
+"HTTP/1.1 200 OK\r\n"
+"Content-Type: text/html\r\n"
+"Connection: close\r\n\r\n"
+"<!DOCTYPE html>\r\n"
+    "<html>\r\n"
+    "<head>\r\n"
+    "    <title>Hello World</title>\r\n"
+    "</head>\r\n"
+    "<body>\r\n"
+    "    <h1>Hello World</h1>\r\n"
+    "</body>\r\n"
+    "</html>\r\n";
+
+
+const std::string HTML_BADREQUEST = 
+"HTTP/1.1 400 Bad Request\r\n"
+"Content-Type: text/html\r\n"
+"Connection: close\r\n\r\n"
+"<!DOCTYPE html>\r\n"
+    "<html>\r\n"
+    "<head>\r\n"
+    "    <title>Bad Request</title>\r\n"
+    "</head>\r\n"
+    "<body>\r\n"
+    "    <h1>Bad Request</h1>\r\n"
+    "</body>\r\n"
+    "</html>\r\n";
+
 bool WebServer::setNonBlocking(int sockfd) {
     int flags = fcntl(sockfd, F_GETFL, 0);
     if (flags == -1) {
@@ -53,98 +82,144 @@ void WebServer::handleNewConnection(int server_fd) {
             close(client_fd);
             continue;
         }
+        std::cout << "add the client fd socket to the map container of parsing request" <<  std::endl;
+        clients[client_fd] = new ParsRequest();
     }
 }
-// std::string& res = write_buffers[fd];
 
-// ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+void WebServer::closeConnection(int fd) {
+    std::cout << "Closing connection fd: " << fd << std::endl;
+    close(fd);
+    if (clients.find(fd) != clients.end()) {
+        delete clients[fd];
+        clients.erase(fd);
+    }
+    write_buffers.erase(fd);
+}
 
-// if (bytes_sent == -1) {
-//     if (errno == EAGAIN || errno == EWOULDBLOCK) {
-//         // Socket buffer full, try again later
-//         return;
-//     }
-//     std::cerr << "send failed: " << strerror(errno) << std::endl;
-//     closeConnection(fd);
-//     return;
-// }
 
-// // Success! Clear the buffer
-// write_buffers.erase(fd);
-
-// std::cout << "Response sent successfully to client: " << fd << std::endl;
-// closeConnection(fd);
-void WebServer::getResponse(int client_fd)
+void WebServer::getResponse(int fd)
 {
-    const char* response = 
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/html\r\n"
-    "\r\n"
-    "<!DOCTYPE html>\n"
-    "<html lang=\"en\">\n"
-    "<head>\n"
-    "    <meta charset=\"UTF-8\">\n"
-    "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-    "    <title>Hello Page</title>\n"
-    "    <style>\n"
-    "        body {\n"
-    "            display: flex;\n"
-    "            justify-content: center;\n"
-    "            align-items: center;\n"
-    "            height: 100vh;\n"
-    "            background-color: #f0f0f0;\n"
-    "            font-family: Arial, sans-serif;\n"
-    "        }\n"
-    "        h1 {\n"
-    "            color: #333;\n"
-    "        }\n"
-    "    </style>\n"
-    "</head>\n"
-    "<body>\n"
-    "    <h1>Hello</h1>\n"
-    "</body>\n"
-    "</html>";
-    ssize_t bytes_sent = send(client_fd, response, strlen(response), 0);
+    if (write_buffers.find(fd) == write_buffers.end()) {
+        return;
+    }
+    
+    std::string& res = write_buffers[fd];
+    
+    ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+    
     if (bytes_sent == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // Socket buffer full, try again later
             return;
         }
         std::cerr << "send failed: " << strerror(errno) << std::endl;
-        close(client_fd);
+        closeConnection(fd);
         return;
     }
-    std::cout << "Response sent successfully to client: " << client_fd << std::endl;
-    close(client_fd);
+    write_buffers.erase(fd);
+    
+    std::cout << "Response sent successfully to client: " << fd << std::endl;
+    closeConnection(fd);
 }
 
-void WebServer::handleClientData(int client_fd) {
+
+void WebServer::handleClientData(int fd) {
     char buffer[BUFFER_SIZE];
-    ssize_t count;
+    ssize_t bytes_read;
     
     while (true) {
-        count = read(client_fd, buffer, sizeof(buffer) - 1);
-        if (count == -1) {
+        bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+        if (bytes_read <= 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                responses[fd] = HTML_RESPONSE;
                 break;
             } 
-            else {
+            else 
+            {
                 std::cerr << "Read error: " << strerror(errno) << std::endl;
-                close(client_fd);
+                responses[fd] = HTML_BADREQUEST;
+                closeConnection(fd);
                 break;
             }
-        } else if (count == 0) {
-            std::cout << "Connection closed by client" << std::endl;
-            close(client_fd);
-            break;
-        } else {
-            buffer[count] = '\0';
-            // const char* response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 14\r\n\r\nHello, World1!";
-            // write(client_fd, response, strlen(response));
-            std::cout << "Received data: " << buffer << std::endl;
+        } 
+        else {
+            std::string req;
+            req.append(buffer, bytes_read);
+            ParsRequest* p = clients[fd];
+            p->parse(req);
+            std::cout << "here" << std::endl;
+            if(!p->isValid())
+            {
+                write_buffers[fd] = HTML_BADREQUEST;
+                std::cout << "isValid " << std::endl;
+                return;
+            }
+            
+            if (p->isComplet()) {
+                std::cout << "Complete request received, preparing response" << std::endl;
+                if (p->isIndex() == 0){
+                    // write_buffers[fd] = HTML_RESPONSE;
+                    std::ifstream file("public/index.html");
+                    if (file.is_open()) {
+                        
+                        std::string content;
+                        std::string line;
+                        while (std::getline(file, line)) {
+                            content += line + "\n";
+                        }
+                        file.close();
+                        
+                        // Add HTTP headers to the content
+                        std::string response = "HTTP/1.1 200 OK\r\n";
+                        response += "Content-Type: text/html\r\n";
+                        response += "Content-Length: ";
+                        std::stringstream ss;
+                        ss << content.length();
+                        response += ss.str();
+                        response += "\r\n";
+                        // + intToString(content.length()) + "\r\n";
+                        response += "\r\n"; // End of headers
+                        response += content;
+                        
+                        // Assign to write buffer
+                        write_buffers[fd] = response;
+                    } else {
+                        // If the file couldn't be opened, send a 404 Not Found response
+                        write_buffers[fd] = "HTTP/1.1 404 Not Found\r\n\r\n";
+                    }
+                }
+                else if (p->isIndex() > 0){
+                    std::string path = "public" + p->getPath();
+                    std::cout << path << std::endl;
+                    std::ifstream file(path.c_str());
+                    if (file.is_open()) {
+                        
+                        std::string content;
+                        std::string line;
+                        while (std::getline(file, line)) {
+                            content += line + "\n";
+                        }
+                        file.close();
+                        std::string response = "HTTP/1.1 200 OK\r\n";
+                        response += "Content-Type: text/html\r\n";
+                        response += "Content-Length: ";
+                        std::stringstream ss;
+                        ss << content.length();
+                        response += ss.str();
+                        response += "\r\n";
+                        response += "\r\n";
+                        response += content;
+                        write_buffers[fd] = response;
+                    // write_buffers[fd] = HTML_RESPONSE;
+                    }
+                }
+                else
+                    write_buffers[fd] = HTML_RESPONSE;
+            }
         }
     }
 }
+
 
 WebServer::WebServer() : epoll_fd(-1) {}
         
