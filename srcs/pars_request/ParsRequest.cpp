@@ -169,7 +169,7 @@ void ParsRequest::printRequest() const {
     }
 }
 
-void ParsRequest::parse(const std::string& request) {
+void ParsRequest::parse(const std::string& request,int client_fd) {
     requestContent += request;
     std::string contentType = "";
     size_t contentLength = 0;
@@ -271,11 +271,10 @@ void ParsRequest::parse(const std::string& request) {
         else {
             std::cout << "*****non-POST requests" <<std::endl;
             if (method == "GET"){
-                if (path == "/"){
-                    is_index = 0;
-                }else{
-                    is_index = 1;
-                }
+                GetHandler getHandler;
+                std::string response = getHandler.handleGetRequest(path);
+                responses[client_fd] = response;
+                is_Complet = true;
             }
             is_Complet = true;
         }
@@ -311,6 +310,7 @@ const std::string& ParsRequest::hostMethod() const { return host; }
 const std::string& ParsRequest::getPath() const { return path; }
 const std::string& ParsRequest::getVersion() const { return version; }
 const std::map<std::string, std::string>& ParsRequest::getHeaders() const { return headers; }
+const std::map<int,std::string>& ParsRequest::getResponses() const { return responses; }
 const std::string& ParsRequest::getBody() const { return body; }
 bool ParsRequest::isValid() const { return is_valid; }
 bool ParsRequest::isComplet() const { return is_Complet; }

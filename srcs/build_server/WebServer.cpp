@@ -126,18 +126,22 @@ void WebServer::getResponse(int fd)
 void WebServer::handleClientData(int fd) {
     char buffer[BUFFER_SIZE];
     ssize_t bytes_read;
+    ParsRequest* p = clients[fd];
     
     while (true) {
         bytes_read = read(fd, buffer, sizeof(buffer) - 1);
         if (bytes_read <= 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                responses[fd] = HTML_RESPONSE;
+                if(p->getMethod() == "GET")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+                else
+                    write_buffers[fd] = HTML_RESPONSE;
                 break;
             } 
             else 
             {
                 std::cerr << "Read error: " << strerror(errno) << std::endl;
-                responses[fd] = HTML_BADREQUEST;
+                write_buffers[fd] = HTML_BADREQUEST;
                 closeConnection(fd);
                 break;
             }
@@ -145,74 +149,22 @@ void WebServer::handleClientData(int fd) {
         else {
             std::string req;
             req.append(buffer, bytes_read);
-            ParsRequest* p = clients[fd];
-            p->parse(req);
+            p->parse(req,fd);
             std::cout << "here" << std::endl;
             if(!p->isValid())
             {
-                write_buffers[fd] = HTML_BADREQUEST;
-                std::cout << "isValid " << std::endl;
+                if(p->getMethod() == "GET")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+                else
+                    write_buffers[fd] = HTML_BADREQUEST;
                 return;
             }
             
             if (p->isComplet()) {
                 std::cout << "Complete request received, preparing response" << std::endl;
-                if (p->isIndex() == 0){
-                    // write_buffers[fd] = HTML_RESPONSE;
-                    std::ifstream file("public/index.html");
-                    if (file.is_open()) {
-                        
-                        std::string content;
-                        std::string line;
-                        while (std::getline(file, line)) {
-                            content += line + "\n";
-                        }
-                        file.close();
-                        
-                        // Add HTTP headers to the content
-                        std::string response = "HTTP/1.1 200 OK\r\n";
-                        response += "Content-Type: text/html\r\n";
-                        response += "Content-Length: ";
-                        std::stringstream ss;
-                        ss << content.length();
-                        response += ss.str();
-                        response += "\r\n";
-                        // + intToString(content.length()) + "\r\n";
-                        response += "\r\n"; // End of headers
-                        response += content;
-                        
-                        // Assign to write buffer
-                        write_buffers[fd] = response;
-                    } else {
-                        // If the file couldn't be opened, send a 404 Not Found response
-                        write_buffers[fd] = "HTTP/1.1 404 Not Found\r\n\r\n";
-                    }
-                }
-                else if (p->isIndex() > 0){
-                    std::string path = "public" + p->getPath();
-                    std::cout << path << std::endl;
-                    std::ifstream file(path.c_str());
-                    if (file.is_open()) {
-                        
-                        std::string content;
-                        std::string line;
-                        while (std::getline(file, line)) {
-                            content += line + "\n";
-                        }
-                        file.close();
-                        std::string response = "HTTP/1.1 200 OK\r\n";
-                        response += "Content-Type: text/html\r\n";
-                        response += "Content-Length: ";
-                        std::stringstream ss;
-                        ss << content.length();
-                        response += ss.str();
-                        response += "\r\n";
-                        response += "\r\n";
-                        response += content;
-                        write_buffers[fd] = response;
-                    // write_buffers[fd] = HTML_RESPONSE;
-                    }
-                }
+                std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
+                if(p->getMethod() == "GET")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
                 else
                     write_buffers[fd] = HTML_RESPONSE;
             }

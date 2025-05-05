@@ -13,6 +13,7 @@
 #define MAX_CONTENT_LENGTH 10485760 
 
 #include "../post_handler/PostHandler.hpp"
+#include "../get_handler/GetHandler.hpp"
 
 class ParsRequest{
     private:
@@ -22,6 +23,7 @@ class ParsRequest{
         std::string port;
         std::string host;
         std::string requestContent;
+        std::map<int,std::string>  responses;
         std::map<std::string, std::string> headers;
         std::string body;
         bool header_parsed;
@@ -42,7 +44,7 @@ class ParsRequest{
     public:
         ParsRequest();
         ~ParsRequest();
-        void parse(const std::string& request);
+        void parse(const std::string& request,int client_fd);
         void parseHeaders(const std::string& header_section);
         void printRequest() const;
 
@@ -50,6 +52,7 @@ class ParsRequest{
         const std::string& getPath() const;
         const std::string& getVersion() const;
         const std::map<std::string, std::string>& getHeaders() const;
+        const std::map<int,std::string>& getResponses() const;
         const std::string& getBody() const;
         bool isValid() const;
         bool isChunked() const;
