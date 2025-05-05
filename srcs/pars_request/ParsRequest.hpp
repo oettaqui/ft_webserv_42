@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include "../Parse_configfile/ConfigParser.hpp"
 #define MAX_CONTENT_LENGTH 10485760 
 
 #include "../post_handler/PostHandler.hpp"
@@ -44,7 +45,7 @@ class ParsRequest{
     public:
         ParsRequest();
         ~ParsRequest();
-        void parse(const std::string& request,int client_fd);
+        void parse(const std::string& request,int client_fd,std::map<std::string,int> socket_data,ConfigParser &parser);
         void parseHeaders(const std::string& header_section);
         void printRequest() const;
 

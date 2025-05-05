@@ -123,11 +123,10 @@ void WebServer::getResponse(int fd)
 }
 
 
-void WebServer::handleClientData(int fd) {
+void WebServer::handleClientData(int fd,std::map<std::string,int> socket_data,ConfigParser &parser) {
     char buffer[BUFFER_SIZE];
     ssize_t bytes_read;
     ParsRequest* p = clients[fd];
-    
     while (true) {
         bytes_read = read(fd, buffer, sizeof(buffer) - 1);
         if (bytes_read <= 0) {
@@ -149,7 +148,7 @@ void WebServer::handleClientData(int fd) {
         else {
             std::string req;
             req.append(buffer, bytes_read);
-            p->parse(req,fd);
+            p->parse(req,fd,socket_data,parser);
             std::cout << "here" << std::endl;
             if(!p->isValid())
             {
@@ -192,7 +191,7 @@ void WebServer::linking_servers(ConfigParser &parser)
             std::cerr << "Failed to initialize server " << *it_names << std::endl;
         }
     }
-    this->run();
+    this->run(parser);
 }
 
 bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
@@ -244,7 +243,20 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
     return true;
 }
 
-void WebServer::run() {
+std::map<std::string,int> WebServer::get_socket_data(int fd)
+{
+    std::map<std::string,int> socket_data;
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
+    getsockname(fd, (struct sockaddr*)&addr, &addr_len);
+    char host[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(addr.sin_addr), host, INET_ADDRSTRLEN);
+    std::string host_str(host);
+    socket_data[host_str] = ntohs(addr.sin_port);
+    return (socket_data);
+}
+
+void WebServer::run(ConfigParser &parser) {
     std::cout << "Server(s) running..." << std::endl;
     int check = 0;
     while (true) 
@@ -254,7 +266,8 @@ void WebServer::run() {
             std::cerr << "epoll_wait failed: " << strerror(errno) << std::endl;
             break;
         }
-        for (int i = 0; i < num_events; i++) {
+        for (int i = 0; i < num_events; i++) 
+        {
             for (std::vector<int>::const_iterator it = server_fds.begin(); it != server_fds.end(); ++it)
             {
                 if (events[i].data.fd == *it) {
@@ -263,7 +276,7 @@ void WebServer::run() {
                 }
             }
             if(check == 0) {
-                handleClientData(events[i].data.fd);
+                handleClientData(events[i].data.fd,get_socket_data(events[i].data.fd),parser);
                 getResponse(events[i].data.fd);
             }
             check = 0;

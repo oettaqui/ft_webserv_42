@@ -169,7 +169,7 @@ void ParsRequest::printRequest() const {
     }
 }
 
-void ParsRequest::parse(const std::string& request,int client_fd) {
+void ParsRequest::parse(const std::string& request,int client_fd,std::map<std::string,int> socket_data,ConfigParser &parser) {
     requestContent += request;
     std::string contentType = "";
     size_t contentLength = 0;
@@ -272,7 +272,7 @@ void ParsRequest::parse(const std::string& request,int client_fd) {
             std::cout << "*****non-POST requests" <<std::endl;
             if (method == "GET"){
                 GetHandler getHandler;
-                std::string response = getHandler.handleGetRequest(path);
+                std::string response = getHandler.handleGetRequest(path,socket_data,parser);
                 responses[client_fd] = response;
                 is_Complet = true;
             }

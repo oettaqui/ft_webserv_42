@@ -234,6 +234,18 @@ const std::vector<Server>& ConfigParser::getServers() const {
     return servers;
 }
 
+const Server& ConfigParser::getServer(const std::string &host_p,int &port_p) const {
+    static Server nullServer;
+    for (std::vector<Server>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
+        if(it->getHost() == host_p && it->getPort() == port_p)
+            return *it;
+        else if(it->getHost() == "localhost"  && host_p == "127.0.0.1" && it->getPort() == port_p)
+            return *it;
+        else if(it->getHost() == "dump-ubuntu-benguerir"  && host_p == "127.0.1.1" && it->getPort() == port_p)
+            return *it;
+    }
+    return nullServer;
+}
 
 void ConfigParser::all_server_data() const {
     for (std::vector<Server>::const_iterator it = this->servers.begin(); it != this->servers.end(); ++it) {
