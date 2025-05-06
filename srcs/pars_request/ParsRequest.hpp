@@ -21,7 +21,7 @@ class ParsRequest{
         std::string method;
         std::string path;
         std::string version;
-        std::string port;
+        int port;
         std::string host;
         std::string requestContent;
         std::map<int,std::string>  responses;
@@ -45,7 +45,7 @@ class ParsRequest{
     public:
         ParsRequest();
         ~ParsRequest();
-        void parse(const std::string& request,int client_fd,std::map<std::string,int> socket_data,ConfigParser &parser);
+        void parse(const std::string& request,int client_fd, ConfigParser &parser);
         void parseHeaders(const std::string& header_section);
         void printRequest() const;
 
@@ -58,7 +58,7 @@ class ParsRequest{
         bool isValid() const;
         bool isChunked() const;
         bool isBoundary() const;
-        const std::string& portMethod() const;
+        const int& portMethod() const;
         const std::string& hostMethod() const;
         bool isComplet() const;
         int isIndex() const;

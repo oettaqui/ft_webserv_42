@@ -17,14 +17,16 @@
 #include <errno.h>
 #include <cstdlib>
 #include "../Parse_configfile/ConfigParser.hpp"
+#include "../pars_request/ParsRequest.hpp"
 
+class ParsRequest;
 class GetHandler {
 public:
     GetHandler() {};
     ~GetHandler() {};
 
     // Method to handle GET requests
-    std::string handleGetRequest(const std::string& path,std::map<std::string,int> socket_data,ConfigParser &parser);
+    std::string handleGetRequest(const std::string& path,ParsRequest &request_data,ConfigParser &parser);
 
 private:
     std::string readFile(const std::string& filePath);

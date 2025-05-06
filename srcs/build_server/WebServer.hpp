@@ -29,7 +29,7 @@ class WebServer {
         bool setNonBlocking(int sockfd);
         bool addToEpoll(int sockfd);
         void handleNewConnection(int server_fd);
-        void handleClientData(int client_fd,std::map<std::string,int> socket_data,ConfigParser &parser);
+        void handleClientData(int client_fd, ConfigParser &parser);
         void getResponse(int client_fd);
         void closeConnection(int fd);
     public:
@@ -37,6 +37,5 @@ class WebServer {
         ~WebServer() ;
         bool initialize(std::vector<Server>::const_iterator &server) ;
         void linking_servers(ConfigParser &parser) ;
-        std::map<std::string,int> get_socket_data(int fd);
         void run(ConfigParser &parser) ;
     };

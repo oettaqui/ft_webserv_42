@@ -234,7 +234,7 @@ const std::vector<Server>& ConfigParser::getServers() const {
     return servers;
 }
 
-const Server& ConfigParser::getServer(const std::string &host_p,int &port_p) const {
+const Server& ConfigParser::getServer(const std::string &host_p, const int& port_p) const {
     static Server nullServer;
     for (std::vector<Server>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
         if(it->getHost() == host_p && it->getPort() == port_p)

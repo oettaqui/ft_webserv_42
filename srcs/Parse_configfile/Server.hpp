@@ -4,6 +4,11 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <string.h>
+#include <sstream>     // For std::istringstream
+#include <iostream>
+#include "unistd.h"
+#include "cstdlib"
 #include "Location.hpp"
 
 class Server {
@@ -19,7 +24,7 @@ class Server {
     public:
         Server();
         ~Server();
-
+        std::vector<std::string> split(const std::string& str, char delim) const;
         void setHost(const std::string& h);
         void setPort(int p);
         void addServerName(const std::string& name);
@@ -37,6 +42,7 @@ class Server {
         const std::map<std::string, Location>& getLocations() const;
 
         bool isValid() const;
+        bool parse_host(const std::string &host_p) const;
         bool hasRequiredLocations() const;
 };
 

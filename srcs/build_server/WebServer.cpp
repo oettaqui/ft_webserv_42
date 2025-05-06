@@ -123,7 +123,7 @@ void WebServer::getResponse(int fd)
 }
 
 
-void WebServer::handleClientData(int fd,std::map<std::string,int> socket_data,ConfigParser &parser) {
+void WebServer::handleClientData(int fd, ConfigParser &parser) {
     char buffer[BUFFER_SIZE];
     ssize_t bytes_read;
     ParsRequest* p = clients[fd];
@@ -148,7 +148,7 @@ void WebServer::handleClientData(int fd,std::map<std::string,int> socket_data,Co
         else {
             std::string req;
             req.append(buffer, bytes_read);
-            p->parse(req,fd,socket_data,parser);
+            p->parse(req,fd, parser);
             std::cout << "here" << std::endl;
             if(!p->isValid())
             {
@@ -216,7 +216,10 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
     else if(strcmp("dump-ubuntu-benguerir",server->getHost().c_str()) == 0)
         server_addr.sin_addr.s_addr = inet_addr("127.0.1.1"); 
     else
+    {
+        std::cout << "*****> " << server->getHost().c_str() << "<*****" << std::endl;
         server_addr.sin_addr.s_addr = inet_addr(server->getHost().c_str()); 
+    }
     server_addr.sin_port = htons(server->getPort());
     if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
         std::cerr << "Bind failed: " << strerror(errno) << std::endl;
@@ -243,19 +246,6 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
     return true;
 }
 
-std::map<std::string,int> WebServer::get_socket_data(int fd)
-{
-    std::map<std::string,int> socket_data;
-    struct sockaddr_in addr;
-    socklen_t addr_len = sizeof(addr);
-    getsockname(fd, (struct sockaddr*)&addr, &addr_len);
-    char host[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(addr.sin_addr), host, INET_ADDRSTRLEN);
-    std::string host_str(host);
-    socket_data[host_str] = ntohs(addr.sin_port);
-    return (socket_data);
-}
-
 void WebServer::run(ConfigParser &parser) {
     std::cout << "Server(s) running..." << std::endl;
     int check = 0;
@@ -276,7 +266,7 @@ void WebServer::run(ConfigParser &parser) {
                 }
             }
             if(check == 0) {
-                handleClientData(events[i].data.fd,get_socket_data(events[i].data.fd),parser);
+                handleClientData(events[i].data.fd,parser);
                 getResponse(events[i].data.fd);
             }
             check = 0;

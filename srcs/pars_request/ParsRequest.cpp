@@ -72,7 +72,8 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         std::vector<std::string> parts = split(it->second, ':');
         if (parts.size() == 2) {
             host = parts[0];
-            port = parts[1];
+            std::stringstream ss(parts[1]);
+            ss >> port;
         }
     }
 
@@ -169,12 +170,11 @@ void ParsRequest::printRequest() const {
     }
 }
 
-void ParsRequest::parse(const std::string& request,int client_fd,std::map<std::string,int> socket_data,ConfigParser &parser) {
+void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &parser) {
     requestContent += request;
     std::string contentType = "";
     size_t contentLength = 0;
     std::string boundaryValue= "";
-    
     
     if (!header_parsed) {
         size_t header_end = requestContent.find("\r\n\r\n");
@@ -272,7 +272,7 @@ void ParsRequest::parse(const std::string& request,int client_fd,std::map<std::s
             std::cout << "*****non-POST requests" <<std::endl;
             if (method == "GET"){
                 GetHandler getHandler;
-                std::string response = getHandler.handleGetRequest(path,socket_data,parser);
+                std::string response = getHandler.handleGetRequest(path,*this,parser);
                 responses[client_fd] = response;
                 is_Complet = true;
             }
@@ -305,7 +305,7 @@ void ParsRequest::parse(const std::string& request,int client_fd,std::map<std::s
 }
 
 const std::string& ParsRequest::getMethod() const { return method; }
-const std::string& ParsRequest::portMethod() const { return port; }
+const int& ParsRequest::portMethod() const { return port; }
 const std::string& ParsRequest::hostMethod() const { return host; }
 const std::string& ParsRequest::getPath() const { return path; }
 const std::string& ParsRequest::getVersion() const { return version; }
