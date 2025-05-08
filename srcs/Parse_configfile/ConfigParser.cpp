@@ -244,6 +244,7 @@ const Server& ConfigParser::getServer(const std::string &host_p, const int& port
         else if(it->getHost() == "dump-ubuntu-benguerir"  && host_p == "127.0.1.1" && it->getPort() == port_p)
             return *it;
     }
+    std::cout << "server not found " << std::endl;
     return nullServer;
 }
 

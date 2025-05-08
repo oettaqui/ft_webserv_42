@@ -95,7 +95,7 @@ std::string PostHandler::createUniqueFile(const std::string& extension) {
     
 
     std::ostringstream filename;
-    filename << "uploads/file_" << tv.tv_sec << "_" << tv.tv_usec;
+    filename << "file_" << tv.tv_sec << "_" << tv.tv_usec;
     
 
     if (!extension.empty()) {
@@ -114,13 +114,31 @@ std::string PostHandler::createUniqueFile(const std::string& extension) {
     return filename.str();
 }
 
-void PostHandler::initialize(const std::string& contentType, size_t expectedContentLength, const std::string& initialBody, bool isChunkedTransfer) {
-    this->expectedLength = expectedContentLength;
+void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
+    // std::cout << "======>" << std::endl;
+    std::string contentType = "";
+    size_t contentLength = 0;
+    std::map<std::string, std::string> headers = data_req.getHeaders();
+   
+    std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
+    if (contentTypeIt != headers.end()) {
+        contentType = contentTypeIt->second;
+    }
+    if (!data_req.isChunked())
+    {
+        std::map<std::string, std::string>::iterator contentLengthIt = headers.find("Content-Length");
+        if (contentLengthIt != headers.end()) {
+            contentLength = std::strtoul(contentLengthIt->second.c_str(), NULL, 10);
+            std::cout << "contentlenght " << contentLength << std::endl;
+        }
+    }
+    this->expectedLength = contentLength;
     this->bodyLength = 0;
     this->isComplete = false;
     this->body = "";
-    
-
+    // (void)parser;
+    Server server = parser.getServer(data_req.hostMethod(), data_req.portMethod());
+    std::cout << "max body size ===>> " << server.getClientMaxBodySize() << std::endl;
     std::string extension = "";
     std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
     if (itT != contentTypes.end()) {
@@ -145,7 +163,7 @@ void PostHandler::initialize(const std::string& contentType, size_t expectedCont
         std::cerr << "Failed to open file for writing: " << filename << std::endl;
     }
 
-    this->isChunked = isChunkedTransfer;
+    this->isChunked = data_req.isChunked();
     if (isChunked) {
         this->expectedLength = 0;
         this->chunkState = READING_SIZE;
@@ -155,12 +173,13 @@ void PostHandler::initialize(const std::string& contentType, size_t expectedCont
     }
     
 
-    if (!initialBody.empty()) {
+    if (!data_req.getBody().empty()) {
         if (isChunked) {
-            processChunkedData(initialBody);
+            processChunkedData(data_req.getBody());
             // std::cout << "here" << std::endl;
         } else {
-            processData(initialBody);
+            processData(data_req.getBody());
+            std::cout << "here processData " << std::endl;
         }
     }
 }
@@ -170,16 +189,16 @@ void PostHandler::initBoundary(const std::string& initBody, const std::string &b
     this->isComplete = false;
     this->body = "";
 
-// Example for file request
-//     Content-Disposition: form-data; name=""; filename="ft_transcendence.pdf"
-//     Content-Type: application/pdf
-// 
-//     starting data...
-// Example for just input type text
-//     Content-Disposition: form-data; name="here1"
-//
-//     ffffff1
-    // (void)boundaryValue;
+    // Example for file request
+    //     Content-Disposition: form-data; name=""; filename="ft_transcendence.pdf"
+    //     Content-Type: application/pdf
+    // 
+    //     starting data...
+    // Example for just input type text
+    //     Content-Disposition: form-data; name="here1"
+    //
+    //     ffffff1
+        // (void)boundaryValue;
     if (initBody.find("Content-Type:") != std::string::npos)
     {
         std::cout << "This part contains a file or non-text content" << std::endl;
@@ -283,11 +302,11 @@ void PostHandler::processData(const std::string& data) {
     }
     
     file << data;
-
+    // std::cout << "write on the file " << std::endl;
     // body += data;
 
     bodyLength += data.length();
-
+    // std::cout << "body len " << bodyLength << " expectedLength " << expectedLength << std::endl;
     if (bodyLength >= expectedLength) {
         file.flush();
         file.close();

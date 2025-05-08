@@ -7,7 +7,11 @@
 #include <iostream>
 #include <sys/time.h>
 #include <sstream>
+#include "../Parse_configfile/ConfigParser.hpp"
+#include "../Parse_configfile/Server.hpp"
+#include "../pars_request/ParsRequest.hpp"
 
+class ParsRequest;
 class PostHandler {
 private:
     std::string body;
@@ -34,13 +38,15 @@ private:
         END_OF_CHUNKS
     };
     ChunkState chunkState;
+
+    // Server server;
     
 public:
     PostHandler();
     ~PostHandler();
     
 
-    void initialize(const std::string& contentType, size_t expectedLength, const std::string& initialBody, bool isChunkedTransfer);
+    void initialize(ParsRequest &data_req, ConfigParser &parser);
     
     void initBoundary(const std::string& initBody,  const std::string &boundaryValue);
 
@@ -58,5 +64,6 @@ public:
     const std::string& getFilename() const;
     size_t getCurrentLength() const;
 };
+
 
 #endif

@@ -16,6 +16,8 @@
 #include "../post_handler/PostHandler.hpp"
 #include "../get_handler/GetHandler.hpp"
 
+class PostHandler;
+
 class ParsRequest{
     private:
         std::string method;
@@ -36,7 +38,6 @@ class ParsRequest{
 
         void parseRequestLine(const std::string& line);
         
-
         PostHandler* postHandler;
 
         // GET
