@@ -2,6 +2,7 @@
 
 PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false){
     storeContentTypes();
+    maxBodySize = 0;
 }
 
 PostHandler::~PostHandler() {
@@ -115,7 +116,6 @@ std::string PostHandler::createUniqueFile(const std::string& extension) {
 }
 
 void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
-    // std::cout << "======>" << std::endl;
     std::string contentType = "";
     size_t contentLength = 0;
     std::map<std::string, std::string> headers = data_req.getHeaders();
@@ -136,9 +136,12 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     this->bodyLength = 0;
     this->isComplete = false;
     this->body = "";
-    // (void)parser;
     Server server = parser.getServer(data_req.hostMethod(), data_req.portMethod());
-    std::cout << "max body size ===>> " << server.getClientMaxBodySize() << std::endl;
+    // std::cout << "max body size ===>> " << server.getClientMaxBodySize() << std::endl;
+    // check if the location is exist in the server if not i should generate a error res depend on the RFC doc
+    // check is the method post is availabl on this location if not i should generate a error res depend on the RFC doc
+    // 
+    this->maxBodySize = server.getClientMaxBodySize();
     std::string extension = "";
     std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
     if (itT != contentTypes.end()) {
@@ -147,8 +150,12 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         std::cout << "Extension not found for content type: " << contentType << std::endl;
     }
 
-
-    this->filename = createUniqueFile(extension);
+    if (expectedLength > maxBodySize){
+        std::cout << "This file has a content lenght greater then max body size : " << std::endl;
+        isComplete = true;
+        return;
+    }else
+        this->filename = createUniqueFile(extension);
     if (!filename.empty()) {
         std::cout << "Created file: " << filename << std::endl;
     }
@@ -273,8 +280,6 @@ std::string PostHandler::extractFormFieldValue(const std::string& body, const st
 }
 
 void PostHandler::processBoundaryData(const std::string &data, const std::string &boundaryValue){
-    // (void)data;
-    // (void)boundaryValue;
     if (!file.is_open()) {
         std::cerr << "Error: File is not open when trying to process data" << std::endl;
         return;
@@ -306,7 +311,16 @@ void PostHandler::processData(const std::string& data) {
     // body += data;
 
     bodyLength += data.length();
-    // std::cout << "body len " << bodyLength << " expectedLength " << expectedLength << std::endl;
+    // // std::cout << "body len " << bodyLength << " expectedLength " << expectedLength << std::endl;
+    // if (bodyLength >= maxBodySize )
+    // {
+    //     file.flush();
+    //     file.close();
+    //     isComplete = true;
+    //     std::cout << "This file has a content lenght greater then max body size : " << filename << " (" << bodyLength << " bytes)" << std::endl;
+    //     return;
+    // }
+    // std::cout << "body lenght ==> " << bodyLength << " | max body size ==> " << maxBodySize << std::endl;
     if (bodyLength >= expectedLength) {
         file.flush();
         file.close();

@@ -224,11 +224,10 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 {
                     postHandler = new PostHandler();
                 }
-                // std::cout << " hhhhhhhhhhhhhhhhhhhh" << std::endl;
                 postHandler->initialize(*this, parser);
-                // std::cout << " hhhhhhhhhhhhhhhhhhhh" << std::endl;
                 
                 if (postHandler->isRequestComplete()) {
+                    std::cout << "true " << std::endl;
                     is_Complet = true;
                 }
             }
@@ -292,7 +291,9 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             postHandler->processData(request);
         }
         if (postHandler->isRequestComplete()) {
+            std::cout << "complet ++++++++++++\n";
             is_Complet = true;
+            // return;
         }
     }
     // else {

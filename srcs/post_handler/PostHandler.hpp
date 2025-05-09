@@ -19,6 +19,7 @@ private:
     std::string filename;
     size_t bodyLength;
     size_t expectedLength;
+    size_t maxBodySize;
     bool isComplete;
     std::map<std::string, std::string> contentTypes;
 

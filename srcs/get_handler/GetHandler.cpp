@@ -10,6 +10,9 @@ std::string GetHandler::handleGetRequest(const std::string& path,ParsRequest &re
         std::cout << "this is the server : ***|" <<  *server_socket.getServerNames().begin() << "|***" << std::endl;
     if (path == "/") {
         content = readFile("public/index.html");
+    }
+    else if (path == "/post.html") {
+        content = readFile("public/post.html");
     } 
     else 
     {

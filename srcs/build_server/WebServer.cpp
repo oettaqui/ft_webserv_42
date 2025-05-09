@@ -135,6 +135,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
                 //     write_buffers[fd] = p->getResponses().find(fd)->second;
                 // else
                 //     write_buffers[fd] = HTML_RESPONSE;
+                std::cout << "S\n";
                 break;
             } 
             else 
@@ -156,7 +157,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
                 if(p->getMethod() == "GET")
                 {
                     write_buffers[fd] = p->getResponses().find(fd)->second;
-                    std::cout << "HHHH" << std::endl;
+                    // std::cout << "HHHH" << std::endl;
                 }
                 else
                     write_buffers[fd] = HTML_BADREQUEST;
@@ -169,7 +170,11 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
                 if(p->getMethod() == "GET")
                     write_buffers[fd] = p->getResponses().find(fd)->second;
                 else
+                {
+                    std::cout << "this res " << "fd " << fd << std::endl;
                     write_buffers[fd] = HTML_RESPONSE;
+                }
+                break;
             }
         }
     }
