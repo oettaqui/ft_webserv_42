@@ -7,9 +7,11 @@
 #include <iostream>
 #include <sys/time.h>
 #include <sstream>
+#include <sys/stat.h>
 #include "../Parse_configfile/ConfigParser.hpp"
 #include "../Parse_configfile/Server.hpp"
 #include "../pars_request/ParsRequest.hpp"
+#include "../Parse_configfile/Location.hpp"
 
 class ParsRequest;
 class PostHandler {
@@ -23,7 +25,7 @@ private:
     bool isComplete;
     std::map<std::string, std::string> contentTypes;
 
-    std::string createUniqueFile(const std::string& extension);
+    std::string createUniqueFile(const std::string& extension, std::string location_path);
     void storeContentTypes();
 
 
@@ -39,8 +41,8 @@ private:
         END_OF_CHUNKS
     };
     ChunkState chunkState;
-
-    // Server server;
+    int status;
+    std::map<std::string, Location> locations;
     
 public:
     PostHandler();
@@ -64,6 +66,9 @@ public:
     const std::string& getBody() const;
     const std::string& getFilename() const;
     size_t getCurrentLength() const;
+    int getStatus() const;
+
+    bool directoryExists(const std::string& path);
 };
 
 

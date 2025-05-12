@@ -105,6 +105,7 @@ void WebServer::getResponse(int fd)
     }
     
     std::string& res = write_buffers[fd];
+    // std::cout << res << std::endl;
     
     ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
     
@@ -135,6 +136,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
                 //     write_buffers[fd] = p->getResponses().find(fd)->second;
                 // else
                 //     write_buffers[fd] = HTML_RESPONSE;
+                
                 std::cout << "S\n";
                 break;
             } 

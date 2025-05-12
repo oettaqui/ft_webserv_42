@@ -171,6 +171,7 @@ void ParsRequest::printRequest() const {
 }
 
 void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &parser) {
+    std::cout << "PARS METHOD\n";
     requestContent += request;
     std::string contentType = "";
     size_t contentLength = 0;
@@ -213,6 +214,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             // if (contentTypeIt != headers.end()) {
             //     contentType = contentTypeIt->second;
             // }
+            std::cout << "hnaaa\n";
             
             std::map<std::string, std::string>::iterator contentLengthIt = headers.find("Content-Length");
             if (contentLengthIt != headers.end()) {
@@ -225,7 +227,10 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     postHandler = new PostHandler();
                 }
                 postHandler->initialize(*this, parser);
-                
+                if (postHandler->getStatus() == 404)
+                {
+                    is_Complet = true;
+                }
                 if (postHandler->isRequestComplete()) {
                     std::cout << "true " << std::endl;
                     is_Complet = true;
@@ -270,7 +275,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             postHandler->initBoundary(body, boundaryValue);
         }
         else {
-            std::cout << "*****non-POST requests" <<std::endl;
+            // std::cout << "*****non-POST requests" <<std::endl;
             if (method == "GET"){
                 GetHandler getHandler;
                 std::string response = getHandler.handleGetRequest(path, *this, parser);
@@ -291,7 +296,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             postHandler->processData(request);
         }
         if (postHandler->isRequestComplete()) {
-            std::cout << "complet ++++++++++++\n";
+            // std::cout << "complet ++++++++++++\n";
             is_Complet = true;
             // return;
         }

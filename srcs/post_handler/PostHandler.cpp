@@ -3,6 +3,7 @@
 PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false){
     storeContentTypes();
     maxBodySize = 0;
+    status = 0;
 }
 
 PostHandler::~PostHandler() {
@@ -89,16 +90,32 @@ void PostHandler::storeContentTypes() {
     contentTypes["application/octet-stream"] = "";
 }
 
-std::string PostHandler::createUniqueFile(const std::string& extension) {
+std::string PostHandler::createUniqueFile(const std::string& extension, std::string location_path) {
 
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    
-
     std::ostringstream filename;
-    filename << "file_" << tv.tv_sec << "_" << tv.tv_usec;
-    
 
+    std::cout << "Debug - location_path: '" << location_path << "'" << std::endl;
+    if (directoryExists(location_path))
+    {
+        if (!location_path.empty() && location_path[location_path.length() - 1] != '/' ) {
+            // std::cout << "herererere \n";
+            location_path += '/';
+            filename  << location_path.c_str() << "file_" << tv.tv_sec << "_" << tv.tv_usec;
+        }
+        else if (location_path == "/")
+        {
+            filename  << "file_" << tv.tv_sec << "_" << tv.tv_usec;
+        }
+    }
+    else{
+        status = 404;
+        std::cout << "directory not found\n";
+        return "";
+    }
+    
+    std::cout << "file name " << filename.str() << std::endl;
     if (!extension.empty()) {
         filename << "." << extension;
     }
@@ -109,9 +126,7 @@ std::string PostHandler::createUniqueFile(const std::string& extension) {
         std::cerr << "Failed to create file: " << filename.str() << std::endl;
         return "";
     }
-    // std::cout << "extension from the function unique " << extension << std::endl;
     outfile.close();
-
     return filename.str();
 }
 
@@ -137,58 +152,89 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     this->isComplete = false;
     this->body = "";
     Server server = parser.getServer(data_req.hostMethod(), data_req.portMethod());
-    // std::cout << "max body size ===>> " << server.getClientMaxBodySize() << std::endl;
     // check if the location is exist in the server if not i should generate a error res depend on the RFC doc
     // check is the method post is availabl on this location if not i should generate a error res depend on the RFC doc
     // 
-    this->maxBodySize = server.getClientMaxBodySize();
-    std::string extension = "";
-    std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
-    if (itT != contentTypes.end()) {
-        extension = itT->second;
-    } else {
-        std::cout << "Extension not found for content type: " << contentType << std::endl;
-    }
-
-    if (expectedLength > maxBodySize){
-        std::cout << "This file has a content lenght greater then max body size : " << std::endl;
-        isComplete = true;
-        return;
-    }else
-        this->filename = createUniqueFile(extension);
-    if (!filename.empty()) {
-        std::cout << "Created file: " << filename << std::endl;
-    }
     
+    locations = server.getLocations();
+    std::string location_path = "";
+    Location location ;
+    std::map<std::string, Location>::iterator locationIt = locations.find(data_req.getPath());
+    if (locationIt != locations.end())
+    {
+        location = locationIt->second;
+        location_path =location.getRoot();
 
-    if (file.is_open()) {
-        file.close();
     }
-    
-    file.open(filename.c_str(), std::ios::binary);
-    if (!file) {
-        std::cerr << "Failed to open file for writing: " << filename << std::endl;
+    else{
+        std::cout << "location not found\n";
+        status = 404;
+        return ;
     }
-
-    this->isChunked = data_req.isChunked();
-    if (isChunked) {
-        this->expectedLength = 0;
-        this->chunkState = READING_SIZE;
-        this->currentChunkSize = -1;
-        this->currentChunkBytesRead = 0;
-        this->chunkSizeBuffer = "";
-    }
-    
-
-    if (!data_req.getBody().empty()) {
-        if (isChunked) {
-            processChunkedData(data_req.getBody());
-            // std::cout << "here" << std::endl;
+    std::vector<std::string> allow_methods = location.getMethods();
+    if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
+        // std::cout << "POST is allowed." << std::endl;
+        std::cout << location_path << std::endl;
+        status = 200;
+        this->maxBodySize = server.getClientMaxBodySize();
+        
+        std::string extension = "";
+        std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
+        if (itT != contentTypes.end()) {
+            extension = itT->second;
         } else {
-            processData(data_req.getBody());
-            std::cout << "here processData " << std::endl;
+            std::cout << "Extension not found for content type: " << contentType << std::endl;
         }
+
+        if (expectedLength > maxBodySize && maxBodySize > 0){
+            std::cout << "This file has a content lenght greater then max body size : " << std::endl;
+            isComplete = true;
+            return;
+        }else{
+
+            this->filename = createUniqueFile(extension, location_path);
+        }
+        if (!filename.empty()) {
+            std::cout << "Created file: " << filename << std::endl;
+        }
+        else{
+            return;
+        }
+        
+
+        if (file.is_open()) {
+            file.close();
+        }
+        
+        file.open(filename.c_str(), std::ios::binary);
+        if (!file) {
+            std::cerr << "Failed to open file for writing: " << filename << std::endl;
+        }
+        this->isChunked = data_req.isChunked();
+        if (isChunked) {
+            this->expectedLength = 0;
+            this->chunkState = READING_SIZE;
+            this->currentChunkSize = -1;
+            this->currentChunkBytesRead = 0;
+            this->chunkSizeBuffer = "";
+        }
+        
+
+        if (!data_req.getBody().empty()) {
+            if (isChunked) {
+                processChunkedData(data_req.getBody());
+                // std::cout << "here" << std::endl;
+            } else {
+                processData(data_req.getBody());
+                std::cout << "here processData " << std::endl;
+            }
+        }
+
+    } else {
+        // std::cout << "POST is not allowed." << std::endl;
+        status = 405;
     }
+
 }
 
 void PostHandler::initBoundary(const std::string& initBody, const std::string &boundaryValue){
@@ -196,16 +242,7 @@ void PostHandler::initBoundary(const std::string& initBody, const std::string &b
     this->isComplete = false;
     this->body = "";
 
-    // Example for file request
-    //     Content-Disposition: form-data; name=""; filename="ft_transcendence.pdf"
-    //     Content-Type: application/pdf
-    // 
-    //     starting data...
-    // Example for just input type text
-    //     Content-Disposition: form-data; name="here1"
-    //
-    //     ffffff1
-        // (void)boundaryValue;
+    
     if (initBody.find("Content-Type:") != std::string::npos)
     {
         std::cout << "This part contains a file or non-text content" << std::endl;
@@ -215,7 +252,7 @@ void PostHandler::initBoundary(const std::string& initBody, const std::string &b
         // let's work on the text request that finish there data from the first read (1024)
         std::cout << "This part is likely a simple text field" << std::endl;
          std::string extension = "txt";
-        this->filename = createUniqueFile(extension);
+        this->filename = createUniqueFile(extension, "/");
         if (!filename.empty()) {
             std::cout << "Created file: " << filename << std::endl;
         }
@@ -307,11 +344,9 @@ void PostHandler::processData(const std::string& data) {
     }
     
     file << data;
-    // std::cout << "write on the file " << std::endl;
     // body += data;
 
     bodyLength += data.length();
-    // // std::cout << "body len " << bodyLength << " expectedLength " << expectedLength << std::endl;
     // if (bodyLength >= maxBodySize )
     // {
     //     file.flush();
@@ -320,7 +355,6 @@ void PostHandler::processData(const std::string& data) {
     //     std::cout << "This file has a content lenght greater then max body size : " << filename << " (" << bodyLength << " bytes)" << std::endl;
     //     return;
     // }
-    // std::cout << "body lenght ==> " << bodyLength << " | max body size ==> " << maxBodySize << std::endl;
     if (bodyLength >= expectedLength) {
         file.flush();
         file.close();
@@ -340,11 +374,9 @@ void PostHandler::processChunkedData(const std::string& data) {
                 if (endPos == std::string::npos) {
                     chunkSizeBuffer.append(data.substr(pos));
                     pos = data.length();
-                    // std::cout << "chunkSizeBuffer ===> " << chunkSizeBuffer << std::endl;
                 }
                 else{
                     chunkSizeBuffer.append(data.substr(pos, endPos - pos));
-                    // std::cout << "chunkSizeBuffer +++++> " << chunkSizeBuffer << std::endl;
                     std::string sizeStr = chunkSizeBuffer;
 
                     // convert hex to int
@@ -372,7 +404,7 @@ void PostHandler::processChunkedData(const std::string& data) {
             case READING_DATA:{
 
                 int bytesRemaining = currentChunkSize - currentChunkBytesRead;
-                // std::cout << "data lenght " << data.length() << " bytesRemaining " << bytesRemaining << std:: endl;
+                
                 int bytesToRead = std::min((int)(data.length() - pos), bytesRemaining);
 
                 if (bytesToRead > 0)
@@ -406,6 +438,20 @@ void PostHandler::processChunkedData(const std::string& data) {
     }
 }
 
+
+
+bool PostHandler::directoryExists(const std::string& path) {
+    struct stat info;
+    
+    if (stat(path.c_str(), &info) != 0) {
+        std::cout << "is not a dir\n";
+        return false;
+    }
+    
+    std::cout << "is not a dir\n";
+    return true;
+}
+
 bool PostHandler::isRequestComplete() const {
     return isComplete;
 }
@@ -420,4 +466,7 @@ const std::string& PostHandler::getFilename() const {
 
 size_t PostHandler::getCurrentLength() const {
     return bodyLength;
+}
+int PostHandler::getStatus() const {
+    return status;
 }
