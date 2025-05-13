@@ -271,10 +271,11 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         else {
             std::cout << "*****non-POST requests" <<std::endl;
             if (method == "GET"){
-                GetHandler getHandler;
-                std::string response = getHandler.handleGetRequest(path,*this,parser);
+                GetHandler* getHandler = new GetHandler();  // Allocate on heap
+                std::string response = getHandler->handleGetRequest(*this, parser);
                 responses[client_fd] = response;
                 is_Complet = true;
+                delete getHandler;
             }
             is_Complet = true;
         }

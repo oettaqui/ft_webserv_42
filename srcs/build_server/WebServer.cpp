@@ -126,15 +126,15 @@ void WebServer::getResponse(int fd)
 void WebServer::handleClientData(int fd, ConfigParser &parser) {
     char buffer[BUFFER_SIZE];
     ssize_t bytes_read;
-    ParsRequest* p = clients[fd];
+    // ParsRequest* p = clients[fd];
     while (true) {
         bytes_read = read(fd, buffer, sizeof(buffer) - 1);
         if (bytes_read <= 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if(p->getMethod() == "GET")
-                    write_buffers[fd] = p->getResponses().find(fd)->second;
-                else
-                    write_buffers[fd] = HTML_RESPONSE;
+                // if(p->getMethod() == "GET")
+                //     write_buffers[fd] = p->getResponses().find(fd)->second;
+                // else
+                //     write_buffers[fd] = HTML_RESPONSE;
                 break;
             } 
             else 
@@ -148,6 +148,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
         else {
             std::string req;
             req.append(buffer, bytes_read);
+            ParsRequest* p = clients[fd];
             p->parse(req,fd, parser);
             std::cout << "here" << std::endl;
             if(!p->isValid())
@@ -166,6 +167,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
                     write_buffers[fd] = p->getResponses().find(fd)->second;
                 else
                     write_buffers[fd] = HTML_RESPONSE;
+                break;
             }
         }
     }
