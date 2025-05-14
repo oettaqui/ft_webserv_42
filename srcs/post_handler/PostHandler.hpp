@@ -25,7 +25,7 @@ private:
     bool isComplete;
     std::map<std::string, std::string> contentTypes;
 
-    std::string createUniqueFile(const std::string& extension, std::string location_path);
+    std::string createUniqueFile(const std::string& extension, std::string& location_path);
     void storeContentTypes();
 
 
@@ -43,6 +43,13 @@ private:
     ChunkState chunkState;
     int status;
     std::map<std::string, Location> locations;
+
+    enum BoundaryState {
+        START_SEPARATOR,
+        READING_CONTENT,
+        END_SEPARATOR
+    };
+    BoundaryState boundaryState;
     
 public:
     PostHandler();
@@ -51,13 +58,13 @@ public:
 
     void initialize(ParsRequest &data_req, ConfigParser &parser);
     
-    void initBoundary(const std::string& initBody,  const std::string &boundaryValue);
+    void initBoundary(const std::string& initBody,  const std::string &boundaryValue, ParsRequest &data_req, ConfigParser &parser);
 
     void processData(const std::string& data);
 
     void processChunkedData(const std::string& data);
 
-    void processBoundaryData(const std::string& data, const std::string &boundaryValue);
+    void processBoundaryData(const std::string& initBody, const std::string &boundaryValue, ParsRequest &data_req, std::string& location_path);
     
     std::string extractFormFieldValue(const std::string& body, const std::string& boundary);
 

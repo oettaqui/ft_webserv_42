@@ -16,6 +16,7 @@
 
 #define MAX_EVENTS 10
 #define BUFFER_SIZE 1024
+// #define BUFFER_SIZE 65536
 
 
 class WebServer {

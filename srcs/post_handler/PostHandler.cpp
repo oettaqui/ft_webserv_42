@@ -4,6 +4,7 @@ PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false)
     storeContentTypes();
     maxBodySize = 0;
     status = 0;
+    this->filename="";
 }
 
 PostHandler::~PostHandler() {
@@ -90,7 +91,7 @@ void PostHandler::storeContentTypes() {
     contentTypes["application/octet-stream"] = "";
 }
 
-std::string PostHandler::createUniqueFile(const std::string& extension, std::string location_path) {
+std::string PostHandler::createUniqueFile(const std::string& extension, std::string& location_path) {
 
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -100,13 +101,17 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
     if (directoryExists(location_path))
     {
         if (!location_path.empty() && location_path[location_path.length() - 1] != '/' ) {
-            // std::cout << "herererere \n";
+            std::cout << "herererere \n";
             location_path += '/';
             filename  << location_path.c_str() << "file_" << tv.tv_sec << "_" << tv.tv_usec;
         }
-        else if (location_path == "/")
+        else if (!location_path.empty() && location_path == "/")
         {
             filename  << "file_" << tv.tv_sec << "_" << tv.tv_usec;
+        }
+        else if (!location_path.empty())
+        {
+            filename  << location_path.c_str() << "file_" << tv.tv_sec << "_" << tv.tv_usec;
         }
     }
     else{
@@ -152,9 +157,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     this->isComplete = false;
     this->body = "";
     Server server = parser.getServer(data_req.hostMethod(), data_req.portMethod());
-    // check if the location is exist in the server if not i should generate a error res depend on the RFC doc
-    // check is the method post is availabl on this location if not i should generate a error res depend on the RFC doc
-    // 
     
     locations = server.getLocations();
     std::string location_path = "";
@@ -191,7 +193,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
             isComplete = true;
             return;
         }else{
-
             this->filename = createUniqueFile(extension, location_path);
         }
         if (!filename.empty()) {
@@ -223,7 +224,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         if (!data_req.getBody().empty()) {
             if (isChunked) {
                 processChunkedData(data_req.getBody());
-                // std::cout << "here" << std::endl;
             } else {
                 processData(data_req.getBody());
                 std::cout << "here processData " << std::endl;
@@ -237,42 +237,46 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
 
 }
 
-void PostHandler::initBoundary(const std::string& initBody, const std::string &boundaryValue){
+void PostHandler::initBoundary(const std::string& initBody, const std::string &boundaryValue, ParsRequest &data_req, ConfigParser &parser){
     this->bodyLength = 0;
     this->isComplete = false;
     this->body = "";
 
-    
-    if (initBody.find("Content-Type:") != std::string::npos)
-    {
-        std::cout << "This part contains a file or non-text content" << std::endl;
-    }
-    else
-    {
-        // let's work on the text request that finish there data from the first read (1024)
-        std::cout << "This part is likely a simple text field" << std::endl;
-         std::string extension = "txt";
-        this->filename = createUniqueFile(extension, "/");
-        if (!filename.empty()) {
-            std::cout << "Created file: " << filename << std::endl;
-        }
-        
+    (void)initBody;
+    (void)boundaryValue;
+    (void)data_req;
+    (void)parser;
 
-        if (file.is_open()) {
-            file.close();
-        }
-        
-        file.open(filename.c_str(), std::ios::binary);
-        if (!file) {
-            std::cerr << "Failed to open file for writing: " << filename << std::endl;
-        }
-        if (!initBody.empty()) {
-            processBoundaryData(initBody, boundaryValue);
-        }
-         
+    // std::cout << "{ BODY " << initBody << " }" << std::endl;
+    // std::cout << "{ BOUNDARY VALUE " << boundaryValue << " }" << std::endl;
+    this->boundaryState = START_SEPARATOR;
+
+    Server server = parser.getServer(data_req.hostMethod(), data_req.portMethod());
+    
+    locations = server.getLocations();
+    std::string location_path = "";
+    Location location ;
+    std::map<std::string, Location>::iterator locationIt = locations.find(data_req.getPath());
+    if (locationIt != locations.end())
+    {
+        location = locationIt->second;
+        location_path =location.getRoot();
+
     }
-    // std::cout << "body ==> " << initBody << std::endl;
-    // std::cout << "boundary value" << boundaryValue << std::endl;
+    else{
+        std::cout << "location not found\n";
+        status = 404;
+        return ;
+    }
+    std::vector<std::string> allow_methods = location.getMethods();
+    if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
+        if (!initBody.empty()) {
+            std::cout << "processBoundaryData " << std::endl;
+            processBoundaryData(initBody, boundaryValue, data_req, location_path);
+        }
+
+    }
+
     
 
 }
@@ -316,23 +320,78 @@ std::string PostHandler::extractFormFieldValue(const std::string& body, const st
 
 }
 
-void PostHandler::processBoundaryData(const std::string &data, const std::string &boundaryValue){
-    if (!file.is_open()) {
-        std::cerr << "Error: File is not open when trying to process data" << std::endl;
+void PostHandler::processBoundaryData(const std::string& initBody, const std::string &boundarySep, ParsRequest &data_req, std::string& location_path){
+
+    (void)initBody;
+    (void)boundarySep;
+    (void)data_req;
+    (void)location_path;
+
+    std::string extension = "";
+    std::string sep = "--" + boundarySep;
+    std::string terminator =  sep + "--";
+    std::string body = initBody;
+    size_t nextBoundaryPos = 0;
+    size_t pos = 0;
+
+    pos = body.find(sep);
+    if (pos == std::string::npos) {
+        std::cerr << "Initial boundary not found" << std::endl;
         return;
     }
+    pos += sep.length();
+    while (pos < initBody.length()) {
 
-    std::string value = extractFormFieldValue(data, boundaryValue);
-    if (value.empty())
-    {
-        std::cout << "i should check the value is empty " << std::endl;
+        nextBoundaryPos = body.find(sep, pos);
+        if (nextBoundaryPos == std::string::npos) {
+            // Try to find end boundary
+            nextBoundaryPos = body.find(terminator, pos);
+            if (nextBoundaryPos == std::string::npos) {
+                std::cerr << "End boundary not found" << std::endl;
+                break;
+            }
+        }
+
+        std::string part = body.substr(pos, nextBoundaryPos - pos);
+        
+        size_t headersEnd = part.find("\r\n\r\n");
+        if (headersEnd == std::string::npos) {
+            std::cerr << "Headers end not found in part" << std::endl;
+            pos = nextBoundaryPos + sep.length();
+            continue;
+        }
+
+        std::string headers = part.substr(0, headersEnd);
+        std::string content = part.substr(headersEnd + 4);
+        // std::cout <<"{" << content << "}"<< std::endl;
+
+        extension = "txt";
+        this->filename = createUniqueFile(extension, location_path);
+        if (this->filename.empty()) {
+            std::cerr << "Failed to generate filename." << std::endl;
+            pos = nextBoundaryPos + sep.length();
+            continue;
+        }
+        
+        if (file.is_open()) {
+            file.close();
+        }
+        
+        file.open(filename.c_str(), std::ios::binary);
+        if (!file) {
+            std::cerr << "Failed to open file for writing: " << filename << std::endl;
+        }
+        file << content;
+        file.flush();
+        file.close();
+        pos = nextBoundaryPos + sep.length();
+        
+        if (body.substr(nextBoundaryPos, terminator.length()) == terminator) {
+            break;
+        }
+
     }
-    // std::cout << "value ==>" << value << "|" << std::endl;
-    file << value;
-    file.flush();
-    file.close();
     isComplete = true;
-
 
 }
 
@@ -344,17 +403,8 @@ void PostHandler::processData(const std::string& data) {
     }
     
     file << data;
-    // body += data;
 
     bodyLength += data.length();
-    // if (bodyLength >= maxBodySize )
-    // {
-    //     file.flush();
-    //     file.close();
-    //     isComplete = true;
-    //     std::cout << "This file has a content lenght greater then max body size : " << filename << " (" << bodyLength << " bytes)" << std::endl;
-    //     return;
-    // }
     if (bodyLength >= expectedLength) {
         file.flush();
         file.close();
@@ -448,7 +498,7 @@ bool PostHandler::directoryExists(const std::string& path) {
         return false;
     }
     
-    std::cout << "is not a dir\n";
+    std::cout << "is a dir\n";
     return true;
 }
 

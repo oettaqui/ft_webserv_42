@@ -171,7 +171,7 @@ void ParsRequest::printRequest() const {
 }
 
 void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &parser) {
-    std::cout << "PARS METHOD\n";
+    // std::cout << "PARS METHOD\n";
     requestContent += request;
     std::string contentType = "";
     size_t contentLength = 0;
@@ -214,7 +214,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             // if (contentTypeIt != headers.end()) {
             //     contentType = contentTypeIt->second;
             // }
-            std::cout << "hnaaa\n";
+            // std::cout << "hnaaa\n";
             
             std::map<std::string, std::string>::iterator contentLengthIt = headers.find("Content-Length");
             if (contentLengthIt != headers.end()) {
@@ -238,7 +238,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             }
         } 
         else if (method == "POST" && is_chunked && !is_boundary){
-            std::cout << "at the first time is chunked =====  " << std::endl;
+            // std::cout << "at the first time is chunked =====  " << std::endl;
             std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
             if (contentTypeIt != headers.end()) {
                 contentType = contentTypeIt->second;
@@ -259,9 +259,10 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             if (contentTypeIt != headers.end()) {
                 contentType = contentTypeIt->second;
             }
-            
+            // std::cout << contentType << std::endl;
             std::string boundaryPrefix = "boundary=";
             size_t posBoundary = contentType.find(boundaryPrefix);
+            // std::cout << "==> " << contentType << std::endl;
             if (posBoundary != std::string::npos)
             {
                 size_t startPos = posBoundary + boundaryPrefix.length();
@@ -272,7 +273,17 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             {
                 postHandler = new PostHandler();
             }
-            postHandler->initBoundary(body, boundaryValue);
+            postHandler->initBoundary(body, boundaryValue, *this, parser);
+            if (postHandler->getStatus() == 404)
+            {
+                std::cout << "ERROR 404" << std::endl;
+                is_Complet = true;
+            }
+            if (postHandler->isRequestComplete())
+            {
+                std::cout << "boundary is complete" << std::endl;
+                is_Complet = true;
+            }
         }
         else {
             // std::cout << "*****non-POST requests" <<std::endl;
@@ -288,13 +299,19 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
 
     else if (method == "POST" && postHandler) {
         if (is_chunked) {
-            std::cout << "at the second time is chunked =====  " << std::endl;
+            // std::cout << "at the second time is chunked =====  " << std::endl;
             postHandler->processChunkedData(request);
             // std::cout << "here continue" << std::endl;
-        } else {
+        }
+        else if (is_boundary)
+        {
+            postHandler->initBoundary(body, boundaryValue, *this, parser);
+        }
+         else {
             // std::cout << "continue here if the post req is binary or boundary" << std::endl;
             postHandler->processData(request);
         }
+
         if (postHandler->isRequestComplete()) {
             // std::cout << "complet ++++++++++++\n";
             is_Complet = true;
