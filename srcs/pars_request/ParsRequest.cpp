@@ -72,7 +72,8 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         std::vector<std::string> parts = split(it->second, ':');
         if (parts.size() == 2) {
             host = parts[0];
-            port = parts[1];
+            std::stringstream ss(parts[1]);
+            ss >> port;
         }
     }
 
@@ -169,13 +170,12 @@ void ParsRequest::printRequest() const {
     }
 }
 
-void ParsRequest::parse(const std::string& request) {
+void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &parser) {
     requestContent += request;
     std::string contentType = "";
     size_t contentLength = 0;
     std::string boundaryValue= "";
-    
-    
+    this->client_fd = client_fd;
     if (!header_parsed) {
         size_t header_end = requestContent.find("\r\n\r\n");
         if (header_end == std::string::npos) {
@@ -271,11 +271,11 @@ void ParsRequest::parse(const std::string& request) {
         else {
             std::cout << "*****non-POST requests" <<std::endl;
             if (method == "GET"){
-                if (path == "/"){
-                    is_index = 0;
-                }else{
-                    is_index = 1;
-                }
+                GetHandler* getHandler = new GetHandler();
+                std::string response = getHandler->handleGetRequest(*this, parser);
+                responses[client_fd] = response;
+                is_Complet = true;
+                delete getHandler;
             }
             is_Complet = true;
         }
@@ -287,7 +287,7 @@ void ParsRequest::parse(const std::string& request) {
             postHandler->processChunkedData(request);
             std::cout << "here continue" << std::endl;
         } else {
-            std::cout << "continue here if the post req is binary or boundary" << std::endl;
+            std::cout << "continue here if the post req is binary " << std::endl;
             postHandler->processData(request);
         }
         if (postHandler->isRequestComplete()) {
@@ -304,13 +304,14 @@ void ParsRequest::parse(const std::string& request) {
     // std::cout << "===============\n";
 
 }
-
+const int& ParsRequest::getClientFd() const{return client_fd;}
 const std::string& ParsRequest::getMethod() const { return method; }
-const std::string& ParsRequest::portMethod() const { return port; }
+const int& ParsRequest::portMethod() const { return port; }
 const std::string& ParsRequest::hostMethod() const { return host; }
 const std::string& ParsRequest::getPath() const { return path; }
 const std::string& ParsRequest::getVersion() const { return version; }
 const std::map<std::string, std::string>& ParsRequest::getHeaders() const { return headers; }
+const std::map<int,std::string>& ParsRequest::getResponses() const { return responses; }
 const std::string& ParsRequest::getBody() const { return body; }
 bool ParsRequest::isValid() const { return is_valid; }
 bool ParsRequest::isComplet() const { return is_Complet; }
