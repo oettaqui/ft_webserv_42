@@ -113,7 +113,7 @@ void WebServer::getResponse(int fd)
     std::cout << "Response sent successfully to client: " << fd << std::endl;
     closeConnection(fd);
 }
-void WebServer::handleClientData(int fd) {
+void WebServer::handleClientData(int fd, ConfigParser &parser) {
     // char buffer[BUFFER_SIZE];
     // ssize_t count;
     char buffer[BUFFER_SIZE];
@@ -140,88 +140,31 @@ void WebServer::handleClientData(int fd) {
             std::string req;
             req.append(buffer, bytes_read);
             ParsRequest* p = clients[fd];
-            p->parse(req);
+            p->parse(req,fd, parser);
             std::cout << "here" << std::endl;
             if(!p->isValid())
             {
-                write_buffers[fd] = HTML_BADREQUEST;
-                std::cout << "isValid " << std::endl;
+                // add now
+                if(p->getMethod() == "GET")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+                else
+                    write_buffers[fd] = HTML_BADREQUEST;
+                return;
                 // struct epoll_event event;
                 // event.events = EPOLLOUT;
                 // event.data.fd = fd;
                 // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
-                return;
+                // return;
             }
             
             if (p->isComplet()) {
+                // add now 
                 std::cout << "Complete request received, preparing response" << std::endl;
-                if (p->isIndex() == 0){
-                    // write_buffers[fd] = HTML_RESPONSE;
-                    std::ifstream file("public/index.html");
-                    if (file.is_open()) {
-                        
-                        std::string content;
-                        std::string line;
-                        while (std::getline(file, line)) {
-                            content += line + "\n";
-                        }
-                        file.close();
-                        
-                        // Add HTTP headers to the content
-                        std::string response = "HTTP/1.1 200 OK\r\n";
-                        response += "Content-Type: text/html\r\n";
-                        response += "Content-Length: ";
-                        std::stringstream ss;
-                        ss << content.length();
-                        response += ss.str();
-                        response += "\r\n";
-                        // + intToString(content.length()) + "\r\n";
-                        response += "\r\n"; // End of headers
-                        response += content;
-                        
-                        // Assign to write buffer
-                        write_buffers[fd] = response;
-                    } else {
-                        // If the file couldn't be opened, send a 404 Not Found response
-                        write_buffers[fd] = "HTTP/1.1 404 Not Found\r\n\r\n";
-                    }
-                }
-                else if (p->isIndex() > 0){
-                    std::string path = "public" + p->getPath();
-                    std::cout << path << std::endl;
-                    std::ifstream file(path.c_str());
-                    if (file.is_open()) {
-                        
-                        std::string content;
-                        std::string line;
-                        while (std::getline(file, line)) {
-                            content += line + "\n";
-                        }
-                        file.close();
-                        std::string response = "HTTP/1.1 200 OK\r\n";
-                        response += "Content-Type: text/html\r\n";
-                        response += "Content-Length: ";
-                        std::stringstream ss;
-                        ss << content.length();
-                        response += ss.str();
-                        response += "\r\n";
-                        response += "\r\n";
-                        response += content;
-                        write_buffers[fd] = response;
-                        
-                    // write_buffers[fd] = HTML_RESPONSE;
-                    }
-                }
+                std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
+                if(p->getMethod() == "GET")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
                 else
                     write_buffers[fd] = HTML_RESPONSE;
-                
-                // here i should check the method 
-                
-                // struct epoll_event event;
-                // event.events = EPOLLOUT;
-                // event.data.fd = fd;
-                // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
-                std::cout << "break \n";
                 break;
             }
         }
@@ -247,7 +190,7 @@ void WebServer::linking_servers(ConfigParser &parser)
             std::cerr << "Failed to initialize server " << *it_names << std::endl;
         }
     }
-    this->run();
+    this->run(parser);
 }
 
 bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
@@ -272,7 +215,10 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
     else if(strcmp("dump-ubuntu-benguerir",server->getHost().c_str()) == 0)
         server_addr.sin_addr.s_addr = inet_addr("127.0.1.1"); 
     else
+    {
+        std::cout << "*****> " << server->getHost().c_str() << "<*****" << std::endl;
         server_addr.sin_addr.s_addr = inet_addr(server->getHost().c_str()); 
+    }
     server_addr.sin_port = htons(server->getPort());
     if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
         std::cerr << "Bind failed: " << strerror(errno) << std::endl;
@@ -316,7 +262,7 @@ void WebServer::closeConnection(int fd) {
     write_buffers.erase(fd);
 }
 
-void WebServer::run() {
+void WebServer::run(ConfigParser &parser) {
     std::cout << "Server(s) running..." << std::endl;
     int check = 0;
     while (true) 
@@ -335,7 +281,7 @@ void WebServer::run() {
                 }
             }
             if(check == 0) {
-                handleClientData(events[i].data.fd);
+                handleClientData(events[i].data.fd,parser);
                 getResponse(events[i].data.fd);
             }
             check = 0;

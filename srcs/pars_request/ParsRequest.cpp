@@ -71,8 +71,10 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
     if (it != headers.end()) {
         std::vector<std::string> parts = split(it->second, ':');
         if (parts.size() == 2) {
+            // add now
             host = parts[0];
-            port = parts[1];
+            std::stringstream ss(parts[1]);
+            ss >> port;
         }
     }
 
@@ -169,7 +171,8 @@ void ParsRequest::printRequest() const {
     }
 }
 
-void ParsRequest::parse(const std::string& request) {
+void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &parser) {
+    this->client_fd = client_fd;
     requestContent += request;
     std::string contentType = "";
     size_t contentLength = 0;
@@ -272,13 +275,12 @@ void ParsRequest::parse(const std::string& request) {
         else {
             std::cout << "*****non-POST requests" <<std::endl;
             if (method == "GET"){
-                if (path == "/"){
-                    is_index = 0;
-                }else{
-                    is_index = 1;
-                }
+                GetHandler* getHandler = new GetHandler();
+                std::string response = getHandler->handleGetRequest(*this, parser);
+                responses[client_fd] = response;
+                is_Complet = true;
+                delete getHandler;
             }
-            
             is_Complet = true;
         }
     }
@@ -309,7 +311,7 @@ void ParsRequest::parse(const std::string& request) {
 }
 
 const std::string& ParsRequest::getMethod() const { return method; }
-const std::string& ParsRequest::portMethod() const { return port; }
+const int& ParsRequest::portMethod() const { return port; }
 const std::string& ParsRequest::hostMethod() const { return host; }
 const std::string& ParsRequest::getPath() const { return path; }
 const std::string& ParsRequest::getVersion() const { return version; }
@@ -319,6 +321,9 @@ bool ParsRequest::isValid() const { return is_valid; }
 bool ParsRequest::isComplet() const { return is_Complet; }
 bool ParsRequest::isChunked() const { return is_chunked; }
 bool ParsRequest::isBoundary() const { return is_boundary; }
+// add now
+const int& ParsRequest::getClientFd() const{return client_fd;}
+const std::map<int,std::string>& ParsRequest::getResponses() const { return responses; }
 // 
 
 int ParsRequest::isIndex() const { return is_index; }

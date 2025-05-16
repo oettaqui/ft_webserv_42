@@ -95,7 +95,7 @@ std::string PostHandler::createUniqueFile(const std::string& extension) {
     
 
     std::ostringstream filename;
-    filename << "file_" << tv.tv_sec << "_" << tv.tv_usec;
+    filename << "uploads/file_" << tv.tv_sec << "_" << tv.tv_usec;
     
 
     if (!extension.empty()) {
