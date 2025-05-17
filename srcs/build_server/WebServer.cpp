@@ -94,7 +94,7 @@ void WebServer::getResponse(int fd)
     }
     
     std::string& res = write_buffers[fd];
-    
+    std::cout << res << std::endl;
     ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
     
     if (bytes_sent == -1) {
@@ -111,6 +111,7 @@ void WebServer::getResponse(int fd)
     write_buffers.erase(fd);
     
     std::cout << "Response sent successfully to client: " << fd << std::endl;
+    usleep(100000);
     closeConnection(fd);
 }
 void WebServer::handleClientData(int fd, ConfigParser &parser) {
@@ -130,7 +131,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             else
             {
                 write_buffers[fd] = HTML_BADREQUEST;
-                closeConnection(fd);
+                // closeConnection(fd);
                 std::cout << "Client disconnected: hhhh" << fd << std::endl;
                 break;
 
@@ -250,6 +251,8 @@ void WebServer::closeConnection(int fd) {
     
     // Remove from epoll
     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+
+    shutdown(fd,SHUT_RDWR);
     
     // Close socket
     close(fd);

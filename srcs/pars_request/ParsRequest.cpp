@@ -221,7 +221,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 postHandler = new PostHandler();
             }
             postHandler->initialize(*this, parser);
-            
             if (postHandler->isRequestComplete()) {
                     is_Complet = true;
             }
