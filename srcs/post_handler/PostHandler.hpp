@@ -7,7 +7,13 @@
 #include <iostream>
 #include <sys/time.h>
 #include <sstream>
+#include <sys/stat.h>
+#include "../Parse_configfile/ConfigParser.hpp"
+#include "../Parse_configfile/Server.hpp"
+#include "../pars_request/ParsRequest.hpp"
+#include "../Parse_configfile/Location.hpp"
 
+class ParsRequest;
 class PostHandler {
 private:
     std::string body;
@@ -16,9 +22,10 @@ private:
     size_t bodyLength;
     size_t expectedLength;
     bool isComplete;
+    size_t maxBodySize;
     std::map<std::string, std::string> contentTypes;
 
-    std::string createUniqueFile(const std::string& extension);
+    std::string createUniqueFile(const std::string& extension, std::string& location_path);
     void storeContentTypes();
 
 
@@ -34,13 +41,15 @@ private:
         END_OF_CHUNKS
     };
     ChunkState chunkState;
+    int status;
+    std::map<std::string, Location> locations;
     
 public:
     PostHandler();
     ~PostHandler();
     
 
-    void initialize(const std::string& contentType, size_t expectedLength, const std::string& initialBody, bool isChunkedTransfer);
+    void initialize(ParsRequest &data_req, ConfigParser &parser);
     
     void initBoundary(const std::string& initBody,  const std::string &boundaryValue);
 
@@ -49,14 +58,15 @@ public:
     void processChunkedData(const std::string& data);
 
     void processBoundaryData(const std::string& data, const std::string &boundaryValue);
-    
-    std::string extractFormFieldValue(const std::string& body, const std::string& boundary);
+
 
     bool isRequestComplete() const;
 
     const std::string& getBody() const;
     const std::string& getFilename() const;
     size_t getCurrentLength() const;
+
+    bool directoryExists(const std::string& path);
 };
 
 #endif

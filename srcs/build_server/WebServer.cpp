@@ -141,7 +141,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             req.append(buffer, bytes_read);
             ParsRequest* p = clients[fd];
             p->parse(req,fd, parser);
-            std::cout << "here" << std::endl;
+            // std::cout << "here" << std::endl;
             if(!p->isValid())
             {
                 // add now

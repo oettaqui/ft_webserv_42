@@ -12,9 +12,11 @@
 #include <iomanip>
 #define MAX_CONTENT_LENGTH 10485760 
 
+#include "../Parse_configfile/ConfigParser.hpp"
 #include "../post_handler/PostHandler.hpp"
 #include "../get_handler/GetHandler.hpp"
 
+class PostHandler;
 class ParsRequest{
     private:
         std::string method;
@@ -48,7 +50,6 @@ class ParsRequest{
         ~ParsRequest();
         void parse(const std::string& request,int client_fd, ConfigParser &parser);
         void parseHeaders(const std::string& header_section);
-        void printRequest() const;
 
         const std::string& getMethod() const;
         const std::string& getPath() const;
