@@ -89,17 +89,15 @@ void WebServer::handleNewConnection(int server_fd) {
 void WebServer::getResponse(int fd)
 {
     if (write_buffers.find(fd) == write_buffers.end()) {
-        // std::cout << "here w" << std::endl;
         return;
     }
     
     std::string& res = write_buffers[fd];
-    
+    std::cout << res << std::endl;
     ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
     
     if (bytes_sent == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // Socket buffer full, try again later
             return;
         }
         std::cerr << "send failed: " << strerror(errno) << std::endl;
@@ -107,17 +105,17 @@ void WebServer::getResponse(int fd)
         return;
     }
     
-    // Success! Clear the buffer
+
     write_buffers.erase(fd);
     
     std::cout << "Response sent successfully to client: " << fd << std::endl;
+    usleep(100000);
     closeConnection(fd);
 }
 void WebServer::handleClientData(int fd, ConfigParser &parser) {
-    // char buffer[BUFFER_SIZE];
-    // ssize_t count;
+
     char buffer[BUFFER_SIZE];
-    // memset(buffer, 0, BUFFER_SIZE);
+    memset(buffer, 0, BUFFER_SIZE);
     ssize_t bytes_read;
     
     while (true) {
@@ -130,7 +128,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             else
             {
                 write_buffers[fd] = HTML_BADREQUEST;
-                closeConnection(fd);
+                // closeConnection(fd);
                 std::cout << "Client disconnected: hhhh" << fd << std::endl;
                 break;
 
@@ -141,24 +139,16 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             req.append(buffer, bytes_read);
             ParsRequest* p = clients[fd];
             p->parse(req,fd, parser);
-            // std::cout << "here" << std::endl;
             if(!p->isValid())
             {
-                // add now
                 if(p->getMethod() == "GET")
                     write_buffers[fd] = p->getResponses().find(fd)->second;
                 else
                     write_buffers[fd] = HTML_BADREQUEST;
                 return;
-                // struct epoll_event event;
-                // event.events = EPOLLOUT;
-                // event.data.fd = fd;
-                // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
-                // return;
             }
             
             if (p->isComplet()) {
-                // add now 
                 std::cout << "Complete request received, preparing response" << std::endl;
                 std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
                 if(p->getMethod() == "GET")
@@ -248,13 +238,15 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
 void WebServer::closeConnection(int fd) {
     std::cout << "Closing connection fd: " << fd << std::endl;
     
-    // Remove from epoll
+
     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+
+    shutdown(fd,SHUT_RDWR);
     
-    // Close socket
+
     close(fd);
     
-    // Clean up resources
+
     if (clients.find(fd) != clients.end()) {
         delete clients[fd];
         clients.erase(fd);
@@ -281,7 +273,7 @@ void WebServer::run(ConfigParser &parser) {
                 }
             }
             if(check == 0) {
-                handleClientData(events[i].data.fd,parser);
+                handleClientData(events[i].data.fd, parser);
                 getResponse(events[i].data.fd);
             }
             check = 0;

@@ -43,6 +43,21 @@ private:
     ChunkState chunkState;
     int status;
     std::map<std::string, Location> locations;
+
+
+     enum BoundaryState {
+        START_SEPARATOR,    // Finding initial boundary
+        READING_HEADERS,    // Reading headers after boundary
+        READING_CONTENT,    // Reading content
+        NEXT_SEPARATOR,     // Found boundary, deciding if it's a new part or terminator
+        END_SEPARATOR       // Found terminator
+    };
+    BoundaryState boundaryState;
+
+    std::string leftoverData;
+    std::string extension;
+    std::string header;
+    std::string content;
     
 public:
     PostHandler();
@@ -51,13 +66,13 @@ public:
 
     void initialize(ParsRequest &data_req, ConfigParser &parser);
     
-    void initBoundary(const std::string& initBody,  const std::string &boundaryValue);
-
     void processData(const std::string& data);
 
     void processChunkedData(const std::string& data);
 
-    void processBoundaryData(const std::string& data, const std::string &boundaryValue);
+    void initBoundary(const std::string& initBody, const std::string &boundaryValue, ParsRequest &data_req, ConfigParser &parser);
+
+    void processBoundaryData(const std::string& initBody, const std::string &boundarySep, ParsRequest &data_req, std::string& location_path);
 
 
     bool isRequestComplete() const;
@@ -67,6 +82,10 @@ public:
     size_t getCurrentLength() const;
 
     bool directoryExists(const std::string& path);
+    int getStatus() const;
+    void setExpextedLength(size_t len);
+
+    std::string extractContentType(const std::string& headers);
 };
 
 #endif
