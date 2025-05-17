@@ -246,6 +246,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     }else {
         std::cout << "POST is not allowed." << std::endl;
         status = 405;
+        return;
     }
     
 

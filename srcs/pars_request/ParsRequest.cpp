@@ -203,7 +203,12 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     postHandler = new PostHandler();
                 }
                 postHandler->initialize(*this, parser);
-                
+                if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
+                {
+                    std::cout << "ERROR " << std::endl;
+                    is_valid = false;
+                    is_Complet = true;
+                }
                 if (postHandler->isRequestComplete()) {
                     std::cout << "true " << std::endl;
                     is_Complet = true;
@@ -221,8 +226,14 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 postHandler = new PostHandler();
             }
             postHandler->initialize(*this, parser);
-            
+            if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
+            {
+                std::cout << "ERROR " << std::endl;
+                is_valid = false;
+                is_Complet = true;
+            }
             if (postHandler->isRequestComplete()) {
+                    is_valid = false;
                     is_Complet = true;
             }
 
@@ -258,6 +269,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             if (postHandler->getStatus() == 404)
             {
                 std::cout << "ERROR 404" << std::endl;
+                is_valid = false;
                 is_Complet = true;
             }
             if (postHandler->isRequestComplete())
