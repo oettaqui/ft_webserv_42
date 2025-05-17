@@ -42,9 +42,6 @@ class ParsRequest{
 
         PostHandler* postHandler;
 
-        // GET
-        int is_index;
-
     public:
         ParsRequest();
         ~ParsRequest();
@@ -62,7 +59,6 @@ class ParsRequest{
         const int& portMethod() const;
         const std::string& hostMethod() const;
         bool isComplet() const;
-        int isIndex() const;
         // add now 
         const int& getClientFd() const;
         const std::map<int,std::string>& getResponses() const;

@@ -8,7 +8,6 @@ ParsRequest::ParsRequest() {
     is_boundary = false;
     postHandler = NULL;
 
-    is_index = -1;
 }
 
 ParsRequest::~ParsRequest() {
@@ -292,5 +291,3 @@ bool ParsRequest::isBoundary() const { return is_boundary; }
 const int& ParsRequest::getClientFd() const{return client_fd;}
 const std::map<int,std::string>& ParsRequest::getResponses() const { return responses; }
 
-
-int ParsRequest::isIndex() const { return is_index; }

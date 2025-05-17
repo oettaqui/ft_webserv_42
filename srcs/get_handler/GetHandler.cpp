@@ -298,13 +298,18 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
     {
         std::cout << "++++++++++++++++++++++++++++++\n";
         location_concerned = it_find_location_server->second;
+        size_t root_rs_sp = split(trim(location_concerned.getRoot(),'.'),'/').size() - 1;
         std::cout << "root_location : " << location_concerned.getRoot() << std::endl;
         fileList =  check_root_location(location_concerned.getRoot());
         if(location_concerned.getIndex().size() != 0 && location_concerned.getAutoindex() == true)
         {
             index_file = location_concerned.getRoot() + '/' + *location_concerned.getIndex().begin();
             if(std::find(fileList.begin(),fileList.end(),*location_concerned.getIndex().begin()) != fileList.end())
+            {
                 content = readFile(index_file);
+            }
+            else
+                content = readFile("./default/index.html");
             
         }
         else if(it_find_path_location !=  path_location.end())
@@ -313,7 +318,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             it_find_path_location++;
             int check_else = 0;
             int check = 0;
-            unsigned long count = 0;
+            unsigned long count = root_rs_sp;
             for (std::vector<std::string>::const_iterator it = it_find_path_location; it != path_location.end(); ++it) {
                 check = 1;
                 if(std::find(fileList.begin(),fileList.end(),*it) != fileList.end())
@@ -356,7 +361,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             index_file = location_concerned.getRoot();
             // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
             fileList = check_root_location(index_file);
-            content = generateAttractivePage(fileList,index_file,0);
+            content = generateAttractivePage(fileList,index_file,1);
             std::cout << "++++++++ is a folder check +++++++++++\n" << index_file;
 
         }
@@ -367,11 +372,12 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         std::cout << "---------------------------\n";
         it_find_location_server = server_socket.getLocations().find("/");
         location_concerned = it_find_location_server->second;
+        size_t root_rs_sp = split(trim(location_concerned.getRoot(),'.'),'/').size() - 1;
         fileList =  check_root_location(location_concerned.getRoot());
         // it_find_path_location++;
         int check_else = 0;
         int check = 0;
-        unsigned long count = 0;
+        unsigned long count = root_rs_sp;
         for (std::vector<std::string>::const_iterator it = it_find_path_location; it != path_location.end(); ++it) {
             check = 1;
             if(std::find(fileList.begin(),fileList.end(),*it) != fileList.end())
@@ -391,6 +397,9 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                 fileList = check_root_location(index_file);
         }
         std::cout << "else : index_file : " << index_file << " | check_else : " << check_else << std::endl;
+        std::cout << "else : count : " << count << " | path_location.size() - 1 : " << path_location.size() - 1 << std::endl;
+        std::cout << "else : trim(location_concerned.getRoot(),'.') : " << trim(location_concerned.getRoot(),'.') << std::endl;
+        std::cout << "root_rs_sp = " << root_rs_sp << std::endl;
         if(check_else == 0)
         {
             content = readFile(index_file);
