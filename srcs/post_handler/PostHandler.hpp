@@ -14,7 +14,6 @@
 #include "../Parse_configfile/Location.hpp"
 
 class ParsRequest;
-
 class PostHandler {
 private:
     std::string body;
@@ -23,7 +22,6 @@ private:
     size_t bodyLength;
     size_t expectedLength;
     bool isComplete;
-
     size_t maxBodySize;
     std::map<std::string, std::string> contentTypes;
 
@@ -43,7 +41,6 @@ private:
         END_OF_CHUNKS
     };
     ChunkState chunkState;
-
     int status;
     std::map<std::string, Location> locations;
 
@@ -67,19 +64,15 @@ public:
     ~PostHandler();
     
 
-
     void initialize(ParsRequest &data_req, ConfigParser &parser);
     
-
     void processData(const std::string& data);
 
     void processChunkedData(const std::string& data);
 
-
     void initBoundary(const std::string& initBody, const std::string &boundaryValue, ParsRequest &data_req, ConfigParser &parser);
 
     void processBoundaryData(const std::string& initBody, const std::string &boundarySep, ParsRequest &data_req, std::string& location_path);
-
 
 
     bool isRequestComplete() const;
@@ -93,7 +86,6 @@ public:
     void setExpextedLength(size_t len);
 
     std::string extractContentType(const std::string& headers);
-
 };
 
 #endif

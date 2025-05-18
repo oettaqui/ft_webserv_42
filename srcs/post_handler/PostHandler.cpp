@@ -2,7 +2,6 @@
 
 PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false){
     storeContentTypes();
-
     this->status = 0;
     this->filename= "";
     this->boundaryState = START_SEPARATOR;
@@ -11,7 +10,6 @@ PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false)
     content = "";
 
     leftoverData = "";
-
 }
 
 PostHandler::~PostHandler() {
@@ -98,7 +96,6 @@ void PostHandler::storeContentTypes() {
     contentTypes["application/octet-stream"] = "";
 }
 
-
 bool PostHandler::directoryExists(const std::string& path) {
     struct stat info;
     
@@ -141,7 +138,6 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
     }
     
     std::cout << "file name " << filename.str() << std::endl;
-
     if (!extension.empty()) {
         filename << "." << extension;
     }
@@ -152,7 +148,6 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
         std::cerr << "Failed to create file: " << filename.str() << std::endl;
         return "";
     }
-
     outfile.close();
     return filename.str();
 }
@@ -225,7 +220,10 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         else{
             return;
         }
-
+        file.open(filename.c_str(), std::ios::binary);
+        if (!file) {
+            std::cerr << "Failed to open file for writing: " << filename << std::endl;
+        }
         this->isChunked = data_req.isChunked();
         if (isChunked) {
             this->expectedLength = 0;
@@ -329,7 +327,6 @@ void PostHandler::processBoundaryData(const std::string& initBody, const std::st
     
 
     
-
 
 
 
@@ -447,7 +444,6 @@ const std::string& PostHandler::getFilename() const {
 
 size_t PostHandler::getCurrentLength() const {
     return bodyLength;
-
 }
 
 void PostHandler::setExpextedLength(size_t len) {
@@ -455,5 +451,4 @@ void PostHandler::setExpextedLength(size_t len) {
 }
 int PostHandler::getStatus() const {
     return status;
-
 }

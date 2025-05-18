@@ -12,7 +12,6 @@
 #include <iomanip>
 #define MAX_CONTENT_LENGTH 10485760 
 
-
 #include "../Parse_configfile/ConfigParser.hpp"
 #include "../post_handler/PostHandler.hpp"
 #include "../get_handler/GetHandler.hpp"
@@ -24,7 +23,6 @@ class ParsRequest{
         std::string path;
         std::string version;
         int port;
-
         std::string host;
         std::string requestContent;
         std::map<std::string, std::string> headers;
@@ -34,10 +32,9 @@ class ParsRequest{
         bool is_chunked;
         bool is_boundary;
         bool is_Complet;
-
+        // add now
         int client_fd;
         std::map<int,std::string>  responses;
-
         std::vector<std::string> split(const std::string& str, char delim);
 
         void parseRequestLine(const std::string& line);
@@ -45,14 +42,11 @@ class ParsRequest{
 
         PostHandler* postHandler;
 
-
     public:
         ParsRequest();
         ~ParsRequest();
         void parse(const std::string& request,int client_fd, ConfigParser &parser);
         void parseHeaders(const std::string& header_section);
-
-
 
         const std::string& getMethod() const;
         const std::string& getPath() const;
@@ -68,7 +62,6 @@ class ParsRequest{
         // add now 
         const int& getClientFd() const;
         const std::map<int,std::string>& getResponses() const;
-
 };
 
 #endif

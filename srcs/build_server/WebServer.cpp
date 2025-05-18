@@ -86,17 +86,6 @@ void WebServer::handleNewConnection(int server_fd) {
     }
 }
 
-void WebServer::closeConnection(int fd) {
-    std::cout << "Closing connection fd: " << fd << std::endl;
-    close(fd);
-    if (clients.find(fd) != clients.end()) {
-        delete clients[fd];
-        clients.erase(fd);
-    }
-    write_buffers.erase(fd);
-}
-
-
 void WebServer::getResponse(int fd)
 {
     if (write_buffers.find(fd) == write_buffers.end()) {
@@ -104,7 +93,7 @@ void WebServer::getResponse(int fd)
     }
     
     std::string& res = write_buffers[fd];
-
+    // std::cout << res << std::endl;
     ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
     
     if (bytes_sent == -1) {
@@ -115,6 +104,8 @@ void WebServer::getResponse(int fd)
         closeConnection(fd);
         return;
     }
+    
+
     write_buffers.erase(fd);
     
     std::cout << "Response sent successfully to client: " << fd << std::endl;
@@ -169,7 +160,6 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
         }
     }
 }
-
 
 WebServer::WebServer() : epoll_fd(-1) {}
         
