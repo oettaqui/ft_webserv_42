@@ -12,14 +12,19 @@
 #include <iomanip>
 #define MAX_CONTENT_LENGTH 10485760 
 
-#include "../post_handler/PostHandler.hpp"
 
+#include "../Parse_configfile/ConfigParser.hpp"
+#include "../post_handler/PostHandler.hpp"
+#include "../get_handler/GetHandler.hpp"
+
+class PostHandler;
 class ParsRequest{
     private:
         std::string method;
         std::string path;
         std::string version;
-        std::string port;
+        int port;
+
         std::string host;
         std::string requestContent;
         std::map<std::string, std::string> headers;
@@ -29,6 +34,10 @@ class ParsRequest{
         bool is_chunked;
         bool is_boundary;
         bool is_Complet;
+
+        int client_fd;
+        std::map<int,std::string>  responses;
+
         std::vector<std::string> split(const std::string& str, char delim);
 
         void parseRequestLine(const std::string& line);
@@ -36,15 +45,14 @@ class ParsRequest{
 
         PostHandler* postHandler;
 
-        // GET
-        int is_index;
 
     public:
         ParsRequest();
         ~ParsRequest();
-        void parse(const std::string& request);
+        void parse(const std::string& request,int client_fd, ConfigParser &parser);
         void parseHeaders(const std::string& header_section);
-        void printRequest() const;
+
+
 
         const std::string& getMethod() const;
         const std::string& getPath() const;
@@ -54,10 +62,13 @@ class ParsRequest{
         bool isValid() const;
         bool isChunked() const;
         bool isBoundary() const;
-        const std::string& portMethod() const;
+        const int& portMethod() const;
         const std::string& hostMethod() const;
         bool isComplet() const;
-        int isIndex() const;
+        // add now 
+        const int& getClientFd() const;
+        const std::map<int,std::string>& getResponses() const;
+
 };
 
 #endif

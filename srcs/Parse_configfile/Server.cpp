@@ -76,6 +76,47 @@ const std::map<std::string, Location>& Server::getLocations() const
     return locations;
 }
 
+std::vector<std::string> Server::split(const std::string& str, char delim) const {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream stream(str);
+    
+    while (getline(stream, token, delim)) {
+        if (!token.empty()) {
+            tokens.push_back(token);
+        }
+    }
+    return tokens;
+}
+
+bool Server::parse_host(const std::string &host_p) const
+{
+    const char *str = host_p.c_str();
+    int check = 0;
+    if(strcmp("dump-ubuntu-benguerir",str) == 0 || strcmp("localhost",str) == 0)
+        return true;
+    else
+    {
+        if(str[0] == '.')
+            return false;
+        for (size_t i = 0; i < strlen(str); i++)
+        {
+            if(str[i] == '.' && check == 0)
+                check = 1;
+            else if(str[i] == '.' && check == 1)
+                return false;
+            else if(str[i] != '.')
+                check = 0;
+            if(!isdigit(str[i]) && str[i] != '.')
+                return false;
+        }
+        if(str[strlen(str) - 1] == '.' || split(host_p,'.').size() != 4)
+            return false;
+    }
+    return true;
+    
+}
+
 // Validation
 bool Server::isValid() const {
     // Check mandatory fields
@@ -87,6 +128,11 @@ bool Server::isValid() const {
     if (port <= 0 || port > 65535) {
         std::cerr << "Error: Invalid port number" << std::endl;
         return false;
+    }
+    if(parse_host(host) == false)
+    {
+        std::cerr << "Error: Invalid host number" << std::endl;
+        return false;  
     }
 
     if (client_max_body_size == 0) {

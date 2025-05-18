@@ -15,7 +15,7 @@
 #include "../pars_request/ParsRequest.hpp"
 
 #define MAX_EVENTS 10
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 65536
 
 
 class WebServer {
@@ -26,16 +26,18 @@ class WebServer {
         std::map<int,std::string>  responses;
         int epoll_fd;
         struct epoll_event events[MAX_EVENTS];
+        std::map<int, ParsRequest* > clients;
+        std::map<int, std::string> write_buffers;
         bool setNonBlocking(int sockfd);
         bool addToEpoll(int sockfd);
         void handleNewConnection(int server_fd);
-        void handleClientData(int client_fd);
-        void getResponse(int client_fd);
+        void handleClientData(int fd, ConfigParser &parser);
+        void getResponse(int fd);
         void closeConnection(int fd);
     public:
         WebServer();
         ~WebServer() ;
         bool initialize(std::vector<Server>::const_iterator &server) ;
         void linking_servers(ConfigParser &parser) ;
-        void run();
+        void run(ConfigParser &parser);
     };
