@@ -5,6 +5,7 @@ GetHandler::GetHandler()
 {
     check_put_header = 0;
     check_if = 0;
+    existent_folder = 0;
 }
 
 void GetHandler::generate_header()
@@ -235,8 +236,11 @@ std::vector<std::string> GetHandler::listFiles(const std::string& dirPath) {
         }
         closedir(dir);
     } 
-    else 
+    else
+    {
+        existent_folder = 1;
         std::cerr << "Could not open directory: " << dirPath << std::endl;
+    }
     return files;
 }
 
@@ -341,9 +345,13 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             }
             std::cout << "else : index_file : " << index_file << " | check_else : " << check_else << std::endl;
             if(check_else == 0 && count == path_location.size() - 1)
+            {
+                std::cout << "11111111111111111\n";
                 content = readFile(index_file);
+            }
             else if(check_else == 1 && count == path_location.size() - 1)
             {
+                std::cout << "22222222222222\n";
                 // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
                 fileList = check_root_location(index_file);
                 content = generateAttractivePage(fileList,index_file,1);
@@ -351,10 +359,11 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             }
             if(check == 0 && count == path_location.size() - 1)
             {
+                std::cout << "33333333333333333\n";
                 index_file = location_concerned.getRoot();
                 // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
                 fileList = check_root_location(index_file);
-                content = generateAttractivePage(fileList,index_file,0);
+                content = generateAttractivePage(fileList,index_file,1);
                 std::cout << "++++++++ is a folder check +++++++++++\n" << index_file;
             }
         }
@@ -405,12 +414,10 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         std::cout << "root_rs_sp = " << root_rs_sp << std::endl;
         if(check_else == 0)
         {
-            std::cout << "11111111111111111\n";
             content = readFile(index_file);
         }
         else if(check_else == 1 && count == path_location.size() - 1)
         {
-            std::cout << "22222222222222\n";
             // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
             fileList = check_root_location(index_file);
             content = generateAttractivePage(fileList,index_file,1);
@@ -420,7 +427,6 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             (trim(location_concerned.getRoot(),'.') == "/" + *path_location.begin() && path_location.size() == 1)) 
             && count == path_location.size() - 1)
         {
-            std::cout << "33333333333333333\n";
             index_file = location_concerned.getRoot();
             // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
             fileList = check_root_location(index_file);
@@ -440,7 +446,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         if(std::find(fileList.begin(),fileList.end(),trim(request_data.getPath(),'/')) != fileList.end())
             content = readFile(index_file);
     }
-    if (content.empty() && check_if != 1) {
+    if ((content.empty() && check_if != 1) || existent_folder == 1) {
         check_put_header = 1;
         std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
         return generateResponse("<h1>404 Not Found</h1>", request_data);
@@ -504,7 +510,7 @@ std::string GetHandler::readFile(const std::string& filePath) {
 std::string GetHandler::generateResponse(const std::string& content,ParsRequest &request_data) {
     std::stringstream response;
     (void)request_data;
-    if(check_put_header == 1 && check_if != 1)
+    if(check_put_header == 1 && check_if != 1 && existent_folder != 1)
     {
         std::cout << "hnaaaaaaaaaaaaaaaa\n";
         generate_header();

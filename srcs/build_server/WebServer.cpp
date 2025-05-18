@@ -94,7 +94,6 @@ void WebServer::getResponse(int fd)
     }
     
     std::string& res = write_buffers[fd];
-    std::cout << res << std::endl;
     ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
     
     if (bytes_sent == -1) {

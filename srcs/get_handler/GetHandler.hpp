@@ -47,6 +47,7 @@ class GetHandler {
         std::string header;
         int check_put_header;
         int check_if;
+        int existent_folder;
     public:
         GetHandler();
         ~GetHandler() {};
