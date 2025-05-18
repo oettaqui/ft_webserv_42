@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <map>
 #include <sys/epoll.h>
 #include <errno.h>
 #include <cstdlib>
@@ -19,7 +20,10 @@
 
 class WebServer {
     private:
+        std::map<int, ParsRequest* > clients;
+        std::map<int, std::string> write_buffers;
         std::vector<int>  server_fds;
+        std::map<int,std::string>  responses;
         int epoll_fd;
         struct epoll_event events[MAX_EVENTS];
         std::map<int, ParsRequest* > clients;

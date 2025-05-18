@@ -72,6 +72,7 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             host = parts[0];
             std::stringstream ss(parts[1]);
             ss >> port;
+
         }
     }
 
@@ -131,6 +132,7 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             is_valid = false;
     }
 
+
     if (is_boundary && is_chunked)
     {
         std::cout << "Error is boundary and chunked in the same time !!! " << std::endl;
@@ -140,15 +142,14 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         it != headers.end(); ++it) {
         if (it->second.empty()) {
             is_valid = false;
-            std::cout << "in this block " << std::endl;
             break;
         }
     }
 }
 
-
 void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &parser) {
     this->client_fd = client_fd;
+
     requestContent += request;
     std::string contentType = "";
     size_t contentLength = 0;
@@ -237,15 +238,11 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     is_Complet = true;
             }
 
+
         }else if (method == "POST" && !is_chunked && is_boundary){
 
             std::cout << "here i will hendl the boundary " << std::endl;
 
-            std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
-            if (contentTypeIt != headers.end()) {
-                contentType = contentTypeIt->second;
-            }
-            // std::cout << contentType << std::endl;
             std::map<std::string, std::string>::iterator contentLengthIt = headers.find("Content-Length");
             if (contentLengthIt != headers.end()) {
                 contentLength = std::strtoul(contentLengthIt->second.c_str(), NULL, 10);
@@ -253,6 +250,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             std::string boundaryPrefix = "boundary=";
             size_t posBoundary = contentType.find(boundaryPrefix);
             // std::cout << "==> " << contentType << std::endl;
+
             if (posBoundary != std::string::npos)
             {
                 size_t startPos = posBoundary + boundaryPrefix.length();
@@ -263,7 +261,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             {
                 postHandler = new PostHandler();
             }
-            // std::cout << "content length " << contentLength << std::endl;
             postHandler->setExpextedLength(contentLength);
             postHandler->initBoundary(body, boundaryValue, *this, parser);
             if (postHandler->getStatus() == 404)
@@ -277,6 +274,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 std::cout << "boundary is complete" << std::endl;
                 is_Complet = true;
             }
+
         }
         else {
             std::cout << "*****non-POST requests" <<std::endl;
@@ -293,17 +291,13 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
 
     else if (method == "POST" && postHandler) {
         if (is_chunked) {
-            // std::cout << "at the second time is chunked =====  " << std::endl;
             postHandler->processChunkedData(request);
-            // std::cout << "here continue" << std::endl;
         }
         else if (is_boundary)
         {
-            // postHandler->processBoundaryData(body, boundaryValue, *this, parser);
             postHandler->initBoundary(request, boundaryValue, *this, parser);
         }
         else {
-            // std::cout << "continue here if the post req is binary " << std::endl;
             postHandler->processData(request);
         }
         
@@ -318,7 +312,9 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
 }
 
 const std::string& ParsRequest::getMethod() const { return method; }
+
 const int& ParsRequest::portMethod() const { return port; }
+
 const std::string& ParsRequest::hostMethod() const { return host; }
 const std::string& ParsRequest::getPath() const { return path; }
 const std::string& ParsRequest::getVersion() const { return version; }
@@ -328,7 +324,11 @@ bool ParsRequest::isValid() const { return is_valid; }
 bool ParsRequest::isComplet() const { return is_Complet; }
 bool ParsRequest::isChunked() const { return is_chunked; }
 bool ParsRequest::isBoundary() const { return is_boundary; }
+
 // add now
 const int& ParsRequest::getClientFd() const{return client_fd;}
 const std::map<int,std::string>& ParsRequest::getResponses() const { return responses; }
+
+
+// 
 
