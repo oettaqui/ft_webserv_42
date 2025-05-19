@@ -528,27 +528,25 @@ std::string GetHandler::readFile(const std::string& filePath) {
     size_t size = getFileSize(filePath);
     std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
     const size_t bufferSize = 8000; // Buffer size set to 8000 bytes
-    char buffer[bufferSize]; // Create a buffer to hold the data
+    char buffer[bufferSize]; 
     std::string content; // String to accumulate file content
     ssize_t bytesSent = 0;
-    
+    ssize_t TotalbytesSent = 0;
+    memset(&buffer, 0, bufferSize);
     // Read and send the file in chunks
     while (file.read(buffer, bufferSize) || file.gcount() > 0) {
         std::cout << "^^^^^^^^^^=> | " << file.gcount() << " |<=^^^^^^^^^\n";
-        
-        // Send the buffer directly over the socket
-        // if((size_t)file.gcount()  < bufferSize)
-        // {
-        //     content.append(buffer,file.gcount());
-        //     break;
-        // }
         bytesSent = send(client_fd, buffer, file.gcount(), 0);
-        
         if (bytesSent < 0) {
+            std::cout << "clooooooooooooooooooooooooooose TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
+            std::cout << "size : |" << size << "| \n";
             file.close();
+            std::cout << strerror(errno) << std::endl;
             return "";
         }
+        TotalbytesSent = TotalbytesSent + bytesSent;
     }
+    std::cout << "sennnnnnnnnnnnnnnnnnnnnnd complete TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
     check_if = 1;
     file.close();
 
@@ -566,9 +564,6 @@ std::string GetHandler::generateResponse(const std::string& content,ParsRequest 
         std::cout << "hnaaaaaaaaaaaaaaaa\n";
         generate_header();
     }
-    std::stringstream response1;
     response << content;
-    // response1 << "badr\n";
-    // send(request_data.getClientFd(), response1.str().c_str(), response1.str().length(), 0);
     return response.str();
 }
