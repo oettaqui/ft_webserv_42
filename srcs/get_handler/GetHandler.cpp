@@ -3,10 +3,14 @@
 
 GetHandler::GetHandler() 
 {
+    check_put_header = 0;
+    check_if = 0;
+    existent_folder = 0;
 }
 
 void GetHandler::generate_header()
 {
+    std::cout << "=======================>\n";
     std::stringstream header;
     header  << "HTTP/1.1 200 OK\r\n"
             << "Content-Type: " << contentType << "\r\n"
@@ -111,8 +115,11 @@ void GetHandler::storeContentTypes(ParsRequest &request_data) {
 }
 
 std::string GetHandler::generateAttractivePage(const std::vector<std::string>& items,const std::string &base_path,int flag) {
-    if(flag == 1)
+    if(flag == 1 && check_put_header == 0 && existent_folder != 1)
+    {
+        std::cout << "header put 2\n";
         generate_header();
+    }
     const std::string path = trim(base_path,'.');
     std::string html = "<!DOCTYPE html>\n"
                        "<html lang=\"en\">\n"
@@ -232,8 +239,11 @@ std::vector<std::string> GetHandler::listFiles(const std::string& dirPath) {
         }
         closedir(dir);
     } 
-    else 
+    else
+    {
+        existent_folder = 1;
         std::cerr << "Could not open directory: " << dirPath << std::endl;
+    }
     return files;
 }
 
@@ -299,6 +309,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         std::cout << "++++++++++++++++++++++++++++++\n";
         location_concerned = it_find_location_server->second;
         size_t root_rs_sp = split(trim(location_concerned.getRoot(),'.'),'/').size() - 1;
+        std::vector<std::string> root_split_rs = split(trim(location_concerned.getRoot(),'.'),'/');
         std::cout << "root_location : " << location_concerned.getRoot() << std::endl;
         fileList =  check_root_location(location_concerned.getRoot());
         if(location_concerned.getIndex().size() != 0 && location_concerned.getAutoindex() == true)
@@ -323,6 +334,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                 check = 1;
                 if(std::find(fileList.begin(),fileList.end(),*it) != fileList.end())
                 {
+                    // std::cout << "dkhalllll ///////////\n";
                     count++;
                     if(check_else == 0)
                         index_file = location_concerned.getRoot() + '/' + *it;
@@ -337,10 +349,15 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                     fileList = check_root_location(index_file);
             }
             std::cout << "else : index_file : " << index_file << " | check_else : " << check_else << std::endl;
+            std::cout << "else : count : " << count << " | path_location.size() - 1 : " << path_location.size() - 1 << std::endl;
             if(check_else == 0 && count == path_location.size() - 1)
+            {
+                std::cout << "11111111111111111\n";
                 content = readFile(index_file);
+            }
             else if(check_else == 1 && count == path_location.size() - 1)
             {
+                std::cout << "22222222222222\n";
                 // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
                 fileList = check_root_location(index_file);
                 content = generateAttractivePage(fileList,index_file,1);
@@ -348,11 +365,30 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             }
             if(check == 0 && count == path_location.size() - 1)
             {
+                std::cout << "33333333333333333\n";
                 index_file = location_concerned.getRoot();
                 // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
                 fileList = check_root_location(index_file);
-                content = generateAttractivePage(fileList,index_file,0);
+                content = generateAttractivePage(fileList,index_file,1);
                 std::cout << "++++++++ is a folder check +++++++++++\n" << index_file;
+            }
+            else if((count != std::string::npos && root_rs_sp != std::string::npos) 
+            && (count == root_rs_sp && existent_folder != 1))
+            {
+                // std::cout << "444444444444\n";
+                // std::cout << "existent_folder : " << existent_folder << std::endl;
+                // std::cout << "last root : " << root_split_rs.back() << std::endl;
+                // std::cout << "last path : " << path_location.back() << std::endl;
+                // std::cout << "count : " << count << std::endl;
+                // std::cout << "root_rs_sp : " << count << std::endl;
+                if(root_split_rs.back() == path_location.back() || path_location.size() == 1)
+                {
+                    index_file = location_concerned.getRoot();
+                    // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
+                    fileList = check_root_location(index_file);
+                    content = generateAttractivePage(fileList,index_file,1);
+                    std::cout << "++++++++ is a folder check +++++++++++\n" << index_file; 
+                }
             }
         }
         else if(it_find_path_location ==  path_location.end())
@@ -373,6 +409,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         it_find_location_server = server_socket.getLocations().find("/");
         location_concerned = it_find_location_server->second;
         size_t root_rs_sp = split(trim(location_concerned.getRoot(),'.'),'/').size() - 1;
+        std::vector<std::string> root_split_rs = split(trim(location_concerned.getRoot(),'.'),'/');
         fileList =  check_root_location(location_concerned.getRoot());
         // it_find_path_location++;
         int check_else = 0;
@@ -402,25 +439,49 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         std::cout << "root_rs_sp = " << root_rs_sp << std::endl;
         if(check_else == 0)
         {
+            std::cout << "11111111111111111\n";
             content = readFile(index_file);
         }
         else if(check_else == 1 && count == path_location.size() - 1)
         {
             // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
+            std::cout << "22222222222222222\n";
             fileList = check_root_location(index_file);
             content = generateAttractivePage(fileList,index_file,1);
             std::cout << "++++++++ is a folder check_else +++++++++++\n" << index_file;
         }
         if((check == 0 || 
-            (trim(location_concerned.getRoot(),'.') == "/" + *path_location.begin() && path_location.size() == 1)) 
-            && count == path_location.size() - 1)
+            (trim(location_concerned.getRoot(),'.') == "/" + *path_location.begin() && path_location.size() == root_rs_sp + 1)) 
+            && count == path_location.size() - 1) 
         {
+            std::cout << "3333333333333333\n";
             index_file = location_concerned.getRoot();
             // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
             fileList = check_root_location(index_file);
             content = generateAttractivePage(fileList,index_file,0);
             std::cout << "++++++++ is a folder check +++++++++++\n" << index_file;
+            check_put_header = 1;
         }
+        else if((count != std::string::npos && root_rs_sp != std::string::npos) && (count == root_rs_sp && existent_folder != 1))
+        {
+            std::cout << "|444444444444|\n";
+            std::cout << "existent_folder : " << existent_folder << std::endl;
+            // std::cout << "last root : " << root_split_rs.back() << std::endl;
+            // std::cout << "last path : " << path_location.back() << std::endl;
+            std::cout << "count : " << count << std::endl;
+            std::cout << "root_rs_sp : " << count << std::endl;
+            if(root_split_rs.back() == path_location.back() || (path_location.size() == 1 && path_location.back() == "/"))
+            {
+                index_file = location_concerned.getRoot();
+                // content = "<h1>is a folder you should list his content of this folder "+ index_file +"</h1>";
+                fileList = check_root_location(index_file);
+                content = generateAttractivePage(fileList,index_file,1);
+                std::cout << "++++++++ is a folder check +++++++++++\n" << index_file; 
+            }
+        }
+        std::cout << "trim(location_concerned.getRoot(),'.') : " << trim(location_concerned.getRoot(),'.') << std::endl;
+        std::cout << "path_location.size() : " << path_location.size() << std::endl;
+        std::cout << "/ + *path_location.begin() : " << "/" + *path_location.begin() << std::endl;
     }
     else 
     {
@@ -433,7 +494,9 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         if(std::find(fileList.begin(),fileList.end(),trim(request_data.getPath(),'/')) != fileList.end())
             content = readFile(index_file);
     }
-    if (content.empty()) {
+    if ((content.empty() && check_if != 1) || existent_folder == 1) {
+        check_put_header = 1;
+        std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
         return generateResponse("<h1>404 Not Found</h1>", request_data);
     }
     return generateResponse(content, request_data);
@@ -452,37 +515,39 @@ std::string GetHandler::readFile(const std::string& filePath) {
             contentType = it->second;
         }
     }
-    generate_header();
     std::ifstream file(filePath.c_str(),std::ios::binary);
-    if (!file) {
+    if (!file || check_put_header == 1) {
         return "";
+    }
+    if(check_put_header == 0)
+    {
+        std::cout << "header put\n";
+        generate_header();
     }
     
     size_t size = getFileSize(filePath);
     std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
     const size_t bufferSize = 8000; // Buffer size set to 8000 bytes
-    char buffer[bufferSize]; // Create a buffer to hold the data
+    char buffer[bufferSize]; 
     std::string content; // String to accumulate file content
     ssize_t bytesSent = 0;
-    
+    ssize_t TotalbytesSent = 0;
+    memset(&buffer, 0, bufferSize);
     // Read and send the file in chunks
     while (file.read(buffer, bufferSize) || file.gcount() > 0) {
         std::cout << "^^^^^^^^^^=> | " << file.gcount() << " |<=^^^^^^^^^\n";
-        
-        // Send the buffer directly over the socket
-        // if((size_t)file.gcount()  < bufferSize)
-        // {
-        //     content.append(buffer,file.gcount());
-        //     break;
-        // }
         bytesSent = send(client_fd, buffer, file.gcount(), 0);
-        
         if (bytesSent < 0) {
+            std::cout << "clooooooooooooooooooooooooooose TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
+            std::cout << "size : |" << size << "| \n";
             file.close();
+            std::cout << strerror(errno) << std::endl;
             return "";
         }
+        TotalbytesSent = TotalbytesSent + bytesSent;
     }
-    
+    std::cout << "sennnnnnnnnnnnnnnnnnnnnnd complete TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
+    check_if = 1;
     file.close();
 
     return content;
@@ -491,9 +556,14 @@ std::string GetHandler::readFile(const std::string& filePath) {
 std::string GetHandler::generateResponse(const std::string& content,ParsRequest &request_data) {
     std::stringstream response;
     (void)request_data;
-    std::stringstream response1;
+    std::cout << "check_put_header : " << check_put_header << std::endl;
+    std::cout << "check_if : " << check_if << std::endl;
+    std::cout << "existent_folder : " << existent_folder << std::endl;
+    if((check_put_header == 1 && check_if != 1) || existent_folder == 1)
+    {
+        std::cout << "hnaaaaaaaaaaaaaaaa\n";
+        generate_header();
+    }
     response << content;
-    // response1 << "badr\n";
-    // send(request_data.getClientFd(), response1.str().c_str(), response1.str().length(), 0);
     return response.str();
 }
