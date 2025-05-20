@@ -143,6 +143,8 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             {
                 if(p->getMethod() == "GET")
                     write_buffers[fd] = p->getResponses().find(fd)->second;
+                else if(p->getMethod() == "DELETE")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
                 else
                     write_buffers[fd] = HTML_BADREQUEST;
                 return;
@@ -152,6 +154,8 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
                 std::cout << "Complete request received, preparing response" << std::endl;
                 std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
                 if(p->getMethod() == "GET")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+                else if(p->getMethod() == "DELETE")
                     write_buffers[fd] = p->getResponses().find(fd)->second;
                 else
                     write_buffers[fd] = HTML_RESPONSE;

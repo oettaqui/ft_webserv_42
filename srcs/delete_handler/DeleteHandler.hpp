@@ -1,5 +1,5 @@
-#ifndef GET_HANDLER_HPP
-#define GET_HANDLER_HPP
+#ifndef DELETE_HANDLER_HPP
+#define DELETE_HANDLER_HPP
 
 #include <fstream>
 #include <sstream>
@@ -20,13 +20,11 @@
 #include "../pars_request/ParsRequest.hpp"
 #include <iostream>
 #include <vector>
-#include <dirent.h>   // For opendir, readdir, closedir 
-#include <sys/stat.h> // For stat (file information)
+#include <dirent.h>
+#include <sys/stat.h>
 #include <algorithm>
 
-
-class ParsRequest;
-class GetHandler {
+class DeleteHandler {
     
     private:
         std::string readFile(const std::string& filePath);
@@ -51,19 +49,35 @@ class GetHandler {
         int statusCode;
         std::string status_message;
     public:
-        GetHandler();
-        ~GetHandler() {};
-        std::string handleGetRequest(ParsRequest &request_data,ConfigParser &parser);
+        DeleteHandler();
+        ~DeleteHandler();
+        std::string handleDeleteRequest(ParsRequest &request_data,ConfigParser &parser);
         std::vector<std::string> check_root_location(std::string directoryPath);
         std::vector<std::string> listFiles(const std::string& dirPath);
         bool isDirectory(const std::string& path);
         std::vector<std::string> split(const std::string& str, char delim) const;
         std::string generateAttractivePage(const std::vector<std::string>& items,const std::string &base_path,int flag);
-        void storeContentTypes(ParsRequest &request_data);
         std::string getFileExtension(const std::string& filename);
         size_t getFileSize(const std::string& filename);
         void generate_header();
-        // void ReadyToWork(const std::string& path);
+    // // Helper methods
+    // bool resourceExists(const std::string& path);
+    // bool deleteFile(const std::string& path);
+    // bool deleteDirectory(const std::string& path);
+    // std::string createResponse(int statusCode, const std::string& message);
 };
 
-#endif
+#endif // DELETE_HANDLER_HPP
+
+
+
+
+
+// Return appropriate response:
+
+// 200 OK: If the resource was successfully deleted
+// 202 Accepted: If the delete request was accepted but not yet processed
+// 204 No Content: If the resource was deleted but no content is returned
+// 404 Not Found: If the resource doesn't exist
+// 403 Forbidden: If the client doesn't have permission to delete
+// 500 Internal Server Error: If something went wrong

@@ -293,6 +293,13 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 is_Complet = true;
                 delete getHandler;
             }
+            else if (method == "DELETE") {
+                DeleteHandler* deleteHandler = new DeleteHandler();
+                std::string response = deleteHandler->handleDeleteRequest(*this, parser);
+                responses[client_fd] = response;
+                is_Complet = true;
+                delete deleteHandler;
+            }
             is_Complet = true;
         }
     }

@@ -6,13 +6,15 @@ GetHandler::GetHandler()
     check_put_header = 0;
     check_if = 0;
     existent_folder = 0;
+    statusCode = 200;
+    status_message = "OK";
 }
 
 void GetHandler::generate_header()
 {
     std::cout << "=======================>\n";
     std::stringstream header;
-    header  << "HTTP/1.1 200 OK\r\n"
+    header  << "HTTP/1.1 "<< statusCode << " " <<  status_message << "\r\n"
             << "Content-Type: " << contentType << "\r\n"
             << "Connection: close\r\n"
             << "\r\n";
@@ -496,6 +498,8 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
     }
     if ((content.empty() && check_if != 1) || existent_folder == 1) {
         check_put_header = 1;
+        statusCode = 404;
+        status_message = "Not Found";
         std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
         return generateResponse("<h1>404 Not Found</h1>", request_data);
     }
