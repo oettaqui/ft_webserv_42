@@ -45,24 +45,38 @@ std::string DeleteHandler::getFileExtension(const std::string& filename) {
     return "";
 }
 
-std::string DeleteHandler::generateAttractivePage(const std::vector<std::string>& items,const std::string &base_path,int flag) {
+std::string DeleteHandler::generateAttractivePage(const std::string &base_path,int flag) {
+    std::string html;
     if(flag == 1 && check_put_header == 0 && existent_folder != 1)
     {
         std::cout << "header put 2\n";
         generate_header();
     }
-    (void)items;
-    const std::string path = trim(base_path,'.');
-    std::string html = "<!DOCTYPE html>\r\n"
-                        "<html>\r\n"
-                        "<head>\r\n"
-                        "    <title>Remove Folder</title>\r\n"
-                        "</head>\r\n"
-                        "<body>\r\n"
-                        "    <h1>Remove Folder</h1>\r\n"
-                        "</body>\r\n"
-                        "</html>\r\n";
-
+    std::cout << "====== >> base_path folder path <<  ======> " << base_path << std::endl;
+    if(deleteDirectory(base_path) == true)
+    {
+        html = "<!DOCTYPE html>\r\n"
+                            "<html>\r\n"
+                            "<head>\r\n"
+                            "    <title>Successfully deleted directory</title>\r\n"
+                            "</head>\r\n"
+                            "<body>\r\n"
+                            "    <h1>Successfully deleted directory</h1>\r\n"
+                            "</body>\r\n"
+                            "</html>\r\n";
+    }
+    else
+    {
+        html = "<!DOCTYPE html>\r\n"
+                            "<html>\r\n"
+                            "<head>\r\n"
+                            "    <title>Error deleting directory</title>\r\n"
+                            "</head>\r\n"
+                            "<body>\r\n"
+                            "    <h1>Error deleting directory</h1>\r\n"
+                            "</body>\r\n"
+                            "</html>\r\n"; 
+    }
     return html;
 }
 std::vector<std::string> DeleteHandler::split(const std::string& str, char delim) const {
@@ -120,7 +134,7 @@ std::vector<std::string> DeleteHandler::check_root_location(std::string director
         }
     } 
     else {
-        std::cout << "No files found in directory '" << directoryPath << "'" << std::endl;
+        std::cout << "--> No files found in directory '" << directoryPath << "'" << std::endl;
     }
     return (fileList);
 }
@@ -145,22 +159,42 @@ std::string DeleteHandler::generateResponse(const std::string& content,ParsReque
 }
 
 std::string DeleteHandler::readFile(const std::string& filePath) {
-    std::ifstream file(filePath.c_str(),std::ios::binary);
-    if (!file || check_put_header == 1) {
+    std::string content;
+    // std::ifstream file(filePath.c_str(),std::ios::binary);
+    // // if(resourceExists(filePath))
+    // // {
+    // //     std::cout << "ooooooooooooooooooooooooo\n";
+    // // }
+    if (!resourceExists(filePath) || check_put_header == 1) {
         return "";
     }
     if(check_put_header == 0)
         generate_header();
     std::cout << "====== >> file path <<  ======> " << index_file << std::endl;
-    std::string content = "<!DOCTYPE html>\r\n"
-                        "<html>\r\n"
-                        "<head>\r\n"
-                        "    <title>Remove file</title>\r\n"
-                        "</head>\r\n"
-                        "<body>\r\n"
-                        "    <h1>Remove file</h1>\r\n"
-                        "</body>\r\n"
-                        "</html>\r\n";
+    if(DeleteHandler::deleteFile(filePath) == true)
+    {
+        content = "<!DOCTYPE html>\r\n"
+                            "<html>\r\n"
+                            "<head>\r\n"
+                            "    <title>Successfully deleted file</title>\r\n"
+                            "</head>\r\n"
+                            "<body>\r\n"
+                            "    <h1>Successfully deleted file</h1>\r\n"
+                            "</body>\r\n"
+                            "</html>\r\n";
+    }
+    else
+    {
+        content = "<!DOCTYPE html>\r\n"
+                            "<html>\r\n"
+                            "<head>\r\n"
+                            "    <title>Error deleting file</title>\r\n"
+                            "</head>\r\n"
+                            "<body>\r\n"
+                            "    <h1>Error deleting file</h1>\r\n"
+                            "</body>\r\n"
+                            "</html>\r\n";    
+    }
     return content;
 }
 
@@ -179,21 +213,110 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
     if(it_find_location_server != server_socket.getLocations().end())
     {
         location_concerned = it_find_location_server->second;
-        size_t root_rs_sp = split(trim(location_concerned.getRoot(),'.'),'/').size() - 1;
-        std::vector<std::string> root_split_rs = split(trim(location_concerned.getRoot(),'.'),'/');
-        fileList =  check_root_location(location_concerned.getRoot());
-        if(location_concerned.getIndex().size() != 0 && location_concerned.getAutoindex() == true)
+        std::cout << "-------------->>> " << location_concerned.getPath() << " <<<-----------------\n";
+        if(!(std::find(location_concerned.getMethods().begin(),location_concerned.getMethods().end(),"DELETE") 
+        != location_concerned.getMethods().end()))
         {
-            index_file = location_concerned.getRoot() + '/' + *location_concerned.getIndex().begin();
-            if(std::find(fileList.begin(),fileList.end(),*location_concerned.getIndex().begin()) != fileList.end())
-                content = readFile(index_file);
-            else
-                content = readFile("./default/index.html");
-            
+            check_put_header = 1;
+            statusCode = 403;
+            status_message = "Forbidden";
+            return generateResponse("<h1>403 the client doesn't have permission to DELETE</h1>", request_data);
         }
-        else if(it_find_path_location !=  path_location.end())
+        else
         {
-            it_find_path_location++;
+            size_t root_rs_sp = split(trim(location_concerned.getRoot(),'.'),'/').size() - 1;
+            std::vector<std::string> root_split_rs = split(trim(location_concerned.getRoot(),'.'),'/');
+            std::cout << "hhh1\n";
+            fileList =  check_root_location(location_concerned.getRoot());
+            std::cout << "hhh2\n"
+            if(location_concerned.getAutoindex() == true)
+            {
+                if(location_concerned.getIndex().size() != 0)
+                {
+                    index_file = location_concerned.getRoot() + '/' + *location_concerned.getIndex().begin();
+                    if(std::find(fileList.begin(),fileList.end(),*location_concerned.getIndex().begin()) != fileList.end())
+                        content = readFile(index_file);
+                    else
+                        content = readFile("./default/index.html");
+                }
+                else
+                   content = readFile("./default/index.html"); 
+            }
+            else if(it_find_path_location !=  path_location.end())
+            {
+                it_find_path_location++;
+                int check_else = 0;
+                int check = 0;
+                unsigned long count = root_rs_sp;
+                for (std::vector<std::string>::const_iterator it = it_find_path_location; it != path_location.end(); ++it) {
+                    check = 1;
+                    if(std::find(fileList.begin(),fileList.end(),*it) != fileList.end())
+                    {
+                        count++;
+                        if(check_else == 0)
+                            index_file = location_concerned.getRoot() + '/' + *it;
+                        else
+                            index_file = index_file + '/' + *it;
+                        if(isDirectory(index_file))
+                            check_else = 1;
+                        else
+                            check_else = 0;
+                    }
+                    if(check_else == 1)
+                        fileList = check_root_location(index_file);
+                }
+                if(check_else == 0 && count == path_location.size() - 1)
+                    content = readFile(index_file);
+                else if(check_else == 1 && count == path_location.size() - 1)
+                {
+                    std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
+                    content = generateAttractivePage(index_file,1);
+                }
+                if(check == 0 && count == path_location.size() - 1)
+                {
+                    index_file = location_concerned.getRoot();
+                    std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
+                    content = generateAttractivePage(index_file,1);
+                }
+                else if((count != std::string::npos && root_rs_sp != std::string::npos) 
+                && (count == root_rs_sp && existent_folder != 1))
+                {
+                    if(root_split_rs.back() == path_location.back() || path_location.size() == 1)
+                    {
+                        index_file = location_concerned.getRoot();
+                        std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
+                        content = generateAttractivePage(index_file,1);
+                    }
+                }
+            }
+            else if(it_find_path_location ==  path_location.end())
+            {
+                index_file = location_concerned.getRoot();
+                std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
+                content = generateAttractivePage(index_file,1);
+            }
+            std::cout << "\n\n";
+
+        }
+    }
+    else if(it_find_path_location !=  path_location.end())
+    {
+        it_find_location_server = server_socket.getLocations().find("/");
+        location_concerned = it_find_location_server->second;
+        std::cout << "-------------->>> " << location_concerned.getPath() << " <<<-----------------\n";
+        if(!(std::find(location_concerned.getMethods().begin(),location_concerned.getMethods().end(),"DELETE") 
+        != location_concerned.getMethods().end()))
+        {
+            check_put_header = 1;
+            statusCode = 403;
+            status_message = "Forbidden";
+            return generateResponse("<h1>403 the client doesn't have permission to DELETE</h1>", request_data);
+        }
+        else
+        {
+            size_t root_rs_sp = split(trim(location_concerned.getRoot(),'.'),'/').size() - 1;
+            std::vector<std::string> root_split_rs = split(trim(location_concerned.getRoot(),'.'),'/');
+            fileList =  check_root_location(location_concerned.getRoot());
             int check_else = 0;
             int check = 0;
             unsigned long count = root_rs_sp;
@@ -210,187 +333,136 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
                         check_else = 1;
                     else
                         check_else = 0;
+                    
                 }
                 if(check_else == 1)
                     fileList = check_root_location(index_file);
             }
-            if(check_else == 0 && count == path_location.size() - 1)
+            if(check_else == 0)
                 content = readFile(index_file);
             else if(check_else == 1 && count == path_location.size() - 1)
             {
                 std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
-                fileList = check_root_location(index_file);
-                content = generateAttractivePage(fileList,index_file,1);
+                content = generateAttractivePage(index_file,1);
             }
-            if(check == 0 && count == path_location.size() - 1)
+            if((check == 0 || 
+                (trim(location_concerned.getRoot(),'.') == "/" + *path_location.begin() && path_location.size() == root_rs_sp + 1)) 
+                && count == path_location.size() - 1) 
             {
                 index_file = location_concerned.getRoot();
                 std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
-                fileList = check_root_location(index_file);
-                content = generateAttractivePage(fileList,index_file,1);
+                content = generateAttractivePage(index_file,0);
+                check_put_header = 1;
             }
-            else if((count != std::string::npos && root_rs_sp != std::string::npos) 
-            && (count == root_rs_sp && existent_folder != 1))
+            else if((count != std::string::npos && root_rs_sp != std::string::npos) && (count == root_rs_sp && existent_folder != 1))
             {
-                if(root_split_rs.back() == path_location.back() || path_location.size() == 1)
+                if(root_split_rs.back() == path_location.back() || (path_location.size() == 1 && path_location.back() == "/"))
                 {
                     index_file = location_concerned.getRoot();
                     std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
-                    fileList = check_root_location(index_file);
-                    content = generateAttractivePage(fileList,index_file,1);
+                    content = generateAttractivePage(index_file,1); 
                 }
             }
-        }
-        else if(it_find_path_location ==  path_location.end())
-        {
-            index_file = location_concerned.getRoot();
-            std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
-            fileList = check_root_location(index_file);
-            content = generateAttractivePage(fileList,index_file,1);
-        }
-        std::cout << "\n\n";
-    }
-    else if(it_find_path_location !=  path_location.end())
-    {
-        it_find_location_server = server_socket.getLocations().find("/");
-        location_concerned = it_find_location_server->second;
-        size_t root_rs_sp = split(trim(location_concerned.getRoot(),'.'),'/').size() - 1;
-        std::vector<std::string> root_split_rs = split(trim(location_concerned.getRoot(),'.'),'/');
-        fileList =  check_root_location(location_concerned.getRoot());
-        int check_else = 0;
-        int check = 0;
-        unsigned long count = root_rs_sp;
-        for (std::vector<std::string>::const_iterator it = it_find_path_location; it != path_location.end(); ++it) {
-            check = 1;
-            if(std::find(fileList.begin(),fileList.end(),*it) != fileList.end())
-            {
-                count++;
-                if(check_else == 0)
-                    index_file = location_concerned.getRoot() + '/' + *it;
-                else
-                    index_file = index_file + '/' + *it;
-                if(isDirectory(index_file))
-                    check_else = 1;
-                else
-                    check_else = 0;
-                
-            }
-            if(check_else == 1)
-                fileList = check_root_location(index_file);
-        }
-        if(check_else == 0)
-            content = readFile(index_file);
-        else if(check_else == 1 && count == path_location.size() - 1)
-        {
-            std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
-            fileList = check_root_location(index_file);
-            content = generateAttractivePage(fileList,index_file,1);
-        }
-        if((check == 0 || 
-            (trim(location_concerned.getRoot(),'.') == "/" + *path_location.begin() && path_location.size() == root_rs_sp + 1)) 
-            && count == path_location.size() - 1) 
-        {
-            index_file = location_concerned.getRoot();
-            std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
-            fileList = check_root_location(index_file);
-            content = generateAttractivePage(fileList,index_file,0);
-            check_put_header = 1;
-        }
-        else if((count != std::string::npos && root_rs_sp != std::string::npos) && (count == root_rs_sp && existent_folder != 1))
-        {
-            if(root_split_rs.back() == path_location.back() || (path_location.size() == 1 && path_location.back() == "/"))
-            {
-                index_file = location_concerned.getRoot();
-                std::cout << "====== >> folder path <<  ======> " << index_file << std::endl;
-                fileList = check_root_location(index_file);
-                content = generateAttractivePage(fileList,index_file,1); 
-            }
+
         }
     }
     else 
     {
         it_find_location_server = server_socket.getLocations().find("/");
         location_concerned = it_find_location_server->second;
-        std::vector<std::string> fileList =  check_root_location(location_concerned.getRoot());
-        index_file = location_concerned.getRoot() + request_data.getPath();
-        if(std::find(fileList.begin(),fileList.end(),trim(request_data.getPath(),'/')) != fileList.end())
-            content = readFile(index_file);
+        std::cout << "-------------->>> " << location_concerned.getPath() << " <<<-----------------\n";
+        if(!(std::find(location_concerned.getMethods().begin(),location_concerned.getMethods().end(),"DELETE") 
+        != location_concerned.getMethods().end()))
+        {
+            check_put_header = 1;
+            statusCode = 403;
+            status_message = "Forbidden";
+            return generateResponse("<h1>403 the client doesn't have permission to DELETE</h1>", request_data);
+        }
+        else
+        {
+            std::vector<std::string> fileList =  check_root_location(location_concerned.getRoot());
+            index_file = location_concerned.getRoot() + request_data.getPath();
+            if(std::find(fileList.begin(),fileList.end(),trim(request_data.getPath(),'/')) != fileList.end())
+                content = readFile(index_file);
+        }
     }
     if ((content.empty() && check_if != 1) || existent_folder == 1) {
         check_put_header = 1;
         statusCode = 404;
         status_message = "Not Found";
-        return generateResponse("<h1>404 Not Found</h1>", request_data);
+        std::cout << "content tttttttttt => " << index_file << std::endl;
+        return generateResponse("<h1>404 Resource doesn't exist</h1>", request_data);
     }
     return generateResponse(content, request_data);
 }
 
 
-// bool DeleteHandler::resourceExists(const std::string& path) {
-//     struct stat buffer;
-//     return (stat(path.c_str(), &buffer) == 0);
-// }
+bool DeleteHandler::resourceExists(const std::string& path) {
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0);
+}
 
-// bool DeleteHandler::deleteFile(const std::string& path) {
-//     // Attempt to remove the file
-//     if (remove(path.c_str()) != 0) {
-//         std::cerr << "Error deleting file: " << path << std::endl;
-//         return false;
-//     }
-//     std::cout << "Successfully deleted file: " << path << std::endl;
-//     return true;
-// }
+bool DeleteHandler::deleteFile(const std::string& path) {
+    // Attempt to remove the file
+    if (remove(path.c_str()) != 0) {
+        std::cerr << "Error deleting file: " << path << std::endl;
+        return false;
+    }
+    std::cout << "Successfully deleted file: " << path << std::endl;
+    return true;
+}
 
-// bool DeleteHandler::deleteDirectory(const std::string& path) {
-//     DIR* dir = opendir(path.c_str());
-//     if (!dir) {
-//         std::cerr << "Error opening directory: " << path << std::endl;
-//         return false;
-//     }
+bool DeleteHandler::deleteDirectory(const std::string& path) {
+    DIR* dir = opendir(path.c_str());
+    if (!dir) {
+        std::cerr << "Error opening directory: " << path << std::endl;
+        return false;
+    }
     
-//     struct dirent* entry;
-//     bool success = true;
+    struct dirent* entry;
+    bool success = true;
     
-//     // First, recursively delete all contents
-//     while ((entry = readdir(dir)) != NULL) {
-//         std::string name = entry->d_name;
+    // First, recursively delete all contents
+    while ((entry = readdir(dir)) != NULL) {
+        std::string name = entry->d_name;
         
-//         // Skip "." and ".." directories
-//         if (name == "." || name == "..") {
-//             continue;
-//         }
+        // Skip "." and ".." directories
+        if (name == "." || name == "..") {
+            continue;
+        }
         
-//         std::string full_path = path + "/" + name;
-//         struct stat path_stat;
-//         stat(full_path.c_str(), &path_stat);
+        std::string full_path = path + "/" + name;
+        struct stat path_stat;
+        stat(full_path.c_str(), &path_stat);
         
-//         if (S_ISDIR(path_stat.st_mode)) {
-//             // Recursive call for subdirectories
-//             if (!deleteDirectory(full_path)) {
-//                 success = false;
-//             }
-//         } else {
-//             // Delete file
-//             if (!deleteFile(full_path)) {
-//                 success = false;
-//             }
-//         }
-//     }
+        if (S_ISDIR(path_stat.st_mode)) {
+            // Recursive call for subdirectories
+            if (!deleteDirectory(full_path)) {
+                success = false;
+            }
+        } else {
+            // Delete file
+            if (!deleteFile(full_path)) {
+                success = false;
+            }
+        }
+    }
     
-//     closedir(dir);
+    closedir(dir);
     
-//     // Then delete the empty directory itself
-//     if (success && rmdir(path.c_str()) != 0) {
-//         std::cerr << "Error deleting directory: " << path << std::endl;
-//         success = false;
-//     }
+    // Then delete the empty directory itself
+    if (success && rmdir(path.c_str()) != 0) {
+        std::cerr << "Error deleting directory: " << path << std::endl;
+        success = false;
+    }
     
-//     if (success) {
-//         std::cout << "Successfully deleted directory: " << path << std::endl;
-//     }
+    if (success) {
+        std::cout << "Successfully deleted directory: " << path << std::endl;
+    }
     
-//     return success;
-// }
+    return success;
+}
 
 // std::string DeleteHandler::createResponse(int statusCode, const std::string& message) {
 //     std::string response = "HTTP/1.1 " + std::to_string(statusCode) + " " + message + "\r\n";

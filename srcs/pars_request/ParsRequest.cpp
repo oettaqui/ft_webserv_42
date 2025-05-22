@@ -108,9 +108,11 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             is_boundary = true;
         }
     }else{
-        std::cout << "content type not found " << std::endl;
         if (method == "POST")
+        {
+            std::cout << "content type not found " << std::endl;
             is_valid = false;
+        }
     }
 
     if (headers.find("Content-Length") != headers.end() && 
