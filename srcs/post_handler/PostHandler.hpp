@@ -13,6 +13,7 @@
 #include "../pars_request/ParsRequest.hpp"
 #include "../Parse_configfile/Location.hpp"
 
+
 class ParsRequest;
 class PostHandler {
 private:
@@ -54,6 +55,14 @@ private:
     std::string boundarySep;
     std::string sep;
     std::string terminator;
+
+    // CGI
+    bool isCGI;
+    std::string cType;
+    std::string scriptPath;
+    std::map<std::string, std::string> cgiPassMap;
+
+    
     
 public:
     PostHandler();
@@ -85,6 +94,12 @@ public:
 
     void setSepa(std::string sep);
     void setTer(std::string ter);
+
+
+    bool getCGIState() const;
+    std::string getContentType() const;
+    std::string getScriptPath() const;
+    std::map<std::string, std::string> getCgiPass() const;
 };
 
 #endif

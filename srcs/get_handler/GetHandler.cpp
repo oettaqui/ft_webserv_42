@@ -501,10 +501,8 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
     }
     return generateResponse(content, request_data);
 }
-// get size compare size with 8000 if up read multiple time
 //
 std::string GetHandler::readFile(const std::string& filePath) {
-    // char str[8000] ={0};
     std::string extension;
     if(!filePath.empty())
     {
@@ -524,7 +522,7 @@ std::string GetHandler::readFile(const std::string& filePath) {
         std::cout << "header put\n";
         generate_header();
     }
-    
+    std::cout << "================={ " << contentType << " }======================\n";
     size_t size = getFileSize(filePath);
     std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
     const size_t bufferSize = 8000; // Buffer size set to 8000 bytes

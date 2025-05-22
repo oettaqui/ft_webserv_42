@@ -149,8 +149,10 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             }
             
             if (p->isComplet()) {
-                std::cout << "Complete request received, preparing response" << std::endl;
-                std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
+                // std::cout << "Complete request received, preparing response" << std::endl;
+                // std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
+                // check CGI
+
                 if(p->getMethod() == "GET")
                     write_buffers[fd] = p->getResponses().find(fd)->second;
                 else

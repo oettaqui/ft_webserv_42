@@ -14,6 +14,9 @@ PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false)
 
     this->sep = ""; 
     this->terminator = ""; 
+
+    this->isCGI = false;
+    this->scriptPath = "";
 }
 
 PostHandler::~PostHandler() {
@@ -104,11 +107,9 @@ bool PostHandler::directoryExists(const std::string& path) {
     struct stat info;
     
     if (stat(path.c_str(), &info) != 0) {
-        // std::cout << "is not a dir\n";
         return false;
     }
     
-    // std::cout << "is a dir\n";
     return true;
 }
 
@@ -161,12 +162,13 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
 
     std::string contentType = "";
     size_t contentLength = 0;
-
+    std::cout << "POST REQUEST ==============================\n";
     std::map<std::string, std::string> headers = data_req.getHeaders();
    
     std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
     if (contentTypeIt != headers.end()) {
         contentType = contentTypeIt->second;
+        cType = contentType;
     }
     if (!data_req.isChunked())
     {
@@ -185,15 +187,48 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     locations = server.getLocations();
     std::string location_path = "";
     Location location ;
-    std::map<std::string, Location>::iterator locationIt = locations.find(data_req.getPath());
+    std::string p = data_req.getPath();
+
+    size_t fp;
+    std::string fileN = "";
+    std::string l;
+    int c = 0;
+    if (p.find(".php") != std::string::npos)
+    {
+        this->scriptPath = p;
+        c = 1;
+        fp = p.find_last_of("/", p.length());
+        l = p.substr(0, fp);
+        fileN = p.substr(fp + 1, p.length());
+        std::cout << "fileN ================= " << fileN << std::endl;
+        std::cout << "location =================== " << l << std::endl;
+    }
+    std::map<std::string, Location>::iterator locationIt;
+    if (c == 1)
+        locationIt = locations.find(l);
+    else
+        locationIt = locations.find(p);
+    
     if (locationIt != locations.end())
     {
         location = locationIt->second;
+        if (location.getCgi())
+        {
+            std::cout << "=============  IS CGI ========\n";
+            this->cgiPassMap = location.getCgiPass();
+            this->isCGI = true;
+        }else{
+            std::cout << "=============  IS NOT CGI ========\n";
+            this->isCGI = false;
+        }
         location_path =location.getRoot();
 
     }
     else{
-        std::cout << "location not found\n";
+
+        
+        std::cout << "location not found  gggggg\n";
+        std::cout << data_req.getPath() << std::endl;
         status = 404;
         return ;
     }
@@ -209,7 +244,21 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         if (itT != contentTypes.end()) {
             extension = itT->second;
         } else {
-            std::cout << "Extension not found for content type: " << contentType << std::endl;
+            // std::cout << " " << contentType << std::endl;
+            if (contentType == "application/x-www-form-urlencoded")
+            {
+                if (fileN.empty())
+                    extension = "txt";
+                else{
+                    size_t pointP = fileN.find(".");
+                    if (pointP != std::string::npos)
+                    {
+                        extension = fileN.substr(pointP, fileN.length());
+                    }
+                }
+            }
+            else
+                std::cout << "Content Type Unsupported" << std::endl;
         }
         if (expectedLength > maxBodySize && maxBodySize > 0 && expectedLength > 0){
             std::cout << "This file has a content lenght greater then max body size : " << std::endl;
@@ -219,7 +268,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
             this->filename = createUniqueFile(extension, location_path);
         }
         if (!filename.empty()) {
-            std::cout << "Created file: " << filename << std::endl;
+            std::cout << "Created file: " << this->filename << std::endl;
         }
         else{
             return;
@@ -329,6 +378,7 @@ void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_r
                         extension = itT->second;
                     } else {
                         std::cout << "Extension not found for content type: " << contentType << std::endl;
+                        // extension = "txt";
                     }
                     std::cout << "extension " << this->extension << std::endl;
                     if (this->file.is_open())
@@ -401,6 +451,14 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
     std::map<std::string, Location>::iterator locationIt = locations.find(data_req.getPath());
     if (locationIt != locations.end()) {
         location = locationIt->second;
+        if (location.getCgi())
+        {
+            std::cout << "=============  IS CGI FROM BOUNDARY ========\n";
+            this->isCGI = true;
+        }else{
+            std::cout << "=============  IS NOT CGI FROM BOUNDARY ========\n";
+            this->isCGI = false;
+        }
         location_path = location.getRoot();
     } else {
         std::cout << "Location not found: " << data_req.getPath() << std::endl;
@@ -552,4 +610,22 @@ void PostHandler::setSepa(std::string sep){
 
 void PostHandler::setTer(std::string ter){
     this->terminator = ter;
+}
+
+
+bool PostHandler::getCGIState() const{
+    return isCGI;
+}
+
+std::string PostHandler::getContentType () const{
+    return cType;
+}
+
+std::string PostHandler::getScriptPath () const{
+    return scriptPath;
+}
+
+std::map<std::string, std::string> PostHandler::getCgiPass() const 
+{ 
+    return cgiPassMap;
 }

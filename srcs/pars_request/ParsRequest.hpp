@@ -15,7 +15,9 @@
 #include "../Parse_configfile/ConfigParser.hpp"
 #include "../post_handler/PostHandler.hpp"
 #include "../get_handler/GetHandler.hpp"
+#include "../CGI/CGIPost.hpp"
 
+class CGIPost;
 class PostHandler;
 class ParsRequest{
     private:
@@ -41,6 +43,20 @@ class ParsRequest{
         
 
         PostHandler* postHandler;
+
+        CGIPost *cgiHandler;
+
+        struct dataCGI {
+            std::string method;
+            std::string path;
+            std::string version;
+            std::map<std::string, std::string> cgiPass;
+            std::string file;
+            std::string contentType;
+            int contentLen;
+            std::string scriptPath;
+            
+        };
 
     public:
         ParsRequest();

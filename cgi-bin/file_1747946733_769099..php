@@ -1,0 +1,1 @@
+username=oussama&email=a%40gmail.com&age=18

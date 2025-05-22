@@ -7,6 +7,7 @@ ParsRequest::ParsRequest() {
     is_chunked = false;
     is_boundary = false;
     postHandler = NULL;
+    cgiHandler = NULL;
 
 }
 
@@ -14,6 +15,8 @@ ParsRequest::~ParsRequest() {
     if (postHandler) {
         delete postHandler;
     }
+    if (cgiHandler)
+        delete cgiHandler;
 }
 
 
@@ -101,16 +104,18 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         std::string boundary = "multipart/form-data";
 
         std::string valueContentType = headers["Content-Type"];
-
+        // std::cout << valueContentType << std::endl;
         if (valueContentType.find(boundary) != std::string::npos)
         {
             std::cout << "it is a boundary" << std::endl;
             is_boundary = true;
         }
     }else{
-        std::cout << "content type not found " << std::endl;
         if (method == "POST")
+        {
+            std::cout << "content type not found " << std::endl;
             is_valid = false;
+        }
     }
 
     if (headers.find("Content-Length") != headers.end() && 
@@ -187,10 +192,11 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             std::cout << "A BAD REQUEST 2" << std::endl;
             return;
         }
+    
 
         
         if (method == "POST" && !is_chunked && !is_boundary) {
-            
+            std::cout << "IS BINARY ========" << std::endl;
             std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
             if (contentTypeIt != headers.end()) {
                 contentType = contentTypeIt->second;
@@ -215,6 +221,30 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 }
                 if (postHandler->isRequestComplete()) {
                     std::cout << "true " << std::endl;
+                    if (postHandler->getCGIState()){
+                        cgiHandler =  new CGIPost();
+                        dataCGI data;
+                        data.method = method;
+                        data.path = path;
+                        data.version = version;
+                        data.file = postHandler->getFilename();
+                        data.contentType = postHandler->getContentType();
+                        data.contentLen = postHandler->getCurrentLength();
+                        data.scriptPath = postHandler->getScriptPath();
+
+                        std::cout << "=============================" << std::endl;
+                        std::cout << "data.method " << data.method << std::endl;
+                        std::cout << "data.path " << data.path << std::endl;
+                        std::cout << "data.version " << data.version << std::endl;
+                        std::cout << "data.file " << data.file << std::endl;
+                        std::cout << "data.contentType " << data.contentType << std::endl;
+                        std::cout << "data.contentLen " << data.contentLen << std::endl;
+                        std::cout << "data.scriptPath " << data.scriptPath << std::endl;
+                        std::cout << "==========================" << std::endl;
+
+                        
+
+                    }
                     is_Complet = true;
                 }
             }
@@ -237,6 +267,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 is_Complet = true;
             }
             if (postHandler->isRequestComplete()) {
+                    
                     is_valid = false;
                     is_Complet = true;
             }
@@ -309,9 +340,30 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             postHandler->processData(request);
         
         if (postHandler->isRequestComplete()) {
-            std::cout << "complet ++++++++++++\n";
+            if (postHandler->getCGIState()){
+                cgiHandler =  new CGIPost();
+                dataCGI data;
+                data.method = method;
+                data.path = path;
+                data.version = version;
+                data.file = postHandler->getFilename();
+                data.contentType = postHandler->getContentType();
+                data.contentLen = postHandler->getCurrentLength();
+                data.scriptPath = postHandler->getScriptPath();
+
+                std::cout << "=============================" << std::endl;
+                std::cout << "data.method " << data.method << std::endl;
+                std::cout << "data.path " << data.path << std::endl;
+                std::cout << "data.version " << data.version << std::endl;
+                std::cout << "data.file " << data.file << std::endl;
+                std::cout << "data.contentType " << data.contentType << std::endl;
+                std::cout << "data.contentLen " << data.contentLen << std::endl;
+                std::cout << "data.scriptPath " << data.scriptPath << std::endl;
+                std::cout << "==========================" << std::endl;
+
+            }
             is_Complet = true;
-            // return;
+    
         }
     }
 
