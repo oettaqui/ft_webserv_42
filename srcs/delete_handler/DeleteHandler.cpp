@@ -13,6 +13,7 @@ DeleteHandler::DeleteHandler() {
     existent_folder = 0;
     statusCode = 200;
     status_message = "OK";
+    permitions_folder = 0;
 }
 
 DeleteHandler::~DeleteHandler() {
@@ -134,6 +135,8 @@ std::vector<std::string> DeleteHandler::check_root_location(std::string director
         }
     } 
     else {
+        if(resourceExists(directoryPath))
+            permitions_folder = 1;
         std::cout << "--> No files found in directory '" << directoryPath << "'" << std::endl;
     }
     return (fileList);
@@ -228,7 +231,7 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
             std::vector<std::string> root_split_rs = split(trim(location_concerned.getRoot(),'.'),'/');
             std::cout << "hhh1\n";
             fileList =  check_root_location(location_concerned.getRoot());
-            std::cout << "hhh2\n"
+            std::cout << "hhh2\n";
             if(location_concerned.getAutoindex() == true)
             {
                 if(location_concerned.getIndex().size() != 0)
@@ -389,10 +392,18 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
     }
     if ((content.empty() && check_if != 1) || existent_folder == 1) {
         check_put_header = 1;
-        statusCode = 404;
-        status_message = "Not Found";
-        std::cout << "content tttttttttt => " << index_file << std::endl;
-        return generateResponse("<h1>404 Resource doesn't exist</h1>", request_data);
+        if(permitions_folder == 1)
+        {
+            statusCode = 403;
+            status_message = "Forbidden";
+            return generateResponse("<h1>403 the client doesn't have permission to DELETE</h1>", request_data);
+        }
+        else
+        {
+            statusCode = 404;
+            status_message = "Not Found";
+            return generateResponse("<h1>404 Resource doesn't exist</h1>", request_data);
+        }
     }
     return generateResponse(content, request_data);
 }
@@ -417,6 +428,8 @@ bool DeleteHandler::deleteDirectory(const std::string& path) {
     DIR* dir = opendir(path.c_str());
     if (!dir) {
         std::cerr << "Error opening directory: " << path << std::endl;
+        if(resourceExists(path))
+            permitions_folder = 1;
         return false;
     }
     

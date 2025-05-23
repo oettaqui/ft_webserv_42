@@ -46,6 +46,7 @@ class DeleteHandler {
         int check_put_header;
         int check_if;
         int existent_folder;
+        int permitions_folder;
         int statusCode;
         std::string status_message;
     public:
