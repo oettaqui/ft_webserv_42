@@ -66,6 +66,7 @@ class GetHandler {
         void generate_header();
         std::vector<std::string> get_location_server() const;
         std::string get_path_to_get() ;
+        bool check_root(const std::string &value_p) const;
         // void ReadyToWork(const std::string& path);
 };
 

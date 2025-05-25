@@ -110,6 +110,14 @@ bool ConfigParser::parseLine(const std::string& line, Server& server) {
     return true;
 }
 
+
+// bool ConfigParser::check_root(std::string &value_p) {
+//     if (value_p.length() >= 2 && value_p.substr(0, 2) == "./") {
+//         return true;
+//     }
+//     return false;
+// }
+
 bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locationLine, Server& server) {
     // Extract location path
     size_t pathStart = locationLine.find(" ") + 1;
@@ -152,7 +160,12 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
 
         // Parse location directives
         if (directive == "root")
+        {
+            // if(check_root(value))
             location.setRoot(value);
+            // else
+                // location.setRoot("./" + value);
+        }
         else if (directive == "allow_methods") {
             size_t start = 0, end;
             while ((end = value.find(" ", start)) != std::string::npos) {

@@ -117,10 +117,22 @@ void GetHandler::storeContentTypes(ParsRequest &request_data) {
     contentTypes[""] = "application/octet-stream";
 }
 
+bool GetHandler::check_root(const std::string &value_p) const {
+    if (value_p.length() >= 2 && value_p.substr(0, 2) == "./") {
+        return true;
+    }
+    return false;
+}
+
 std::string GetHandler::generateAttractivePage(const std::vector<std::string>& items,const std::string &base_path) {
     generate_header();
+    std::string send_href;
     const std::string path = trim(base_path,'.');
-    std::string send_href = location_base + path.substr(location_concerned.getRoot().length() - 1,path.length());
+    std::cout << "generateAttractivePage\n";
+    if(check_root(location_concerned.getRoot()))
+        send_href = location_base + path.substr(location_concerned.getRoot().length() - 1,path.length());
+    else
+        send_href = location_base + path.substr(location_concerned.getRoot().length(),path.length());
     std::cout << "======================| location_base |============ :: " << location_base << std::endl;
     std::cout << "======================| path |============ :: " << path << std::endl;
     std::cout << "======================| first send_href |============ :: " << send_href << std::endl;
@@ -191,18 +203,22 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
                        "        <ul class=\"links-list\">\n";
 
     if(location_base == "/")
+    {
+        std::cout << send_href << "   <= -/-/-/-/-/-/-/-/\n";
         send_href = send_href.substr(1, send_href.length());
+        std::cout << send_href << "   <= /*/*/*/*/*/*/*/*/\n";
+    }
     for (size_t i = 0; i < items.size(); ++i) {
         if(isDirectory(base_path + "/" + items[i]))
         {
             html += "            <li class=\"link-item\">\n"
-                    "                <a href=\"" + send_href + "/" + items[i] + "\">" +  items[i] +" 📁</a>\n"
+                    "                <a href=\"" + send_href + "/" + items[i] + "\">" + send_href + "/"+   items[i] +" 📁</a>\n"
                     "            </li>\n";
         }
         else
         {
             html += "            <li class=\"link-item\">\n"
-                    "                <a href=\"" + send_href + "/" + items[i] + "\">"  + items[i] + " 📄</a>\n"
+                    "                <a href=\"" + send_href + "/" + items[i] + "\">" + send_href + "/" +  items[i] + " 📄</a>\n"
                     "            </li>\n";         
         }
     }
@@ -422,15 +438,18 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             }
             else if(!isDirectory(index_file))
             {
+                std::cout << "haaaaaaaaaaaaaaaaa1\n";
                 content = readFile(index_file);
             }
             else if(isDirectory(index_file))
             {
+                std::cout << "haaaaaaaaaaaaaaaaa2\n";
                 fileList = check_root_location(index_file);
                 content = generateAttractivePage(fileList,index_file);
             }
             else
             {
+                std::cout << "haaaaaaaaaaaaaaaaa3\n";
                 content = "<h1>test 1</h1>";
                 generate_header();
             }
