@@ -100,6 +100,8 @@ public:
     std::string getContentType() const;
     std::string getScriptPath() const;
     std::map<std::string, std::string> getCgiPass() const;
+
+    std::pair<std::string, Location> getCorrectPath(const std::map<std::string, Location>& locations, std::string path);
 };
 
 #endif
