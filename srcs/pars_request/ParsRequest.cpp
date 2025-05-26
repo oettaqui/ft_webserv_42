@@ -108,8 +108,11 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             is_boundary = true;
         }
     }else{
-        std::cout << "content type not found " << std::endl;
-        is_valid = false;
+        if (method == "POST")
+        {
+            std::cout << "content type not found " << std::endl;
+            is_valid = false;
+        }
     }
 
     if (headers.find("Content-Length") != headers.end() && 
@@ -267,11 +270,13 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 postHandler = new PostHandler();
             }
             // std::cout << "content length " << contentLength << std::endl;
+            postHandler->setSepa( "--" + boundaryValue + "\r\n");
+            postHandler->setTer( "--" + boundaryValue + "--");
             postHandler->setExpextedLength(contentLength);
-            postHandler->initBoundary(body, boundaryValue, *this, parser);
-            if (postHandler->getStatus() == 404)
+            postHandler->initBoundary(body, *this, parser);
+            if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
             {
-                std::cout << "ERROR 404" << std::endl;
+                std::cout << "ERROR " << std::endl;
                 is_valid = false;
                 is_Complet = true;
             }
@@ -290,25 +295,27 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 is_Complet = true;
                 delete getHandler;
             }
+            else if (method == "DELETE") {
+                DeleteHandler* deleteHandler = new DeleteHandler();
+                std::string response = deleteHandler->handleDeleteRequest(*this, parser);
+                responses[client_fd] = response;
+                is_Complet = true;
+                delete deleteHandler;
+            }
             is_Complet = true;
         }
     }
 
     else if (method == "POST" && postHandler) {
-        if (is_chunked) {
-            // std::cout << "at the second time is chunked =====  " << std::endl;
+        if (is_chunked) 
             postHandler->processChunkedData(request);
-            // std::cout << "here continue" << std::endl;
-        }
         else if (is_boundary)
         {
-            // postHandler->processBoundaryData(body, boundaryValue, *this, parser);
-            postHandler->initBoundary(request, boundaryValue, *this, parser);
+            std::string body = request;
+            postHandler->initBoundary(body, *this, parser);
         }
-        else {
-            // std::cout << "continue here if the post req is binary " << std::endl;
+        else 
             postHandler->processData(request);
-        }
         
         if (postHandler->isRequestComplete()) {
             std::cout << "complet ++++++++++++\n";

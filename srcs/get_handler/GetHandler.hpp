@@ -37,7 +37,7 @@ class GetHandler {
         std::string contentType;
         std::string location_base;
         std::map<std::string, Location>::const_iterator it_find_location_server;
-        std::vector<std::string>::const_iterator it_find_path_location;
+        std::vector<std::string>::iterator it_find_path_location;
         Location  location_concerned;
         Server server_socket;
         std::vector<std::string> fileList;
@@ -45,20 +45,29 @@ class GetHandler {
         std::map<std::string, std::string> contentTypes;
         int client_fd;
         std::string header;
+        int check_put_header;
+        int check_if;
+        int existent_folder;
+        int statusCode;
+        std::string status_message;
+        size_t ingore_element;
     public:
         GetHandler();
-        ~GetHandler() {};
+        ~GetHandler();
         std::string handleGetRequest(ParsRequest &request_data,ConfigParser &parser);
         std::vector<std::string> check_root_location(std::string directoryPath);
         std::vector<std::string> listFiles(const std::string& dirPath);
         bool isDirectory(const std::string& path);
         std::vector<std::string> split(const std::string& str, char delim) const;
-        std::string generateAttractivePage(const std::vector<std::string>& items,const std::string &base_path,int flag);
+        std::string generateAttractivePage(const std::vector<std::string>& items,const std::string &base_path);
         void storeContentTypes(ParsRequest &request_data);
         std::string getFileExtension(const std::string& filename);
         size_t getFileSize(const std::string& filename);
         void generate_header();
-        // void ReadyToWork(const std::string& path);
+        std::vector<std::string> get_location_server() const;
+        std::string get_path_to_get() ;
+        bool check_root(const std::string &value_p) const;
+        std::string url_decode(std::string url);
 };
 
 #endif

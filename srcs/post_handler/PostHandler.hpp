@@ -45,19 +45,15 @@ private:
     std::map<std::string, Location> locations;
 
 
-     enum BoundaryState {
-        START_SEPARATOR,    // Finding initial boundary
-        READING_HEADERS,    // Reading headers after boundary
-        READING_CONTENT,    // Reading content
-        NEXT_SEPARATOR,     // Found boundary, deciding if it's a new part or terminator
-        END_SEPARATOR       // Found terminator
-    };
-    BoundaryState boundaryState;
-
     std::string leftoverData;
     std::string extension;
-    std::string header;
+    std::string headers;
     std::string content;
+    int check;
+
+    std::string boundarySep;
+    std::string sep;
+    std::string terminator;
     
 public:
     PostHandler();
@@ -70,9 +66,9 @@ public:
 
     void processChunkedData(const std::string& data);
 
-    void initBoundary(const std::string& initBody, const std::string &boundaryValue, ParsRequest &data_req, ConfigParser &parser);
+    void initBoundary(const std::string& initBody, ParsRequest &data_req, ConfigParser &parser);
 
-    void processBoundaryData(const std::string& initBody, const std::string &boundarySep, ParsRequest &data_req, std::string& location_path);
+    void processBoundaryData(std::string& initBody, ParsRequest &data_req, std::string& location_path);
 
 
     bool isRequestComplete() const;
@@ -86,6 +82,9 @@ public:
     void setExpextedLength(size_t len);
 
     std::string extractContentType(const std::string& headers);
+
+    void setSepa(std::string sep);
+    void setTer(std::string ter);
 };
 
 #endif

@@ -15,6 +15,7 @@
 #include "../Parse_configfile/ConfigParser.hpp"
 #include "../post_handler/PostHandler.hpp"
 #include "../get_handler/GetHandler.hpp"
+#include "../delete_handler/DeleteHandler.hpp"
 
 class PostHandler;
 class ParsRequest{

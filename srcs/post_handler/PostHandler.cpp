@@ -4,12 +4,16 @@ PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false)
     storeContentTypes();
     this->status = 0;
     this->filename= "";
-    this->boundaryState = START_SEPARATOR;
+
     extension = "";
-    header = "";
+    headers = "";
     content = "";
 
     leftoverData = "";
+    check = 0;
+
+    this->sep = ""; 
+    this->terminator = ""; 
 }
 
 PostHandler::~PostHandler() {
@@ -100,11 +104,11 @@ bool PostHandler::directoryExists(const std::string& path) {
     struct stat info;
     
     if (stat(path.c_str(), &info) != 0) {
-        std::cout << "is not a dir\n";
+        // std::cout << "is not a dir\n";
         return false;
     }
     
-    std::cout << "is a dir\n";
+    // std::cout << "is a dir\n";
     return true;
 }
 
@@ -114,7 +118,7 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
     gettimeofday(&tv, NULL);
     std::ostringstream filename;
 
-    std::cout << "Debug - location_path: '" << location_path << "'" << std::endl;
+    // std::cout << "Debug - location_path: '" << location_path << "'" << std::endl;
     if (directoryExists(location_path))
     {
         if (!location_path.empty() && location_path[location_path.length() - 1] != '/' ) {
@@ -133,11 +137,11 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
     }
     else{
         status = 404;
-        std::cout << "directory not found\n";
+        // std::cout << "directory not found\n";
         return "";
     }
     
-    std::cout << "file name " << filename.str() << std::endl;
+    // std::cout << "file name " << filename.str() << std::endl;
     if (!extension.empty()) {
         filename << "." << extension;
     }
@@ -253,45 +257,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
 
 }
 
-void PostHandler::initBoundary(const std::string& initBody, const std::string &boundaryValue, ParsRequest &data_req, ConfigParser &parser){
-    this->bodyLength = 0;
-    this->isComplete = false;
-    // this->body = "";
 
-
-    // (void)initBody;
-    // (void)boundaryValue;
-    // (void)data_req;
-    // (void)parser;
-    std::cout << "{ BODY " << initBody << " }" << std::endl;
-    std::cout << "{ BOUNDARY VALUE " << boundaryValue << " }" << std::endl;
-    Server server = parser.getServer(data_req.hostMethod(), data_req.portMethod());
-    
-    locations = server.getLocations();
-    std::string location_path = "";
-    Location location ;
-    std::map<std::string, Location>::iterator locationIt = locations.find(data_req.getPath());
-    if (locationIt != locations.end())
-    {
-        location = locationIt->second;
-        location_path =location.getRoot();
-
-    }
-    else{
-        std::cout << "location not found\n";
-        status = 404;
-        return ;
-    }
-    std::vector<std::string> allow_methods = location.getMethods();
-    if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
-        if (!initBody.empty()) {
-            // std::cout << "processBoundaryData " << std::endl;
-            processBoundaryData(initBody, boundaryValue, data_req, location_path);
-        }
-
-    }
-
-}
 
 std::string PostHandler::extractContentType(const std::string& headers) {
     std::string contentTypePrefix = "Content-Type: ";
@@ -299,8 +265,7 @@ std::string PostHandler::extractContentType(const std::string& headers) {
     
     if (contentTypePos != std::string::npos) {
         contentTypePos += contentTypePrefix.length();
-        
-        // Find the end of the line
+
         size_t lineEnd = headers.find("\r\n", contentTypePos);
         if (lineEnd == std::string::npos) {
             lineEnd = headers.length();
@@ -309,28 +274,157 @@ std::string PostHandler::extractContentType(const std::string& headers) {
         return headers.substr(contentTypePos, lineEnd - contentTypePos);
     }
 
-    return "";
+    return "text/plain";
 }
 
 
-
-
-void PostHandler::processBoundaryData(const std::string& initBody, const std::string &boundarySep, ParsRequest &data_req, std::string& location_path){
-    (void)initBody;
-    (void)boundarySep;
+void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_req, std::string& location_path){
     (void)data_req;
     (void)location_path;
-    std::string sep = "--" + boundarySep;
-    std::string terminator =  sep + "--";
-    std::string body = this->leftoverData + initBody;
-    // size_t pos = 0;
     
+    initBody = this->leftoverData + initBody;
+    std::string body = initBody;
+    size_t tPos = 0;
+    size_t sPos = 0;
+    size_t hPos = 0;
+    this->leftoverData = "";
 
-    
+    // Find terminator
+    tPos = body.find(terminator);
+    if (tPos != std::string::npos){
 
+        if (tPos >= 2 && body.substr(tPos-2, 2) == "\r\n") {
+            std::string before_terminator = body.substr(0, tPos-2);
+            this->check = 1;
+            processBoundaryData(before_terminator, data_req, location_path);
+        } else {
+            std::string before_terminator = body.substr(0, tPos);
+            this->check = 1;
+            processBoundaryData(before_terminator, data_req, location_path);
+        }
+    }else{
+        if ((sPos = body.find(sep)) != std::string::npos){
+            if (sPos > 0)
+            {
+                this->content = body.substr(0, sPos);
+                if (this->file.is_open())
+                {
+                    this->file << this->content;
+                    this->content = "";
+                    this->file.flush();
+                    this->file.close();
+                }
+                body = body.substr(sPos, body.length());
+                sPos = 0;
 
+            }
+            if (sPos == 0) {
+                // fetchData();
+                body = body.substr(sep.length(), body.length());
+                if ((hPos = body.find("\r\n\r\n")) != std::string::npos){
+                    this->headers = body.substr(0 , hPos);
+                    std::string contentType = extractContentType(this->headers);
+                    std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
+                    if (itT != contentTypes.end()) {
+                        extension = itT->second;
+                    } else {
+                        std::cout << "Extension not found for content type: " << contentType << std::endl;
+                    }
+                    std::cout << "extension " << this->extension << std::endl;
+                    if (this->file.is_open())
+                    {
+                        this->file.flush();
+                        this->file.close();
+                    }
+                    this->filename = createUniqueFile(extension, location_path);
+                    if (!filename.empty()) {
+                        std::cout << "Created file: " << filename << std::endl;
+                    }
+                    else{
+                        return;
+                    }
+                    file.open(filename.c_str(), std::ios::binary);
+                    if (!file) {
+                        std::cerr << "Failed to open file for writing: " << filename << std::endl;
+                    }
+                    body = body.substr(hPos + 4, body.length());
+                }
+                
+            }
+            processBoundaryData(body, data_req, location_path);
+        }else if ((sPos = body.find(sep)) == std::string::npos){
+            if (check == 0){
+                if (body.length() > sep.length())
+                {
+                    // std::cout << "this scope 2\n";
+                    this->leftoverData = body.substr(body.length() - sep.length(), body.length());
+                    this->file << body.substr(0, body.length() - sep.length());
+                    
+                }else{
+                    // std::cout << "this scope 3\n";
+                    this->leftoverData = body;
+                }
+            }else{
+                
+                // std::cout << "this scope 1\n";
+                this->file << body;
+            }
+        }
+        if (this->check == 1)
+        {
+            // std::cout << " this check ==>  "  << std::endl;
 
+            this->file.flush();
+            this->file.close();
+            isComplete = true;
+            return;
+        }
+    }
 }
+
+
+
+
+void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_req, ConfigParser &parser) {
+
+    this->bodyLength = 0;
+    this->isComplete = false;
+    
+    // std::cout << "{ BODY " << initBody << " }" << std::endl;
+    // std::cout << "{ BOUNDARY VALUE " << boundaryValue << " }" << std::endl;
+    Server server = parser.getServer(data_req.hostMethod(), data_req.portMethod());
+    locations = server.getLocations();
+    
+    std::string location_path = "";
+    Location location;
+
+    std::map<std::string, Location>::iterator locationIt = locations.find(data_req.getPath());
+    if (locationIt != locations.end()) {
+        location = locationIt->second;
+        location_path = location.getRoot();
+    } else {
+        std::cout << "Location not found: " << data_req.getPath() << std::endl;
+        status = 404;
+        return;
+    }
+
+    std::vector<std::string> allow_methods = location.getMethods();
+    if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
+    
+        std::string body = initBody; 
+        processBoundaryData(body, data_req, location_path);
+    } else {
+        std::cout << "Method POST not allowed\n";
+        status = 405;
+        return;
+    }
+}
+
+
+
+
+
+
 
 
 void PostHandler::processData(const std::string& data) {
@@ -451,4 +545,11 @@ void PostHandler::setExpextedLength(size_t len) {
 }
 int PostHandler::getStatus() const {
     return status;
+}
+void PostHandler::setSepa(std::string sep){
+    this->sep = sep;
+}
+
+void PostHandler::setTer(std::string ter){
+    this->terminator = ter;
 }
