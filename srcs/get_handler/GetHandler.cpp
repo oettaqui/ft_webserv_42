@@ -11,6 +11,10 @@ GetHandler::GetHandler()
     status_message = "OK";
 }
 
+GetHandler::~GetHandler() {
+    // Destructor
+}
+
 void GetHandler::generate_header()
 {
     std::cout << "=======================>\n";
@@ -125,17 +129,39 @@ bool GetHandler::check_root(const std::string &value_p) const {
 }
 
 std::string GetHandler::generateAttractivePage(const std::vector<std::string>& items,const std::string &base_path) {
-    generate_header();
     std::string send_href;
-    const std::string path = trim(base_path,'.');
+    std::string path;
+    DIR* dir = opendir(base_path.c_str());
+    if (!dir) {
+        statusCode = 404;
+        status_message = "Not Found";
+        check_if = 0;
+        return "";
+    }
+    generate_header();
+    if(base_path != ".")
+        path = trim(base_path,'.');
     std::cout << "generateAttractivePage\n";
     if(check_root(location_concerned.getRoot()))
+    {
+        std::cout << "hnaa1\n";
         send_href = location_base + path.substr(location_concerned.getRoot().length() - 1,path.length());
+    }
+    else if(path.empty())
+    {
+        send_href = base_path;
+    }
     else
+    {
+        std::cout << "hnaa2\n";
+        std::cout << "======================| location_base |============ :: " << location_base << std::endl;
+        std::cout << "======================| base_path |============ :: " << base_path << std::endl;
+        std::cout << "======================| path |============ :: " << path << std::endl;
         send_href = location_base + path.substr(location_concerned.getRoot().length(),path.length());
-    std::cout << "======================| location_base |============ :: " << location_base << std::endl;
-    std::cout << "======================| path |============ :: " << path << std::endl;
-    std::cout << "======================| first send_href |============ :: " << send_href << std::endl;
+    }
+    std::cout << "======================| (2)location_base |============ :: " << location_base << std::endl;
+    std::cout << "======================| (2)path |============ :: " << path << std::endl;
+    std::cout << "======================| (2)first send_href |============ :: " << send_href << std::endl;
     std::string html = "<!DOCTYPE html>\n"
                        "<html lang=\"en\">\n"
                        "<head>\n"
@@ -165,7 +191,7 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
                        "            margin-top: 0;\n"
                        "        }\n"
                        "        .links-list {\n"
-                       "            list-style-type: none;\n"
+                       "            list-style-type: none;\n"wnloads/badr
                        "            padding: 0;\n"
                        "        }\n"
                        "        .link-item {\n"
@@ -202,23 +228,22 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
                        "        <h1>Files List</h1>\n"
                        "        <ul class=\"links-list\">\n";
 
-    if(location_base == "/")
+    if(location_base == "/" && location_concerned.getRoot() != ".")
     {
-        std::cout << send_href << "   <= -/-/-/-/-/-/-/-/\n";
         send_href = send_href.substr(1, send_href.length());
-        std::cout << send_href << "   <= /*/*/*/*/*/*/*/*/\n";
+        std::cout << "======================| (3)first send_href |============ :: " << send_href << std::endl;
     }
     for (size_t i = 0; i < items.size(); ++i) {
         if(isDirectory(base_path + "/" + items[i]))
         {
             html += "            <li class=\"link-item\">\n"
-                    "                <a href=\"" + send_href + "/" + items[i] + "\">" + send_href + "/"+   items[i] +" 📁</a>\n"
+                    "                <a href=\"" + send_href + "/" + items[i] + "\">"  + items[i] +" 📁</a>\n"
                     "            </li>\n";
         }
         else
         {
             html += "            <li class=\"link-item\">\n"
-                    "                <a href=\"" + send_href + "/" + items[i] + "\">" + send_href + "/" +  items[i] + " 📄</a>\n"
+                    "                <a href=\"" + send_href + "/" + items[i] + "\">"  +  items[i] + " 📄</a>\n"
                     "            </li>\n";         
         }
     }
@@ -363,6 +388,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         {
             statusCode = 403;
             status_message = "Forbidden";
+            contentType = "text/html";
             generate_header();
             return generateResponse("<h1>403 the client doesn't have permission to GET</h1>", request_data);
         }
@@ -412,6 +438,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         if(!(std::find(location_concerned.getMethods().begin(),location_concerned.getMethods().end(),"GET") 
         != location_concerned.getMethods().end()))
         {
+            contentType = "text/html";
             std::cout << "imposiiiii \n";
             statusCode = 403;
             status_message = "Forbidden";
@@ -458,6 +485,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
     if (content.empty() && check_if == 0) {
         check_put_header = 1;
         statusCode = 404;
+        contentType = "text/html";
         status_message = "Not Found";
         std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
         generate_header();
@@ -467,7 +495,6 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
 }
 
 std::string GetHandler::readFile(const std::string& filePath) {
-    // char str[8000] ={0};
     std::string extension;
     if(!filePath.empty())
     {
@@ -483,11 +510,6 @@ std::string GetHandler::readFile(const std::string& filePath) {
         std::cout << "failed Read ///////\n";
         return "";
     }
-    // if(check_put_header == 0)
-    // {
-    //     std::cout << "header put\n";
-    //     generate_header();
-    // }
     generate_header();
     size_t size = getFileSize(filePath);
     std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";

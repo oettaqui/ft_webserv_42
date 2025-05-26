@@ -49,6 +49,7 @@ class DeleteHandler {
         int permitions_folder;
         int statusCode;
         std::string status_message;
+        size_t ingore_element;
     public:
         DeleteHandler();
         ~DeleteHandler();
@@ -57,15 +58,15 @@ class DeleteHandler {
         std::vector<std::string> listFiles(const std::string& dirPath);
         bool isDirectory(const std::string& path);
         std::vector<std::string> split(const std::string& str, char delim) const;
-        std::string generateAttractivePage(const std::string &base_path,int flag);
+        std::string generateAttractivePage(const std::string &base_path);
         std::string getFileExtension(const std::string& filename);
         size_t getFileSize(const std::string& filename);
         void generate_header();
-    // // Helper methods
+        std::vector<std::string> get_location_server() const;
+        std::string get_path_to_get();
         bool resourceExists(const std::string& path);
         bool deleteFile(const std::string& path);
         bool deleteDirectory(const std::string& path);
-    // std::string createResponse(int statusCode, const std::string& message);
 };
 
 #endif // DELETE_HANDLER_HPP

@@ -53,7 +53,7 @@ class GetHandler {
         size_t ingore_element;
     public:
         GetHandler();
-        ~GetHandler() {};
+        ~GetHandler();
         std::string handleGetRequest(ParsRequest &request_data,ConfigParser &parser);
         std::vector<std::string> check_root_location(std::string directoryPath);
         std::vector<std::string> listFiles(const std::string& dirPath);
@@ -67,7 +67,6 @@ class GetHandler {
         std::vector<std::string> get_location_server() const;
         std::string get_path_to_get() ;
         bool check_root(const std::string &value_p) const;
-        // void ReadyToWork(const std::string& path);
 };
 
 #endif
