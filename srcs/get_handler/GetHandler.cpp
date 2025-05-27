@@ -15,14 +15,26 @@ GetHandler::~GetHandler() {
     // Destructor
 }
 
-void GetHandler::generate_header()
+void GetHandler::generate_header(int flag)
 {
     std::cout << "=======================>\n";
     std::stringstream header;
-    header  << "HTTP/1.1 "<< statusCode << " " <<  status_message << "\r\n"
-            << "Content-Type: " << contentType << "\r\n"
-            << "Connection: close\r\n"
-            << "\r\n";
+    if(flag == 0)
+    {
+        std::cout << "header for small\n";
+        header  << "HTTP/1.1 "<< statusCode << " " <<  status_message << "\r\n"
+                << "Content-Type: " << contentType << "\r\n"
+                << "Connection: close\r\n"
+                << "\r\n";
+    }
+    else
+    {
+        std::cout << "header for large\n";
+        header  << "HTTP/1.1 "<< statusCode << " " <<  status_message << "\r\n"
+        << "Content-Type: " << contentType << "\r\n"
+        << "Transfer-Encoding: chunked\r\n"
+        << "\r\n";
+    }
     send(client_fd, header.str().c_str(), header.str().length(), 0);
 } 
 
@@ -138,7 +150,7 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
         check_if = 0;
         return "";
     }
-    generate_header();
+    generate_header(0);
     if(base_path != ".")
         path = trim(base_path,'.');
     std::cout << "generateAttractivePage\n";
@@ -390,7 +402,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             statusCode = 403;
             status_message = "Forbidden";
             contentType = "text/html";
-            generate_header();
+            generate_header(0);
             return generateResponse("<h1>403 the client doesn't have permission to GET</h1>", request_data);
         }
         else
@@ -423,7 +435,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             else
             {
                 content = "<h1>test 1</h1>";
-                generate_header();
+                generate_header(0);
             }
         }
     }
@@ -443,7 +455,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             std::cout << "imposiiiii \n";
             statusCode = 403;
             status_message = "Forbidden";
-            generate_header();
+            generate_header(0);
             return generateResponse("<h1>403 the client doesn't have permission to GET</h1>", request_data);
         }
         else
@@ -479,7 +491,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             {
                 std::cout << "haaaaaaaaaaaaaaaaa3\n";
                 content = "<h1>test 1</h1>";
-                generate_header();
+                generate_header(0);
             }
         }
     }
@@ -489,7 +501,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         contentType = "text/html";
         status_message = "Not Found";
         std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
-        generate_header();
+        generate_header(0);
         return generateResponse("<h1>404 Not Found</h1>", request_data);
     }
     return generateResponse(content, request_data);
@@ -497,48 +509,174 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
 
 std::string GetHandler::readFile(const std::string& filePath) {
     std::string extension;
-    if(!filePath.empty())
-    {
+    if(!filePath.empty()) {
         extension = getFileExtension(filePath);
         std::map<std::string, std::string>::const_iterator it = contentTypes.find(extension);
-        if(it != contentTypes.end() && !extension.empty())
-        {
+        if(it != contentTypes.end() && !extension.empty()) {
             contentType = it->second;
         }
     }
-    std::ifstream file(filePath.c_str(),std::ios::binary);
+    
+    std::ifstream file(filePath.c_str(), std::ios::binary);
     if (!file) {
         std::cout << "failed Read ///////\n";
         return "";
     }
-    generate_header();
+    
     size_t size = getFileSize(filePath);
     std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
-    const size_t bufferSize = 8000; // Buffer size set to 8000 bytes
-    char buffer[bufferSize]; 
-    std::string content; // String to accumulate file content
-    ssize_t bytesSent = 0;
-    ssize_t TotalbytesSent = 0;
-    memset(&buffer, 0, bufferSize);
-    // Read and send the file in chunks
-    while (file.read(buffer, bufferSize) || file.gcount() > 0) {
-        std::cout << "^^^^^^^^^^=> | " << file.gcount() << " |<=^^^^^^^^^\n";
-        bytesSent = send(client_fd, buffer, file.gcount(), 0);
-        if (bytesSent < 0 || bytesSent < file.gcount()) {
-            std::cout << strerror(errno) << std::endl;
-            close(client_fd);
-            std::cout << "clooooooooooooooooooooooooooose TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
-            std::cout << "size : |" << size << "| \n";
-            file.close();
-            return "";
-        }
-        TotalbytesSent = TotalbytesSent + bytesSent;
+    
+    const size_t bufferSize = 1024;
+    // char buffer[bufferSize];
+    const size_t threshold = bufferSize * bufferSize; // 1MB threshold
+    
+    bool useChunked = (size > threshold);
+    generate_header(useChunked ? 1 : 0);
+    
+    if (!useChunked) {
+        // Small file - send with Content-Length
+        return readSmallFile(file, size);
+    } else {
+        // Large file - send chunked
+        return readLargeFileChunked(file);
     }
-    std::cout << "sennnnnnnnnnnnnnnnnnnnnnd complete TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
-    check_if = 1;
+}
+
+std::string GetHandler::readSmallFile(std::ifstream& file, size_t size) {
+    std::string content;
+    content.reserve(size); // Pre-allocate
+    
+    const size_t bufferSize = 1024;
+    char buffer[bufferSize];
+    
+    while (file.read(buffer, bufferSize) || file.gcount() > 0) {
+        content.append(buffer, file.gcount());
+    }
+    
+    // Send all at once for small files
+    ssize_t bytesSent = send(client_fd, content.c_str(), content.length(), 0);
+    if (bytesSent < 0) {
+        std::cout << "Send error: " << strerror(errno) << std::endl;
+        close(client_fd);
+        return "";
+    }
+    
     file.close();
     return content;
 }
+
+std::string GetHandler::readLargeFileChunked(std::ifstream& file) {
+    const size_t bufferSize = 1024;
+    char buffer[bufferSize];
+    ssize_t totalBytesSent = 0;
+    
+    while (file.read(buffer, bufferSize) || file.gcount() > 0) {
+        size_t bytesRead = file.gcount();
+        std::cout << "^^^^^^^^^^=> | " << bytesRead << " |<=^^^^^^^^^\n";
+        
+        // Send chunk size in hex + CRLF
+        std::stringstream chunkSize;
+        chunkSize << std::hex << bytesRead << "\r\n";
+        
+        ssize_t bytesSent = send(client_fd, chunkSize.str().c_str(), chunkSize.str().length(), 0);
+        if (bytesSent < 0) {
+            std::cout << "Chunk size send error: " << strerror(errno) << std::endl;
+            close(client_fd);
+            file.close();
+            return "";
+        }
+        
+        // Send chunk data
+        bytesSent = send(client_fd, buffer, bytesRead, 0);
+        if (bytesSent < 0) {
+            std::cout << "Chunk data send error: " << strerror(errno) << std::endl;
+            close(client_fd);
+            file.close();
+            return "";
+        }
+        
+        // Send CRLF after chunk data
+        bytesSent = send(client_fd, "\r\n", 2, 0);
+        if (bytesSent < 0) {
+            std::cout << "Chunk CRLF send error: " << strerror(errno) << std::endl;
+            close(client_fd);
+            file.close();
+            return "";
+        }
+        
+        totalBytesSent += bytesRead;
+        memset(buffer, 0, bufferSize); // Clear buffer
+    }
+    
+    // Send final chunk (0-sized chunk + CRLF + CRLF)
+    const char* finalChunk = "0\r\n\r\n";
+    ssize_t bytesSent = send(client_fd, finalChunk, 5, 0);
+    if (bytesSent < 0) {
+        std::cout << "Final chunk send error: " << strerror(errno) << std::endl;
+        close(client_fd);
+        file.close();
+        return "";
+    }
+    
+    std::cout << "Chunked send complete. Total bytes sent: " << totalBytesSent << std::endl;
+    file.close();
+    return "";
+}
+
+// std::string GetHandler::readFile(const std::string& filePath) {
+//     std::string extension;
+//     if(!filePath.empty())
+//     {
+//         extension = getFileExtension(filePath);
+//         std::map<std::string, std::string>::const_iterator it = contentTypes.find(extension);
+//         if(it != contentTypes.end() && !extension.empty())
+//         {
+//             contentType = it->second;
+//         }
+//     }
+//     std::ifstream file(filePath.c_str(),std::ios::binary);
+//     if (!file) {
+//         std::cout << "failed Read ///////\n";
+//         return "";
+//     }
+//     size_t size = getFileSize(filePath);
+//     std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
+//     const size_t bufferSize = 1024; // Buffer size set to 8000 bytes
+//     char buffer[bufferSize]; 
+//     std::string content; // String to accumulate file content
+//     ssize_t bytesSent = 0;
+//     ssize_t TotalbytesSent = 0;
+//     memset(&buffer, 0, bufferSize);
+//     if(size > bufferSize * bufferSize)
+//         generate_header(1);
+//     else
+//         generate_header(0);
+//     while (file.read(buffer, bufferSize) || file.gcount() > 0) {
+//         std::cout << "^^^^^^^^^^=> | " << file.gcount() << " |<=^^^^^^^^^\n";
+//         std::stringstream size_header;
+//         if(size > bufferSize * bufferSize)
+//         {
+//             size_header  <<  file.gcount() <<  "\r\n";
+//             bytesSent = send(client_fd, size_header.str().c_str(), size_header.str().length(), 0);
+//         }
+//         bytesSent = send(client_fd, buffer, file.gcount(), 0);
+//         if(size > bufferSize * bufferSize)
+//             bytesSent = send(client_fd, "\r\n", 2, 0);
+//         if (bytesSent < 0) {
+//             std::cout << strerror(errno) << std::endl;
+//             close(client_fd);
+//             std::cout << "clooooooooooooooooooooooooooose(2) TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
+//             std::cout << "size : |" << size << "| \n";
+//             file.close();
+//             return "";
+//         }
+//         TotalbytesSent = TotalbytesSent + bytesSent;
+//     }
+//     std::cout << "sennnnnnnnnnnnnnnnnnnnnnd complete TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
+//     check_if = 1;
+//     file.close();
+//     return content;
+// }
 
 std::string GetHandler::generateResponse(const std::string& content,ParsRequest &request_data) {
     std::stringstream response;

@@ -63,11 +63,13 @@ class GetHandler {
         void storeContentTypes(ParsRequest &request_data);
         std::string getFileExtension(const std::string& filename);
         size_t getFileSize(const std::string& filename);
-        void generate_header();
+        void generate_header(int flag);
         std::vector<std::string> get_location_server() const;
         std::string get_path_to_get() ;
         bool check_root(const std::string &value_p) const;
         std::string url_decode(std::string url);
+        std::string readLargeFileChunked(std::ifstream& file);
+        std::string readSmallFile(std::ifstream& file, size_t size);
 };
 
 #endif
