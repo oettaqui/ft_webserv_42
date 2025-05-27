@@ -10,7 +10,7 @@ const std::string HTML_RESPONSE =
     "    <title>Hello World</title>\r\n"
     "</head>\r\n"
     "<body>\r\n"
-    "    <h1>Hello World</h1>\r\n"
+    "    <h1>Hello World1</h1>\r\n"
     "</body>\r\n"
     "</html>\r\n";
 
@@ -149,14 +149,15 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             }
             
             if (p->isComplet()) {
-                // std::cout << "Complete request received, preparing response" << std::endl;
-                // std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
-                // check CGI
 
                 if(p->getMethod() == "GET")
                     write_buffers[fd] = p->getResponses().find(fd)->second;
-                else
-                    write_buffers[fd] = HTML_RESPONSE;
+                else{
+                    if (!p->getCGIState())
+                        write_buffers[fd] = HTML_RESPONSE;
+                    else
+                        closeConnection(fd);
+                }
                 break;
             }
         }

@@ -5,7 +5,7 @@ PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false)
     this->status = 0;
     this->filename= "";
 
-    extension = "";
+    this->extension = "";
     headers = "";
     content = "";
 
@@ -17,6 +17,8 @@ PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false)
 
     this->isCGI = false;
     this->scriptPath = "";
+
+    this->autoIndex = false;
 }
 
 PostHandler::~PostHandler() {
@@ -158,6 +160,33 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
 }
 
 
+bool PostHandler::fileExistsAndNotEmpty(const std::string& filename) {
+    std::ifstream file(filename.c_str());
+    return file && file.peek() != std::ifstream::traits_type::eof();
+}
+
+std::string PostHandler::getTheValidIndex(std::vector<std::string> index, std::string path) {
+    std::cout << "*****======== PATH ======*****" << std::endl;
+
+
+    if (path.empty() || path[path.length() - 1] != '/') {
+        path += "/";
+    }
+
+    std::string tmp;
+    std::vector<std::string>::iterator it = index.begin();
+    while (it != index.end()) {
+        tmp = path + *it;
+        std::cout << "index ===> " << *it << std::endl;
+        if (fileExistsAndNotEmpty(tmp)) {
+            return tmp; 
+        }
+        ++it;
+    }
+
+    return "";
+}
+
 void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
 
     std::string contentType = "";
@@ -204,8 +233,10 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     size_t fp;
     std::string fileN = "";
     std::string l;
+    std::vector<std::string> indexV;
+    
     int c = 0;
-    if (p.find(".php") != std::string::npos)
+    if (p.find(".php") != std::string::npos || p.find(".py") != std::string::npos)
     {
         this->scriptPath = p;
         c = 1;
@@ -215,63 +246,70 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         std::cout << "fileN ================= " << fileN << std::endl;
         std::cout << "location =================== " << l << std::endl;
     }
-    // std::map<std::string, Location>::iterator locationIt;
-    // if (c == 1)
-    //     locationIt = locations.find(l);
-    // else
-    //     locationIt = locations.find(p);
-    
-    // if (locationIt != locations.end())
-    // {
-        // location = locationIt->second;
-        location = LocationAndPath.second;
-        if (location.getCgi())
+    else if (p.find_last_of(".", p.length()) != std::string::npos)
+        c = 2;
+
+    location = LocationAndPath.second;
+    if (location.getCgi())
+    {
+        std::cout << "=============  IS CGI ========\n";
+        this->cgiPassMap = location.getCgiPass();
+        this->isCGI = true;
+        this->cgi_pass = location.getCgiPass();
+        this->autoIndex = location.getAutoindex();
+        if (c == 2)
         {
-            std::cout << "=============  IS CGI ========\n";
-            this->cgiPassMap = location.getCgiPass();
-            this->isCGI = true;
-        }else{
-            std::cout << "=============  IS NOT CGI ========\n";
-            this->isCGI = false;
+            indexV = location.getIndex();
+            
+            std::string tmp =  getTheValidIndex(indexV, correctPath);
+            if (!tmp.empty())
+            {
+                correctPath = tmp;
+                // std::cout << "CORRECT PATH " << correctPath << std::endl;
+                this->scriptPath = correctPath;
+                c = 1;
+                fp = correctPath.find_last_of("/", p.length());
+                l = correctPath.substr(0, fp);
+                // std::cout << "l" << l << std::endl;
+                fileN = correctPath.substr(fp + 1, correctPath.length());
+            }
+            else{
+                status = 404;
+                return;
+            }
         }
-        if (c != 1)
-            location_path = correctPath;
-        else
-            location_path = l;
+    }else{
+        // std::cout << "=============  IS NOT CGI ========\n";
+        this->isCGI = false;
+    }
+    if (c != 1)
+        location_path = correctPath;
+    else
+        location_path = l;
 
-    // }
-    // else{
-
-
-    //     std::cout << "location not found  gggggg\n";
-    //     std::cout << data_req.getPath() << std::endl;
-    //     status = 404;
-    //     return ;
-    // }
-
-
-     std::vector<std::string> allow_methods = location.getMethods();
+    std::vector<std::string> allow_methods = location.getMethods();
     if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
-        // std::cout << "POST is allowed." << std::endl;
-        std::cout << location_path << std::endl;
+        std::cout << "Location Path" << location_path << std::endl;
         status = 200;
         this->maxBodySize = server.getClientMaxBodySize();
         
-        std::string extension = "";
         std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
         if (itT != contentTypes.end()) {
-            extension = itT->second;
+            this->extension = itT->second;
         } else {
-            // std::cout << " " << contentType << std::endl;
             if (contentType == "application/x-www-form-urlencoded")
             {
                 if (fileN.empty())
-                    extension = "txt";
+                    this->extension = "txt";
                 else{
                     size_t pointP = fileN.find(".");
                     if (pointP != std::string::npos)
                     {
-                        extension = fileN.substr(pointP + 1, fileN.length());
+                        this->extension = fileN.substr(pointP + 1, fileN.length());
+                        std::cout << "extension " << extension << std::endl;
+                    }
+                    else{
+                        std::cout << "==============> " << fileN << std::endl;
                     }
                 }
             }
@@ -386,7 +424,6 @@ void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_r
 
             }
             if (sPos == 0) {
-                // fetchData();
                 body = body.substr(sep.length(), body.length());
                 if ((hPos = body.find("\r\n\r\n")) != std::string::npos){
                     this->headers = body.substr(0 , hPos);
@@ -488,6 +525,9 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
         {
             std::cout << "=============  IS CGI FROM BOUNDARY ========\n";
             this->isCGI = true;
+            this->cgi_pass = location.getCgiPass();
+            this->autoIndex = location.getAutoindex();
+
         }else{
             std::cout << "=============  IS NOT CGI FROM BOUNDARY ========\n";
             this->isCGI = false;
@@ -746,4 +786,19 @@ std::pair<std::string, Location> PostHandler::getCorrectPath(const std::map<std:
 
     std::cout << "No matching location found.\n";
     return std::make_pair("", Location());
+}
+
+
+bool PostHandler::getAutoindexFromPost() const 
+{ 
+    return this->autoIndex;
+}
+
+const std::map<std::string, std::string>& PostHandler::getCgiPassFomPost() const 
+{ 
+    return this->cgiPassMap;
+}
+
+const std::string& PostHandler::getExtension() const{
+    return this->extension;
 }

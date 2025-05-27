@@ -16,6 +16,7 @@
 #include "../post_handler/PostHandler.hpp"
 #include "../get_handler/GetHandler.hpp"
 #include "../CGI/CGIPost.hpp"
+#include "../CGI/DataCGI.hpp"
 
 class CGIPost;
 class PostHandler;
@@ -45,18 +46,9 @@ class ParsRequest{
         PostHandler* postHandler;
 
         CGIPost *cgiHandler;
+        bool CGI;
+        int status;
 
-        struct dataCGI {
-            std::string method;
-            std::string path;
-            std::string version;
-            std::map<std::string, std::string> cgiPass;
-            std::string file;
-            std::string contentType;
-            int contentLen;
-            std::string scriptPath;
-            
-        };
 
     public:
         ParsRequest();
@@ -78,6 +70,8 @@ class ParsRequest{
         // add now 
         const int& getClientFd() const;
         const std::map<int,std::string>& getResponses() const;
+
+        bool getCGIState() const;
 };
 
 #endif
