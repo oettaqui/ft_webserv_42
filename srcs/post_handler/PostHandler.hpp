@@ -63,6 +63,7 @@ private:
     std::string scriptPath;
     std::map<std::string, std::string> cgiPassMap;
     bool autoIndex;
+    
 
     bool fileExistsAndNotEmpty(const std::string& filename);
 

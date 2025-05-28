@@ -191,7 +191,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
 
     std::string contentType = "";
     size_t contentLength = 0;
-    std::cout << "POST REQUEST ==============================\n";
+    // std::cout << "POST REQUEST ==============================\n";
     std::map<std::string, std::string> headers = data_req.getHeaders();
    
     std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
@@ -220,7 +220,13 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
 
     LocationAndPath = getCorrectPath(locations, data_req.getPath());
     correctPath = LocationAndPath.first;
-    std::cout << "************* " << correctPath << " *****************" << std::endl;
+    std::cout << "************* CORRECT PATH ( " << correctPath << " )*****************" << std::endl;
+    size_t Ppos = correctPath.find(".");
+    if ( Ppos != std::string::npos && Ppos + 1 < correctPath.length() && correctPath[Ppos + 1] != '/')
+    {
+        correctPath = correctPath.substr(0, Ppos + 1) + "/" + correctPath.substr(Ppos + 1, correctPath.length());  
+        std::cout << "************* CORRECT PATH UPDATE ( " << correctPath << " )*****************" << std::endl;
+    }
     if (correctPath.empty()){
         std::cout << "Location Not found 404 \n";
         this->status = 404;
@@ -243,8 +249,8 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         fp = p.find_last_of("/", p.length());
         l = p.substr(0, fp);
         fileN = p.substr(fp + 1, p.length());
-        std::cout << "fileN ================= " << fileN << std::endl;
-        std::cout << "location =================== " << l << std::endl;
+        // std::cout << "fileN ================= " << fileN << std::endl;
+        // std::cout << "location =================== " << l << std::endl;
     }
     else if (p.find_last_of(".", p.length()) != std::string::npos)
         c = 2;
@@ -262,19 +268,19 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
             indexV = location.getIndex();
             
             std::string tmp =  getTheValidIndex(indexV, correctPath);
-            if (!tmp.empty())
+            // std::cout << "00000000000000000000000000 { " << tmp << " } 0000000000000000000000000000\n";
+            if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos))
             {
                 correctPath = tmp;
-                // std::cout << "CORRECT PATH " << correctPath << std::endl;
                 this->scriptPath = correctPath;
                 c = 1;
                 fp = correctPath.find_last_of("/", p.length());
                 l = correctPath.substr(0, fp);
-                // std::cout << "l" << l << std::endl;
                 fileN = correctPath.substr(fp + 1, correctPath.length());
             }
-            else{
+            else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos)){
                 status = 404;
+                std::cout << "is a CGI but i don't have the extension that i should interprete it \n";
                 return;
             }
         }
@@ -705,54 +711,6 @@ std::map<std::string, std::string> PostHandler::getCgiPass() const
 }
 
 
-// std::string PostHandler::getCorrectPath(std::map<std::string, Location> locations, std::string path){
-
-//     // std::cout << "============================ START ===========================\n";
-//     // std::cout << "URL PATH => " << path << std::endl;
-//     // for (std::map<std::string, Location>::iterator it = locations.begin(); it != locations.end(); ++it) {
-//     //         std::cout << "Location: " << it->first << std::endl;
-//     // }
-//     std::string tmp = path;
-//     std::string notLocation;
-//     std::string rest = "";
-//     while (!tmp.empty()){
-//         std::map<std::string, Location>::const_iterator it = locations.find(tmp);
-//         if (it != locations.end()) {
-//             std::string root = it->second.getRoot();
-//             // std::string rest = path.substr(tmp.length());
-            
-//             std::string result = root + rest;
-
-//             // std::cout << "Matched Location: " << tmp << std::endl;
-//             // std::cout << "rest" << rest << std::endl;
-//             // std::cout << "Root Path: " << root << std::endl;
-//             // std::cout << "Resolved Full Path: " << result << std::endl;
-//             // std::cout << "============================ END ===========================\n";
-//             return result;
-//         }
-
-//         std::size_t lastSlash = tmp.find_last_of('/');
-//         if (lastSlash == std::string::npos || lastSlash == 0) {
-//             // std::cout << "last slash" << lastSlash << "len tmp " << tmp.length() << std::endl;
-//             if (lastSlash == 0 && tmp.length() > 0){
-//                 rest = tmp.substr(0, tmp.length());
-//                 tmp = "/";
-//             }
-//             else
-//                 tmp = "/";
-            
-//         } else {
-//             rest = tmp.substr(lastSlash, tmp.length()) + rest;
-//             tmp = tmp.substr(0, lastSlash);
-//         }
-
-//     }
-
-//     std::cout << "No matching location found.\n";
-//     // std::cout << "============================ END ===========================\n";
-//     return "";
-// }
-
 std::pair<std::string, Location> PostHandler::getCorrectPath(const std::map<std::string, Location>& locations, std::string path){
 
     std::string tmp = path;
@@ -763,13 +721,19 @@ std::pair<std::string, Location> PostHandler::getCorrectPath(const std::map<std:
         std::map<std::string, Location>::const_iterator it = locations.find(tmp);
         if (it != locations.end()) {
             std::string root = it->second.getRoot();
+            if (!root.empty() && root[root.size() - 1] != '/' && !rest.empty() && rest[0] != '/')
+            {
+                root += "/";
+            }
             std::string result = root + rest;
             
+            
+            std::cout << "============ ROOT " << root << std::endl; 
             std::cout << "============ RESULT " << result << std::endl; 
             return std::make_pair(result, it->second);
         }
 
-        std::size_t lastSlash = tmp.find_last_of('/');
+        size_t lastSlash = tmp.find_last_of('/');
         if (lastSlash == std::string::npos || lastSlash == 0) {
             if (lastSlash == 0 && tmp.length() > 0){
                 rest = tmp.substr(1, tmp.length()) + rest;

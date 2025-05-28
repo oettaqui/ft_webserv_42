@@ -41,7 +41,39 @@ void ParsRequest::parseRequestLine(const std::string& line) {
         path = parts[1];
         version = parts[2];
         is_valid = true;
-    
+        std::cout << "PATH from parsRequestLine function =========> " << path << std::endl;
+        size_t posQuery = path.find("?");
+        size_t posEndQuery = path.find_last_of("#", path.length());
+        if (posQuery != std::string::npos){
+            std::string query;
+            if (posEndQuery != std::string::npos)
+                query = path.substr(posQuery + 1, posEndQuery);
+            else
+                query = path.substr(posQuery + 1, path.length());
+            std::cout << "Query from parsRequestLine function =========> " << query << std::endl;
+            path = path.substr(0, posQuery);
+            // while(query.length() > 0){
+            //     int posK = query.find("=");
+            //     if (posK != std::string::npos){
+            //         std::string key = query.substr(0, posK);
+            //         std::string value = "";
+            //         query = query.substr(posK + 1, query.length());
+            //         if (query.length() < 1 && value.empty())
+            //         {
+            //             is_valid = false;
+            //             break;
+            //         }
+            //         else{
+
+            //         }
+                    
+            //     }else if (){
+            //         is_valid = false;
+            //         break;
+            //     }
+            // }
+
+        }
         if ((method != "POST" && method != "GET" && method != "DELETE") && (version != "HTTP/1.1" || !path.empty())){
             is_valid = false;
         }

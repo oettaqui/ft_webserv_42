@@ -49,6 +49,8 @@ class ParsRequest{
         bool CGI;
         int status;
 
+        std::map<std::string, std::string> queryData;
+
 
     public:
         ParsRequest();
