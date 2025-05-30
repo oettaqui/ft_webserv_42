@@ -371,7 +371,8 @@ std::vector<std::string> GetHandler::get_location_server() const
     return find_vec;
 }
 
-std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser &parser) {
+std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser &parser,int &epoll_fd) {
+    this->epoll_fd = epoll_fd;
     storeContentTypes(request_data);
     path_location = this->split(url_decode(request_data.getPath()),'/');
     contentType = "text/html";
@@ -537,8 +538,11 @@ std::string GetHandler::readFile(const std::string& filePath) {
         // Small file - send with Content-Length
         return readSmallFile(file, size);
     } else {
+        SendState& state = pendingSends[client_fd];
+        state.size = size;
+        state.file = &file;
         // Large file - send chunked
-        return readLargeFileChunked(file);
+        return readLargeFileChunked();
     }
 }
 
@@ -560,68 +564,181 @@ std::string GetHandler::readSmallFile(std::ifstream& file, size_t size) {
         close(client_fd);
         return "";
     }
-    
     file.close();
+    check_if = 1;
     return content;
 }
 
-std::string GetHandler::readLargeFileChunked(std::ifstream& file) {
-    const size_t bufferSize = 1024;
-    char buffer[bufferSize];
-    ssize_t totalBytesSent = 0;
-    
-    while (file.read(buffer, bufferSize) || file.gcount() > 0) {
-        size_t bytesRead = file.gcount();
-        std::cout << "^^^^^^^^^^=> | " << bytesRead << " |<=^^^^^^^^^\n";
-        
-        // Send chunk size in hex + CRLF
-        std::stringstream chunkSize;
-        chunkSize << std::hex << bytesRead << "\r\n";
-        
-        ssize_t bytesSent = send(client_fd, chunkSize.str().c_str(), chunkSize.str().length(), 0);
-        if (bytesSent < 0) {
-            std::cout << "Chunk size send error: " << strerror(errno) << std::endl;
-            close(client_fd);
-            file.close();
-            return "";
-        }
-        
-        // Send chunk data
-        bytesSent = send(client_fd, buffer, bytesRead, 0);
-        if (bytesSent < 0) {
-            std::cout << "Chunk data send error: " << strerror(errno) << std::endl;
-            close(client_fd);
-            file.close();
-            return "";
-        }
-        
-        // Send CRLF after chunk data
-        bytesSent = send(client_fd, "\r\n", 2, 0);
-        if (bytesSent < 0) {
-            std::cout << "Chunk CRLF send error: " << strerror(errno) << std::endl;
-            close(client_fd);
-            file.close();
-            return "";
-        }
-        
-        totalBytesSent += bytesRead;
-        memset(buffer, 0, bufferSize); // Clear buffer
+bool GetHandler::init_membres()
+{
+    SendState& state = pendingSends[client_fd];
+    if(state.file->read(state.buffer,state.bufferSize) || state.file->gcount() > 0)
+    {
+        state.bytes_read = state.file->gcount();
+        return (true);
     }
-    
-    // Send final chunk (0-sized chunk + CRLF + CRLF)
+    else
+    {
+        check_if = 1;
+        std::cout << "init_membres error: " << strerror(errno) << " (total_sent) ==> " << state.sent << std::endl;
+        pendingSends.erase(client_fd);
+        close(client_fd);
+        state.file->close();
+        return (false);
+    }
+    return (true);
+}
+
+bool GetHandler::send_size()
+{
+    SendState& state = pendingSends[client_fd];
+    std::stringstream chunkSize;
+    chunkSize << std::hex << state.bytes_read << "\r\n";    
+    ssize_t bytesSent = send(client_fd, chunkSize.str().c_str(), chunkSize.str().length(), 0);
+    if(bytesSent < 0)
+    {
+        check_if = 1;
+        std::cout << "send_size error: " << strerror(errno) << " (total_sent) ==> " << state.sent <<  std::endl;
+        pendingSends.erase(client_fd);
+        close(client_fd);
+        state.file->close();
+        return (false);
+    }
+    // state.sent = state.sent + bytesSent;
+    return true;
+}
+
+bool GetHandler::send_chunk()
+{
+    SendState& state = pendingSends[client_fd];
+    memset(state.buffer, 0, state.bufferSize);
+    ssize_t bytesSent = send(client_fd, state.buffer, state.bytes_read, 0);
+    if (bytesSent < 0) {
+        check_if = 1;
+        std::cout << "(1)send_chunk error: " << strerror(errno) << " (total_sent) ==> " << state.sent <<  std::endl;
+        pendingSends.erase(client_fd);
+        close(client_fd);
+        state.file->close();
+        return (false);
+    }
+    state.sent = state.sent + bytesSent;
+    memset(state.buffer, 0, state.bufferSize); 
+    return (true);
+}
+
+bool GetHandler::send_separator()
+{
+    SendState& state = pendingSends[client_fd];
+    ssize_t bytesSent = send(client_fd, "\r\n", 2, 0);
+    if (bytesSent < 0) {
+        check_if = 1;
+        std::cout << "(2)send_chunk error: " << strerror(errno) << " (total_sent) ==> " << state.sent << std::endl;
+        state.file->close();
+        pendingSends.erase(client_fd);
+        close(client_fd);
+        return (false);
+    }
+    // state.sent = state.sent + bytesSent;
+    return (true);
+}
+
+
+bool GetHandler::send_chunk_final()
+{
+    SendState& state = pendingSends[client_fd];
     const char* finalChunk = "0\r\n\r\n";
     ssize_t bytesSent = send(client_fd, finalChunk, 5, 0);
     if (bytesSent < 0) {
-        std::cout << "Final chunk send error: " << strerror(errno) << std::endl;
+        check_if = 1;
+        std::cout << "send_chunk_final error: " << strerror(errno) << " (total_sent) ==> " << state.sent<<  std::endl;
+        pendingSends.erase(client_fd);
         close(client_fd);
-        file.close();
-        return "";
+        state.file->close();
+        return (false);
     }
-    
-    std::cout << "Chunked send complete. Total bytes sent: " << totalBytesSent << std::endl;
-    file.close();
+    // state.sent = state.sent + bytesSent;
+    return (true);
+}
+
+std::string GetHandler::readLargeFileChunked() {
+    SendState& state = pendingSends[client_fd];
+    while(state.sent <  state.size )
+    {
+        if(!init_membres())
+            return "";
+        if(!send_size())
+            return "";
+        if(!send_chunk())
+            return "";
+        if(!send_separator())
+            return "";
+        if(state.sent >= state.size)
+        {
+            if(!send_chunk())
+                return "";
+            else
+                break;
+        }
+    }
+    check_if = 1;
+    std::cout << "Chunked send complete. Total bytes sent: " << state.sent << std::endl;
+    state.file->close();
     return "";
 }
+    // const size_t bufferSize = 1024;
+    // char buffer[bufferSize];
+    // ssize_t totalBytesSent = 0;
+    
+    // while (file.read(buffer, bufferSize) || file.gcount() > 0) {
+    //     size_t bytesRead = file.gcount();
+    //     std::cout << "^^^^^^^^^^=> | " << bytesRead << " |<=^^^^^^^^^\n";
+        
+    //     // Send chunk size in hex + CRLF
+    //     std::stringstream chunkSize;
+    //     chunkSize << std::hex << bytesRead << "\r\n";
+        
+    //     ssize_t bytesSent = send(client_fd, chunkSize.str().c_str(), chunkSize.str().length(), 0);
+    //     if (bytesSent < 0) {
+    //         std::cout << "Chunk size send error: " << strerror(errno) << std::endl;
+    //         close(client_fd);
+    //         file.close();
+    //         return "";
+    //     }
+        
+    //     // Send chunk data
+    //     bytesSent = send(client_fd, buffer, bytesRead, 0);
+    //     if (bytesSent < 0) {
+    //         std::cout << "Chunk data send error: " << strerror(errno) << std::endl;
+    //         close(client_fd);
+    //         file.close();
+    //         return "";
+    //     }
+        
+    //     // Send CRLF after chunk data
+    //     bytesSent = send(client_fd, "\r\n", 2, 0);
+    //     if (bytesSent < 0) {
+    //         std::cout << "Chunk CRLF send error: " << strerror(errno) << std::endl;
+    //         close(client_fd);
+    //         file.close();
+    //         return "";
+    //     }
+        
+    //     totalBytesSent += bytesRead;
+    //     memset(buffer, 0, bufferSize); // Clear buffer
+    // }
+    
+    // // Send final chunk (0-sized chunk + CRLF + CRLF)
+    // const char* finalChunk = "0\r\n\r\n";
+    // ssize_t bytesSent = send(client_fd, finalChunk, 5, 0);
+    // if (bytesSent < 0) {
+    //     std::cout << "Final chunk send error: " << strerror(errno) << std::endl;
+    //     close(client_fd);
+    //     file.close();
+    //     return "";
+    // }
+    
+    // std::cout << "Chunked send complete. Total bytes sent: " << totalBytesSent << std::endl;
+    // file.close();
 
 // std::string GetHandler::readFile(const std::string& filePath) {
 //     std::string extension;

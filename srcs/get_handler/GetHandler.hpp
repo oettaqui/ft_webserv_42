@@ -27,8 +27,23 @@
 
 class ParsRequest;
 class GetHandler {
-    
     private:
+        struct SendState {
+            std::string data;
+            ssize_t sent;
+            ssize_t bufferSize;
+            ssize_t bytes_read;
+            ssize_t size;
+            bool isChunked;
+            bool isComplete;
+            std::ifstream* file; // Pointer to the file stream
+            std::string filePath; // Path to the file
+            std::streampos filePos; // Position in the file
+            char buffer[1024]; 
+            // Constructor to initialize member variables
+            SendState() : sent(0),bufferSize(1024),bytes_read(0),size(0), isChunked(false),  isComplete(false), file(NULL),filePath(""), filePos(0) {}
+        };
+        int epoll_fd;
         std::string readFile(const std::string& filePath);
         std::string generateResponse(const std::string& content,ParsRequest &request_data);
         std::string trim(const std::string& str, char ch);
@@ -51,10 +66,11 @@ class GetHandler {
         int statusCode;
         std::string status_message;
         size_t ingore_element;
+        std::map<int, SendState> pendingSends;
     public:
         GetHandler();
         ~GetHandler();
-        std::string handleGetRequest(ParsRequest &request_data,ConfigParser &parser);
+        std::string handleGetRequest(ParsRequest &request_data,ConfigParser &parser,int &epoll_fd);
         std::vector<std::string> check_root_location(std::string directoryPath);
         std::vector<std::string> listFiles(const std::string& dirPath);
         bool isDirectory(const std::string& path);
@@ -68,8 +84,13 @@ class GetHandler {
         std::string get_path_to_get() ;
         bool check_root(const std::string &value_p) const;
         std::string url_decode(std::string url);
-        std::string readLargeFileChunked(std::ifstream& file);
+        std::string readLargeFileChunked();
         std::string readSmallFile(std::ifstream& file, size_t size);
+        bool init_membres();
+        bool send_size();
+        bool send_chunk();
+        bool send_chunk_final();
+        bool send_separator();
 };
 
 #endif

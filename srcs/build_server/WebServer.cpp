@@ -138,7 +138,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             std::string req;
             req.append(buffer, bytes_read);
             ParsRequest* p = clients[fd];
-            p->parse(req,fd, parser);
+            p->parse(req,fd, parser,epoll_fd);
             if(!p->isValid())
             {
                 if(p->getMethod() == "GET")

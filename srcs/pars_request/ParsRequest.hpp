@@ -46,7 +46,7 @@ class ParsRequest{
     public:
         ParsRequest();
         ~ParsRequest();
-        void parse(const std::string& request,int client_fd, ConfigParser &parser);
+        void parse(const std::string& request,int client_fd, ConfigParser &parser,int &epoll_fd);
         void parseHeaders(const std::string& header_section);
 
         const std::string& getMethod() const;

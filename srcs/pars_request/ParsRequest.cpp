@@ -46,6 +46,9 @@ void ParsRequest::parseRequestLine(const std::string& line) {
     }
 }
 
+
+
+
 void ParsRequest::parseHeaders(const std::string& header_section) {
     std::vector<std::string> lines = split(header_section, '\n');
     for (std::vector<std::string>::iterator it = lines.begin(); 
@@ -126,7 +129,8 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         // std::cout << "hnaaa 2" << std::endl;
         std::string check = "chunked";
         if (headers["Transfer-Encoding"] != check) {
-            is_valid = false;
+            if (method == "POST")
+                is_valid = false;
         }
         else{
             is_chunked = true;
@@ -142,18 +146,18 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         std::cout << "Error is boundary and chunked in the same time !!! " << std::endl;
         is_valid = false;
     }
-    for (std::map<std::string, std::string>::iterator it = headers.begin(); 
-        it != headers.end(); ++it) {
-        if (it->second.empty()) {
-            is_valid = false;
-            std::cout << "in this block " << std::endl;
-            break;
-        }
-    }
+    // for (std::map<std::string, std::string>::iterator it = headers.begin(); 
+    //     it != headers.end(); ++it) {
+    //     if (it->second.empty()) {
+    //         is_valid = false;
+    //         std::cout << "in this block " << std::endl;
+    //         break;
+    //     }
+    // }
 }
 
 
-void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &parser) {
+void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &parser,int &epoll_fd) {
     this->client_fd = client_fd;
     requestContent += request;
     std::string contentType = "";
@@ -290,7 +294,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             std::cout << "*****non-POST requests" <<std::endl;
             if (method == "GET"){
                 GetHandler* getHandler = new GetHandler();
-                std::string response = getHandler->handleGetRequest(*this, parser);
+                std::string response = getHandler->handleGetRequest(*this, parser,epoll_fd);
                 responses[client_fd] = response;
                 is_Complet = true;
                 delete getHandler;
