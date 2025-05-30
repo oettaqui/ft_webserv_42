@@ -41,39 +41,54 @@ void ParsRequest::parseRequestLine(const std::string& line) {
         path = parts[1];
         version = parts[2];
         is_valid = true;
-        std::cout << "PATH from parsRequestLine function =========> " << path << std::endl;
-        size_t posQuery = path.find("?");
-        size_t posEndQuery = path.find_last_of("#", path.length());
-        if (posQuery != std::string::npos){
-            std::string query;
-            if (posEndQuery != std::string::npos)
-                query = path.substr(posQuery + 1, posEndQuery);
-            else
-                query = path.substr(posQuery + 1, path.length());
-            std::cout << "Query from parsRequestLine function =========> " << query << std::endl;
-            path = path.substr(0, posQuery);
-            // while(query.length() > 0){
-            //     int posK = query.find("=");
-            //     if (posK != std::string::npos){
-            //         std::string key = query.substr(0, posK);
-            //         std::string value = "";
-            //         query = query.substr(posK + 1, query.length());
-            //         if (query.length() < 1 && value.empty())
-            //         {
-            //             is_valid = false;
-            //             break;
-            //         }
-            //         else{
+        // std::cout << "PATH from parsRequestLine function =========> " << path << std::endl;
 
-            //         }
+        // size_t posQuery = path.find_last_of('?');
+        // size_t posEndQuery = path.find_last_of('#');
+        // std::string query;
+        // if (posQuery != std::string::npos){
+
+        //     if (posEndQuery != std::string::npos)
+        //         query = path.substr(posQuery + 1, posEndQuery);
+        //     else
+        //        query = path.substr(posQuery + 1, path.length()); 
+        //     path = path.substr(0, posQuery);
+
+        // }
+        // std::cout << "Query from parsRequestLine function =========> " << query << std::endl;
+        // std::cout << "PATH after update from parsRequestLine function =========> " << path << std::endl;
+        // size_t posQuery = path.find("?");
+        // size_t posEndQuery = path.find_last_of("#", path.length());
+        // if (posQuery != std::string::npos){
+        //     std::string query;
+        //     if (posEndQuery != std::string::npos)
+        //         query = path.substr(posQuery + 1, posEndQuery);
+        //     else
+        //         query = path.substr(posQuery + 1, path.length());
+        //     std::cout << "Query from parsRequestLine function =========> " << query << std::endl;
+        //     path = path.substr(0, posQuery);
+        //     // while(query.length() > 0){
+        //     //     int posK = query.find("=");
+        //     //     if (posK != std::string::npos){
+        //     //         std::string key = query.substr(0, posK);
+        //     //         std::string value = "";
+        //     //         query = query.substr(posK + 1, query.length());
+        //     //         if (query.length() < 1 && value.empty())
+        //     //         {
+        //     //             is_valid = false;
+        //     //             break;
+        //     //         }
+        //     //         else{
+
+        //     //         }
                     
-            //     }else if (){
-            //         is_valid = false;
-            //         break;
-            //     }
-            // }
+        //     //     }else if (){
+        //     //         is_valid = false;
+        //     //         break;
+        //     //     }
+        //     // }
 
-        }
+        // }
         if ((method != "POST" && method != "GET" && method != "DELETE") && (version != "HTTP/1.1" || !path.empty())){
             is_valid = false;
         }
@@ -112,7 +127,7 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
     }
 
     if (headers.find("Host") == headers.end()) {
-        is_valid = false; 
+        is_valid = false;
     }
     
     
@@ -159,10 +174,10 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
     if (headers.find("Content-Length") == headers.end() && 
         headers.find("Transfer-Encoding") != headers.end())
     {
-        // std::cout << "hnaaa 2" << std::endl;
         std::string check = "chunked";
         if (headers["Transfer-Encoding"] != check) {
-            is_valid = false;
+            if (method == "POST")
+                is_valid = false;
         }
         else{
             is_chunked = true;
@@ -178,14 +193,14 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         std::cout << "Error is boundary and chunked in the same time !!! " << std::endl;
         is_valid = false;
     }
-    for (std::map<std::string, std::string>::iterator it = headers.begin(); 
-        it != headers.end(); ++it) {
-        if (it->second.empty()) {
-            is_valid = false;
-            std::cout << "in this block " << std::endl;
-            break;
-        }
-    }
+    // for (std::map<std::string, std::string>::iterator it = headers.begin(); 
+    //     it != headers.end(); ++it) {
+    //     if (it->second.empty()) {
+    //         is_valid = false;
+    //         std::cout << "in this block " << std::endl;
+    //         break;
+    //     }
+    // }
 }
 
 

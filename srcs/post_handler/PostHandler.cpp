@@ -111,8 +111,8 @@ bool PostHandler::directoryExists(const std::string& path) {
     if (stat(path.c_str(), &info) != 0) {
         return false;
     }
-    
-    return true;
+    // return true;
+    return S_ISDIR(info.st_mode);
 }
 
 std::string PostHandler::createUniqueFile(const std::string& extension, std::string& location_path) {
@@ -121,7 +121,8 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
     gettimeofday(&tv, NULL);
     std::ostringstream filename;
 
-    // std::cout << "Debug - location_path: '" << location_path << "'" << std::endl;
+    std::cout << "Debug - location_path: '" << location_path << "'" << std::endl;
+    
     if (directoryExists(location_path))
     {
         if (!location_path.empty() && location_path[location_path.length() - 1] != '/' ) {
@@ -137,10 +138,11 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
         {
             filename  << location_path.c_str() << "file_" << tv.tv_sec << "_" << tv.tv_usec;
         }
+        
     }
     else{
         status = 404;
-        // std::cout << "directory not found\n";
+        std::cout << "directory not found\n";
         return "";
     }
     
