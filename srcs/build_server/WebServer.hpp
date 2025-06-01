@@ -11,10 +11,10 @@
 #include <errno.h>
 #include <cstdlib>
 #include "../Parse_configfile/ConfigParser.hpp"
-#include "../pars_request/ParsRequest.hpp"
+// #include "../pars_request/ParsRequest.hpp"
 
 #define MAX_EVENTS 10
-#define BUFFER_SIZE 65536
+#define BUFFER_SIZE 1024
 
 
 class WebServer {
@@ -22,7 +22,7 @@ class WebServer {
         std::vector<int>  server_fds;
         int epoll_fd;
         struct epoll_event events[MAX_EVENTS];
-        std::map<int, ParsRequest* > clients;
+        // std::map<int, ParsRequest* > clients;
         std::map<int, std::string> write_buffers;
         bool setNonBlocking(int sockfd);
         bool addToEpoll(int sockfd);

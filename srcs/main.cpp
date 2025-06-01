@@ -18,8 +18,10 @@ int main(int ac,char **av) {
             }
             else
             {
+                std::cout << "👍 good configfile\n";
                 WebServer server;
                 server.linking_servers(parser);
+                return 0;
             }
         }
         catch(const char *str)

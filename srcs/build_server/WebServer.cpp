@@ -1,33 +1,27 @@
 #include "WebServer.hpp"
+WebServer::WebServer() : epoll_fd(-1) {}
+        
+WebServer::~WebServer() {
+    for (std::vector<int>::const_iterator it = server_fds.begin(); it != server_fds.end(); it++)
+    {
+        if (*it != -1) 
+            close(*it);
+    }
+    if (epoll_fd != -1) close(epoll_fd);
+}
 
-const std::string HTML_RESPONSE = 
-"HTTP/1.1 200 OK\r\n"
-"Content-Type: text/html\r\n"
-"Connection: close\r\n\r\n"
-"<!DOCTYPE html>\r\n"
-    "<html>\r\n"
-    "<head>\r\n"
-    "    <title>Hello World</title>\r\n"
-    "</head>\r\n"
-    "<body>\r\n"
-    "    <h1>Hello World</h1>\r\n"
-    "</body>\r\n"
-    "</html>\r\n";
+bool WebServer::addToEpoll(int sockfd) {
+    struct epoll_event event;
+    event.events = EPOLLIN | EPOLLET;
+    event.data.fd = sockfd;
+    
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sockfd, &event) == -1) {
+        std::cerr << "Failed to add fd to epoll: " << strerror(errno) << std::endl;
+        return false;
+    }
+    return true;
+}
 
-
-const std::string HTML_BADREQUEST = 
-"HTTP/1.1 400 Bad Request\r\n"
-"Content-Type: text/html\r\n"
-"Connection: close\r\n\r\n"
-"<!DOCTYPE html>\r\n"
-    "<html>\r\n"
-    "<head>\r\n"
-    "    <title>Bad Request</title>\r\n"
-    "</head>\r\n"
-    "<body>\r\n"
-    "    <h1>Bad Request</h1>\r\n"
-    "</body>\r\n"
-    "</html>\r\n";
 
 bool WebServer::setNonBlocking(int sockfd) {
     int flags = fcntl(sockfd, F_GETFL, 0);
@@ -42,146 +36,6 @@ bool WebServer::setNonBlocking(int sockfd) {
     return true;
 }
 
-
-bool WebServer::addToEpoll(int sockfd) {
-    struct epoll_event event;
-    event.events = EPOLLIN | EPOLLET;
-    event.data.fd = sockfd;
-    
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sockfd, &event) == -1) {
-        std::cerr << "Failed to add fd to epoll: " << strerror(errno) << std::endl;
-        return false;
-    }
-    return true;
-}
-
-void WebServer::handleNewConnection(int server_fd) {
-    struct sockaddr_in client_addr;
-    socklen_t client_len = sizeof(client_addr);
-    
-    while (true) { 
-        int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
-        if (client_fd == -1) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                break;
-            } else {
-                std::cerr << "Accept failed: " << strerror(errno) << std::endl;
-                break;
-            }
-        }
-        
-        std::cout << "New connection from " << inet_ntoa(client_addr.sin_addr) 
-                  << ":" << ntohs(client_addr.sin_port) << std::endl;
-                  
-        if (!setNonBlocking(client_fd)) {
-            close(client_fd);
-            continue;
-        }
-        
-        if (!addToEpoll(client_fd)) {
-            close(client_fd);
-            continue;
-        }
-        clients[client_fd] = new ParsRequest();
-    }
-}
-
-void WebServer::getResponse(int fd)
-{
-    if (write_buffers.find(fd) == write_buffers.end()) {
-        return;
-    }
-    
-    std::string& res = write_buffers[fd];
-    // std::cout << res << std::endl;
-    ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
-    
-    if (bytes_sent == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            return;
-        }
-        std::cerr << "send failed: " << strerror(errno) << std::endl;
-        closeConnection(fd);
-        return;
-    }
-    
-
-    write_buffers.erase(fd);
-    
-    std::cout << "Response sent successfully to client: " << fd << std::endl;
-    usleep(100000);
-    closeConnection(fd);
-}
-void WebServer::handleClientData(int fd, ConfigParser &parser) {
-
-    char buffer[BUFFER_SIZE];
-    memset(buffer, 0, BUFFER_SIZE);
-    ssize_t bytes_read;
-    
-    while (true) {
-        bytes_read = read(fd, buffer, BUFFER_SIZE);
-        if (bytes_read <= 0) {
-            if (errno == EAGAIN  || errno != EWOULDBLOCK) {
-                std::cerr << "Failed read operation " << std::endl;
-                break;
-            }
-            else
-            {
-                write_buffers[fd] = HTML_BADREQUEST;
-                // closeConnection(fd);
-                std::cout << "Client disconnected: hhhh" << fd << std::endl;
-                break;
-
-            }
-        }
-        else {
-            std::string req;
-            req.append(buffer, bytes_read);
-            ParsRequest* p = clients[fd];
-            p->parse(req,fd, parser);
-            if(!p->isValid())
-            {
-                if(p->getMethod() == "GET")
-                    write_buffers[fd] = p->getResponses().find(fd)->second;
-                else
-                    write_buffers[fd] = HTML_BADREQUEST;
-                return;
-            }
-            
-            if (p->isComplet()) {
-                std::cout << "Complete request received, preparing response" << std::endl;
-                std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
-                if(p->getMethod() == "GET")
-                    write_buffers[fd] = p->getResponses().find(fd)->second;
-                else
-                    write_buffers[fd] = HTML_RESPONSE;
-                break;
-            }
-        }
-    }
-}
-
-WebServer::WebServer() : epoll_fd(-1) {}
-        
-WebServer::~WebServer() {
-    for (std::vector<int>::const_iterator it = server_fds.begin(); it != server_fds.end(); it++)
-    {
-        if (*it != -1) 
-            close(*it);
-    }
-    if (epoll_fd != -1) close(epoll_fd);
-}
-
-void WebServer::linking_servers(ConfigParser &parser)
-{
-    for (std::vector<Server>::const_iterator it = parser.getServers().begin(); it != parser.getServers().end(); ++it) {
-        if (!this->initialize(it)) {
-            std::vector<std::string>::const_iterator it_names = it->getServerNames().begin();
-            std::cerr << "Failed to initialize server " << *it_names << std::endl;
-        }
-    }
-    this->run(parser);
-}
 
 bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -235,26 +89,106 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
     return true;
 }
 
-void WebServer::closeConnection(int fd) {
-    std::cout << "Closing connection fd: " << fd << std::endl;
-    
+void WebServer::linking_servers(ConfigParser &parser)
+{
+    for (std::vector<Server>::const_iterator it = parser.getServers().begin(); it != parser.getServers().end(); ++it) {
+        if (!this->initialize(it)) {
+            std::vector<std::string>::const_iterator it_names = it->getServerNames().begin();
+            if(it_names != it->getServerNames().end())
+                std::cerr << "Failed to initialize server " << *it_names << std::endl;
+            else
+                std::cerr << "Failed to initialize server with host : " << it->getHost() << " and port : " << it->getPort() << std::endl;
 
-    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-
-    shutdown(fd,SHUT_RDWR);
-    
-
-    close(fd);
-    
-
-    if (clients.find(fd) != clients.end()) {
-        delete clients[fd];
-        clients.erase(fd);
+        }
     }
-    write_buffers.erase(fd);
+    this->run(parser);
+}
+
+void WebServer::handleNewConnection(int server_fd) {
+    struct sockaddr_in client_addr;
+    socklen_t client_len = sizeof(client_addr);
+    
+    // while (true) { 
+        int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+        if (client_fd == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return ;
+            } else {
+                std::cerr << "Accept failed: " << strerror(errno) << std::endl;
+                return ;
+            }
+        }
+        
+        std::cout << "New connection from " << inet_ntoa(client_addr.sin_addr) 
+                  << ":" << ntohs(client_addr.sin_port) << std::endl;
+                  
+        if (!setNonBlocking(client_fd)) {
+            close(client_fd);
+        }
+        
+        if (!addToEpoll(client_fd)) {
+            close(client_fd);
+        }
+        std::cout << "*1*\n";
+        // clients[client_fd] = new ParsRequest();
+    // }
+}
+
+void WebServer::handleClientData(int fd, ConfigParser &parser) {
+
+    char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+    ssize_t bytes_read;
+    
+    while (true) {
+        bytes_read = read(fd, buffer, BUFFER_SIZE);
+        if (bytes_read <= 0) {
+            if (errno == EAGAIN  || errno != EWOULDBLOCK) {
+                std::cerr << "Failed read operation " << std::endl;
+                break;
+            }
+            else
+            {
+                write_buffers[fd] = HTML_BADREQUEST;
+                // closeConnection(fd);
+                std::cout << "Client disconnected: hhhh" << fd << std::endl;
+                break;
+
+            }
+        }
+        else {
+            std::string req;
+            req.append(buffer, bytes_read);
+            ParsRequest* p = clients[fd];
+            p->parse(req,fd, parser);
+            if(!p->isValid())
+            {
+                if(p->getMethod() == "GET")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+                else if(p->getMethod() == "DELETE")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+                else
+                    write_buffers[fd] = HTML_BADREQUEST;
+                return;
+            }
+            
+            if (p->isComplet()) {
+                std::cout << "Complete request received, preparing response" << std::endl;
+                std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
+                if(p->getMethod() == "GET")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+                else if(p->getMethod() == "DELETE")
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+                else
+                    write_buffers[fd] = HTML_RESPONSE;
+                break;
+            }
+        }
+    }
 }
 
 void WebServer::run(ConfigParser &parser) {
+    (void)parser;
     std::cout << "Server(s) running..." << std::endl;
     int check = 0;
     while (true) 
@@ -273,8 +207,9 @@ void WebServer::run(ConfigParser &parser) {
                 }
             }
             if(check == 0) {
-                handleClientData(events[i].data.fd, parser);
-                getResponse(events[i].data.fd);
+                std::cout << "lahbaaaaal 👍👓\n";
+                // handleClientData(events[i].data.fd, parser);
+                // getResponse(events[i].data.fd);
             }
             check = 0;
         }
