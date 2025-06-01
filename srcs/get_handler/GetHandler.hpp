@@ -24,6 +24,7 @@
 #include <sys/stat.h> // For stat (file information)
 #include <algorithm>
 
+#define BUFFER_SIZE_G 8000
 
 class ParsRequest;
 class GetHandler {
@@ -51,6 +52,11 @@ class GetHandler {
         int statusCode;
         std::string status_message;
         size_t ingore_element;
+        std::ifstream file;
+        ssize_t totalBytesSent;
+        ssize_t size;
+        bool is_true_parse;
+        ssize_t contentLength;
     public:
         GetHandler();
         ~GetHandler();
@@ -69,7 +75,8 @@ class GetHandler {
         bool check_root(const std::string &value_p) const;
         std::string url_decode(std::string url);
         std::string readLargeFileChunked(std::ifstream& file);
-        std::string readSmallFile(std::ifstream& file, size_t size);
+        std::string readSmallFile(std::ifstream& file);
+        bool get_is_true_parse() const;
 };
 
 #endif

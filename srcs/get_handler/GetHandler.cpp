@@ -9,6 +9,10 @@ GetHandler::GetHandler()
     existent_folder = 0;
     statusCode = 200;
     status_message = "OK";
+    totalBytesSent = 0;
+    size = 0;
+    is_true_parse = false;
+    contentLength = 0;
 }
 
 GetHandler::~GetHandler() {
@@ -17,6 +21,8 @@ GetHandler::~GetHandler() {
 
 void GetHandler::generate_header(int flag)
 {
+    if(check_put_header == 1)
+        return ;
     std::cout << "=======================>\n";
     std::stringstream header;
     if(flag == 0)
@@ -24,6 +30,7 @@ void GetHandler::generate_header(int flag)
         std::cout << "header for small\n";
         header  << "HTTP/1.1 "<< statusCode << " " <<  status_message << "\r\n"
                 << "Content-Type: " << contentType << "\r\n"
+                << "Content-Length: " << contentLength << "\r\n"
                 << "Connection: close\r\n"
                 << "\r\n";
     }
@@ -36,6 +43,7 @@ void GetHandler::generate_header(int flag)
         << "\r\n";
     }
     send(client_fd, header.str().c_str(), header.str().length(), 0);
+    check_put_header = 1;
 } 
 
 size_t GetHandler::getFileSize(const std::string& filename) {
@@ -150,7 +158,6 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
         check_if = 0;
         return "";
     }
-    generate_header(0);
     if(base_path != ".")
         path = trim(base_path,'.');
     std::cout << "generateAttractivePage\n";
@@ -267,7 +274,9 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
             "    </div>\n"
             "</body>\n"
             "</html>";
-
+    // is_true_parse = true;
+    contentLength = html.length();
+    generate_header(0);
     return html;
 }
 std::vector<std::string> GetHandler::split(const std::string& str, char delim) const {
@@ -402,6 +411,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             statusCode = 403;
             status_message = "Forbidden";
             contentType = "text/html";
+            contentLength = 54;
             generate_header(0);
             return generateResponse("<h1>403 the client doesn't have permission to GET</h1>", request_data);
         }
@@ -432,11 +442,6 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                 fileList = check_root_location(index_file);
                 content = generateAttractivePage(fileList,index_file);
             }
-            else
-            {
-                content = "<h1>test 1</h1>";
-                generate_header(0);
-            }
         }
     }
     else if(find_vec.size() == 0)
@@ -455,6 +460,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             std::cout << "imposiiiii \n";
             statusCode = 403;
             status_message = "Forbidden";
+            contentLength = 54;
             generate_header(0);
             return generateResponse("<h1>403 the client doesn't have permission to GET</h1>", request_data);
         }
@@ -496,11 +502,11 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         }
     }
     if (content.empty() && check_if == 0) {
-        check_put_header = 1;
         statusCode = 404;
         contentType = "text/html";
         status_message = "Not Found";
         std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
+        contentLength = 22;
         generate_header(0);
         return generateResponse("<h1>404 Not Found</h1>", request_data);
     }
@@ -517,166 +523,134 @@ std::string GetHandler::readFile(const std::string& filePath) {
         }
     }
     
-    std::ifstream file(filePath.c_str(), std::ios::binary);
-    if (!file) {
-        std::cout << "failed Read ///////\n";
-        return "";
+    if(!file.is_open())
+    {
+        std::cout << "dkhal-------------\n";
+        file.open(filePath.c_str(), std::ios::binary);
+        if (!file) {
+            std::cout << "failed Read ///////\n";
+            return "";
+        }
     }
     
-    size_t size = getFileSize(filePath);
+    if(size == 0)
+    {
+        size = getFileSize(filePath);
+        contentLength = size;
+    }
     std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
-    
-    const size_t bufferSize = 1024;
     // char buffer[bufferSize];
-    const size_t threshold = bufferSize * bufferSize; // 1MB threshold
-    
+    const ssize_t threshold = 1024*1024; // 1MB threshold
     bool useChunked = (size > threshold);
     generate_header(useChunked ? 1 : 0);
     
     if (!useChunked) {
         // Small file - send with Content-Length
-        return readSmallFile(file, size);
+        return readSmallFile(file);
     } else {
         // Large file - send chunked
         return readLargeFileChunked(file);
     }
 }
 
-std::string GetHandler::readSmallFile(std::ifstream& file, size_t size) {
+std::string GetHandler::readSmallFile(std::ifstream& file) {
     std::string content;
-    content.reserve(size); // Pre-allocate
-    
-    const size_t bufferSize = 1024;
-    char buffer[bufferSize];
-    
-    while (file.read(buffer, bufferSize) || file.gcount() > 0) {
-        content.append(buffer, file.gcount());
-    }
+    // content.reserve(size); // Pre-allocate
+    char buffer[BUFFER_SIZE_G];
+    memset(buffer, 0, BUFFER_SIZE_G);
+    file.read(buffer, BUFFER_SIZE_G);
+    content.append(buffer, file.gcount());
     
     // Send all at once for small files
+    std::cout << "**********************************\n"; 
+    std::cout << file.gcount() << std::endl;
+    // std::cout << content << std::endl;
+    // std::cout << buffer << std::endl;
+    std::cout << "**********************************\n"; 
     ssize_t bytesSent = send(client_fd, content.c_str(), content.length(), 0);
     if (bytesSent < 0) {
         std::cout << "Send error: " << strerror(errno) << std::endl;
         close(client_fd);
+        file.close();
         return "";
     }
-    
-    file.close();
-    return content;
+    totalBytesSent = totalBytesSent + bytesSent;
+    check_if = 1;
+    if(totalBytesSent >= size)
+    {
+        std::cout << "++++++++++++++++++++++++++++++333333333\n";
+        file.close();
+        is_true_parse = true;
+    }
+    return "";
 }
 
 std::string GetHandler::readLargeFileChunked(std::ifstream& file) {
-    const size_t bufferSize = 1024;
-    char buffer[bufferSize];
-    ssize_t totalBytesSent = 0;
+    char buffer[BUFFER_SIZE_G];
+    memset(buffer, 0, BUFFER_SIZE_G);
+    file.read(buffer, BUFFER_SIZE_G);
+    size_t bytesRead = file.gcount();
+    std::cout << "^^^^^^^^^^=> | " << bytesRead << " |<=^^^^^^^^^\n";
     
-    while (file.read(buffer, bufferSize) || file.gcount() > 0) {
-        size_t bytesRead = file.gcount();
-        std::cout << "^^^^^^^^^^=> | " << bytesRead << " |<=^^^^^^^^^\n";
-        
-        // Send chunk size in hex + CRLF
-        std::stringstream chunkSize;
-        chunkSize << std::hex << bytesRead << "\r\n";
-        
-        ssize_t bytesSent = send(client_fd, chunkSize.str().c_str(), chunkSize.str().length(), 0);
-        if (bytesSent < 0) {
-            std::cout << "Chunk size send error: " << strerror(errno) << std::endl;
-            close(client_fd);
-            file.close();
-            return "";
-        }
-        
-        // Send chunk data
-        bytesSent = send(client_fd, buffer, bytesRead, 0);
-        if (bytesSent < 0) {
-            std::cout << "Chunk data send error: " << strerror(errno) << std::endl;
-            close(client_fd);
-            file.close();
-            return "";
-        }
-        
-        // Send CRLF after chunk data
-        bytesSent = send(client_fd, "\r\n", 2, 0);
-        if (bytesSent < 0) {
-            std::cout << "Chunk CRLF send error: " << strerror(errno) << std::endl;
-            close(client_fd);
-            file.close();
-            return "";
-        }
-        
-        totalBytesSent += bytesRead;
-        memset(buffer, 0, bufferSize); // Clear buffer
-    }
+    // Send chunk size in hex + CRLF
+    std::stringstream chunkSize;
+    chunkSize << std::hex << bytesRead << "\r\n";
     
-    // Send final chunk (0-sized chunk + CRLF + CRLF)
-    const char* finalChunk = "0\r\n\r\n";
-    ssize_t bytesSent = send(client_fd, finalChunk, 5, 0);
+    ssize_t bytesSent = send(client_fd, chunkSize.str().c_str(), chunkSize.str().length(), 0);
     if (bytesSent < 0) {
-        std::cout << "Final chunk send error: " << strerror(errno) << std::endl;
+        std::cout << "Chunk size send error: " << strerror(errno) << std::endl;
         close(client_fd);
         file.close();
         return "";
     }
     
-    std::cout << "Chunked send complete. Total bytes sent: " << totalBytesSent << std::endl;
-    file.close();
+    // Send chunk data
+    bytesSent = send(client_fd, buffer, bytesRead, 0);
+    if (bytesSent < 0) {
+        std::cout << "Chunk data send error: " << strerror(errno) << std::endl;
+        close(client_fd);
+        file.close();
+        return "";
+    }
+    
+    // Send CRLF after chunk data
+    bytesSent = send(client_fd, "\r\n", 2, 0);
+    if (bytesSent < 0) {
+        std::cout << "Chunk CRLF send error: " << strerror(errno) << std::endl;
+        close(client_fd);
+        file.close();
+        return "";
+    }    
+    totalBytesSent += bytesRead;
+         // Clear buffer
+    // Send final chunk (0-sized chunk + CRLF + CRLF)
+    if(totalBytesSent >= size)
+    {
+        const char* finalChunk = "0\r\n\r\n";
+        ssize_t bytesSent = send(client_fd, finalChunk, 5, 0);
+        if (bytesSent < 0) {
+            std::cout << "Final chunk send error: " << strerror(errno) << std::endl;
+            close(client_fd);
+            file.close();
+            return "";
+        }
+    }
+    
+    if(totalBytesSent >= size)
+    {
+        std::cout << "Chunked send complete. Total bytes sent: " << totalBytesSent << std::endl;
+        file.close();
+        std::cout << "++++++++++++++++++++++++++++++222222222222\n";
+        is_true_parse = true;
+    }
+    check_if = 1;
     return "";
 }
 
-// std::string GetHandler::readFile(const std::string& filePath) {
-//     std::string extension;
-//     if(!filePath.empty())
-//     {
-//         extension = getFileExtension(filePath);
-//         std::map<std::string, std::string>::const_iterator it = contentTypes.find(extension);
-//         if(it != contentTypes.end() && !extension.empty())
-//         {
-//             contentType = it->second;
-//         }
-//     }
-//     std::ifstream file(filePath.c_str(),std::ios::binary);
-//     if (!file) {
-//         std::cout << "failed Read ///////\n";
-//         return "";
-//     }
-//     size_t size = getFileSize(filePath);
-//     std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
-//     const size_t bufferSize = 1024; // Buffer size set to 8000 bytes
-//     char buffer[bufferSize]; 
-//     std::string content; // String to accumulate file content
-//     ssize_t bytesSent = 0;
-//     ssize_t TotalbytesSent = 0;
-//     memset(&buffer, 0, bufferSize);
-//     if(size > bufferSize * bufferSize)
-//         generate_header(1);
-//     else
-//         generate_header(0);
-//     while (file.read(buffer, bufferSize) || file.gcount() > 0) {
-//         std::cout << "^^^^^^^^^^=> | " << file.gcount() << " |<=^^^^^^^^^\n";
-//         std::stringstream size_header;
-//         if(size > bufferSize * bufferSize)
-//         {
-//             size_header  <<  file.gcount() <<  "\r\n";
-//             bytesSent = send(client_fd, size_header.str().c_str(), size_header.str().length(), 0);
-//         }
-//         bytesSent = send(client_fd, buffer, file.gcount(), 0);
-//         if(size > bufferSize * bufferSize)
-//             bytesSent = send(client_fd, "\r\n", 2, 0);
-//         if (bytesSent < 0) {
-//             std::cout << strerror(errno) << std::endl;
-//             close(client_fd);
-//             std::cout << "clooooooooooooooooooooooooooose(2) TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
-//             std::cout << "size : |" << size << "| \n";
-//             file.close();
-//             return "";
-//         }
-//         TotalbytesSent = TotalbytesSent + bytesSent;
-//     }
-//     std::cout << "sennnnnnnnnnnnnnnnnnnnnnd complete TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
-//     check_if = 1;
-//     file.close();
-//     return content;
-// }
+bool GetHandler::get_is_true_parse() const
+{
+    return is_true_parse;
+}
 
 std::string GetHandler::generateResponse(const std::string& content,ParsRequest &request_data) {
     std::stringstream response;
@@ -684,6 +658,11 @@ std::string GetHandler::generateResponse(const std::string& content,ParsRequest 
     std::cout << "check_put_header : " << check_put_header << std::endl;
     std::cout << "check_if : " << check_if << std::endl;
     std::cout << "existent_folder : " << existent_folder << std::endl;
+    if (!content.empty())
+    {
+        std::cout << "trueeeeeeeeeeeeee\n";
+        is_true_parse = true;
+    }
     response << content;
     return response.str();
 }
@@ -738,3 +717,57 @@ std::string GetHandler::url_decode(std::string url) {
 //         return decoded;
 //     }
 // };
+// std::string GetHandler::readFile(const std::string& filePath) {
+//     std::string extension;
+//     if(!filePath.empty())
+//     {
+//         extension = getFileExtension(filePath);
+//         std::map<std::string, std::string>::const_iterator it = contentTypes.find(extension);
+//         if(it != contentTypes.end() && !extension.empty())
+//         {
+//             contentType = it->second;
+//         }
+//     }
+//     std::ifstream file(filePath.c_str(),std::ios::binary);
+//     if (!file) {
+//         std::cout << "failed Read ///////\n";
+//         return "";
+//     }
+//     size_t size = getFileSize(filePath);
+//     std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
+//     const size_t bufferSize = 1024; // Buffer size set to 8000 bytes
+//     char buffer[bufferSize]; 
+//     std::string content; // String to accumulate file content
+//     ssize_t bytesSent = 0;
+//     ssize_t TotalbytesSent = 0;
+//     memset(&buffer, 0, bufferSize);
+//     if(size > bufferSize * bufferSize)
+//         generate_header(1);
+//     else
+//         generate_header(0);
+//     while (file.read(buffer, bufferSize) || file.gcount() > 0) {
+//         std::cout << "^^^^^^^^^^=> | " << file.gcount() << " |<=^^^^^^^^^\n";
+//         std::stringstream size_header;
+//         if(size > bufferSize * bufferSize)
+//         {
+//             size_header  <<  file.gcount() <<  "\r\n";
+//             bytesSent = send(client_fd, size_header.str().c_str(), size_header.str().length(), 0);
+//         }
+//         bytesSent = send(client_fd, buffer, file.gcount(), 0);
+//         if(size > bufferSize * bufferSize)
+//             bytesSent = send(client_fd, "\r\n", 2, 0);
+//         if (bytesSent < 0) {
+//             std::cout << strerror(errno) << std::endl;
+//             close(client_fd);
+//             std::cout << "clooooooooooooooooooooooooooose(2) TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
+//             std::cout << "size : |" << size << "| \n";
+//             file.close();
+//             return "";
+//         }
+//         TotalbytesSent = TotalbytesSent + bytesSent;
+//     }
+//     std::cout << "sennnnnnnnnnnnnnnnnnnnnnd complete TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
+//     check_if = 1;
+//     file.close();
+//     return content;
+// }

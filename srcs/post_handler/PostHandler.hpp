@@ -13,6 +13,7 @@
 #include "../pars_request/ParsRequest.hpp"
 #include "../Parse_configfile/Location.hpp"
 
+
 class ParsRequest;
 class PostHandler {
 private:
@@ -24,6 +25,7 @@ private:
     bool isComplete;
     size_t maxBodySize;
     std::map<std::string, std::string> contentTypes;
+    std::map<std::string, std::string> cgi_pass; 
 
     std::string createUniqueFile(const std::string& extension, std::string& location_path);
     void storeContentTypes();
@@ -54,6 +56,18 @@ private:
     std::string boundarySep;
     std::string sep;
     std::string terminator;
+
+    // CGI
+    bool isCGI;
+    std::string cType;
+    std::string scriptPath;
+    std::map<std::string, std::string> cgiPassMap;
+    bool autoIndex;
+    
+
+    bool fileExistsAndNotEmpty(const std::string& filename);
+
+    
     
 public:
     PostHandler();
@@ -85,6 +99,21 @@ public:
 
     void setSepa(std::string sep);
     void setTer(std::string ter);
+
+
+    bool getCGIState() const;
+    std::string getContentType() const;
+    std::string getScriptPath() const;
+    std::map<std::string, std::string> getCgiPass() const;
+
+    std::pair<std::string, Location> getCorrectPath(const std::map<std::string, Location>& locations, std::string path);
+
+    const std::map<std::string, std::string>& getCgiPassFomPost() const;
+    bool getAutoindexFromPost() const;
+
+    const std::string& getExtension() const;
+    std::string getTheValidIndex(std::vector<std::string> index, std::string path);
+
 };
 
 #endif

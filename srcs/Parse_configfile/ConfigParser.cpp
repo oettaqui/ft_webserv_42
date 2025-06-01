@@ -139,7 +139,6 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
     std::string line;
     while (std::getline(file, line)) {
         trim(line);
-        
         if (line.empty() || line[0] == '#')
             continue;
 
@@ -169,10 +168,12 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
         else if (directive == "allow_methods") {
             size_t start = 0, end;
             while ((end = value.find(" ", start)) != std::string::npos) {
-                location.addMethod(value.substr(start, end - start));
+                if(!value.substr(start, end - start).empty())
+                    location.addMethod(value.substr(start, end - start));
                 start = end + 1;
             }
-            location.addMethod(value.substr(start));
+            if(!value.substr(start, end - start).empty())
+                location.addMethod(value.substr(start));
         }
         else if (directive == "index") {
             size_t start = 0, end;
@@ -236,7 +237,7 @@ bool ConfigParser::validateConfig() const {
     }
 
     for (size_t i = 0; i < servers.size(); ++i) {
-        if (!servers[i].isValid() || !servers[i].hasRequiredLocations())
+        if (!servers[i].isValid())
             return false;
     }
 
