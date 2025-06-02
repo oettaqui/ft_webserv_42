@@ -77,7 +77,6 @@ class ParsRequest{
         // add now 
         const int& getClientFd() const;
         const std::map<int,std::string>& getResponses() const;
-
         bool getCGIState() const;
 };
 

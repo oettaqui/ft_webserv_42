@@ -113,7 +113,7 @@ public:
 
     const std::string& getExtension() const;
     std::string getTheValidIndex(std::vector<std::string> index, std::string path);
-
+    std::string url_decode(std::string url);
 };
 
 #endif

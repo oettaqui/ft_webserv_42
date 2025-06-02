@@ -77,6 +77,8 @@ class GetHandler {
         std::string readLargeFileChunked(std::ifstream& file);
         std::string readSmallFile(std::ifstream& file);
         bool get_is_true_parse() const;
+        ////
+        std::string url_encode_question_marks(std::string url);
 };
 
 #endif

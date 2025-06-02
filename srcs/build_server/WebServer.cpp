@@ -298,7 +298,6 @@ void WebServer::run(ConfigParser &parser) {
             break;
         }
         for (int i = 0; i < num_events; i++) {
-            std::cout << "num_events = " << num_events << std::endl;
             for (std::vector<int>::const_iterator it = server_fds.begin(); it != server_fds.end(); ++it)
             {
                 if (events[i].data.fd == *it) {

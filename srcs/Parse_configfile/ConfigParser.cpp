@@ -261,6 +261,23 @@ const Server& ConfigParser::getServer(const std::string &host_p, const int& port
     return nullServer;
 }
 
+void ConfigParser::prapare_servers()
+{
+    for (std::vector<Server>::iterator it = this->servers.begin(); it != this->servers.end(); ++it) {
+        if(it->getLocations().find("/") == it->getLocations().end())
+        {
+            Location location;
+            location.setPath("/");
+            location.setRoot("./default");
+            location.addMethod("GET");
+            location.addMethod("POST");
+            location.addIndex("index.html");
+            location.setAutoindex("on");
+            it->addLocation("/", location);
+        }
+    }
+}
+
 void ConfigParser::all_server_data() const {
     for (std::vector<Server>::const_iterator it = this->servers.begin(); it != this->servers.end(); ++it) {
         std::cout << "Server host: " << it->getHost() << std::endl;

@@ -715,7 +715,8 @@ std::map<std::string, std::string> PostHandler::getCgiPass() const
 
 std::pair<std::string, Location> PostHandler::getCorrectPath(const std::map<std::string, Location>& locations, std::string path){
 
-    std::string tmp = path;
+
+    std::string tmp = url_decode(path);
     std::string notLocation;
     std::string rest = "";
     
@@ -767,4 +768,16 @@ const std::map<std::string, std::string>& PostHandler::getCgiPassFomPost() const
 
 const std::string& PostHandler::getExtension() const{
     return this->extension;
+}
+
+///****add the uncoding function***/
+
+std::string PostHandler::url_decode(std::string url) {
+    for (size_t i = 0; i < url.length(); ++i) {
+        if (url[i] == '%') {
+            int hex = strtol(url.substr(i+1, 2).c_str(), 0, 16);
+            url.replace(i, 3, 1, char(hex));
+        }
+    }
+    return url;
 }
