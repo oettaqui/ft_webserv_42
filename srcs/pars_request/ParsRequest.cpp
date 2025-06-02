@@ -54,54 +54,23 @@ void ParsRequest::parseRequestLine(const std::string& line) {
         path = parts[1];
         version = parts[2];
         is_valid = true;
-        // std::cout << "PATH from parsRequestLine function =========> " << path << std::endl;
+        std::cout << "PATH from parsRequestLine function =========> " << path << std::endl;
 
-        // size_t posQuery = path.find_last_of('?');
-        // size_t posEndQuery = path.find_last_of('#');
-        // std::string query;
-        // if (posQuery != std::string::npos){
+        size_t posQuery = path.find('?');
+        size_t posEndQuery = path.find_last_of('#');
+        
+        if (posQuery != std::string::npos){
 
-        //     if (posEndQuery != std::string::npos)
-        //         query = path.substr(posQuery + 1, posEndQuery);
-        //     else
-        //        query = path.substr(posQuery + 1, path.length()); 
-        //     path = path.substr(0, posQuery);
+            if (posEndQuery != std::string::npos)
+                this->query = path.substr(posQuery + 1, posEndQuery);
+            else
+               this->query = path.substr(posQuery + 1, path.length()); 
+            path = path.substr(0, posQuery);
 
-        // }
+        }
         // std::cout << "Query from parsRequestLine function =========> " << query << std::endl;
         // std::cout << "PATH after update from parsRequestLine function =========> " << path << std::endl;
-        // size_t posQuery = path.find("?");
-        // size_t posEndQuery = path.find_last_of("#", path.length());
-        // if (posQuery != std::string::npos){
-        //     std::string query;
-        //     if (posEndQuery != std::string::npos)
-        //         query = path.substr(posQuery + 1, posEndQuery);
-        //     else
-        //         query = path.substr(posQuery + 1, path.length());
-        //     std::cout << "Query from parsRequestLine function =========> " << query << std::endl;
-        //     path = path.substr(0, posQuery);
-        //     // while(query.length() > 0){
-        //     //     int posK = query.find("=");
-        //     //     if (posK != std::string::npos){
-        //     //         std::string key = query.substr(0, posK);
-        //     //         std::string value = "";
-        //     //         query = query.substr(posK + 1, query.length());
-        //     //         if (query.length() < 1 && value.empty())
-        //     //         {
-        //     //             is_valid = false;
-        //     //             break;
-        //     //         }
-        //     //         else{
-
-        //     //         }
-                    
-        //     //     }else if (){
-        //     //         is_valid = false;
-        //     //         break;
-        //     //     }
-        //     // }
-
-        // }
+    
         if ((method != "POST" && method != "GET" && method != "DELETE") && (version != "HTTP/1.1" || !path.empty())){
             is_valid = false;
         }
@@ -236,7 +205,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         header_parsed = true;
         std::string header_section = requestContent.substr(0, header_end);
         body = requestContent.substr(header_end + 4);
-        
+        std::cout << "BODY ==> " << body << std::endl;
         std::vector<std::string> lines = split(header_section, '\n');
         if (lines.empty()) {
             is_valid = false;
@@ -293,6 +262,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         data.contentType = postHandler->getContentType();
                         data.contentLen = postHandler->getCurrentLength();
                         data.scriptPath = postHandler->getScriptPath();
+                        data.queryString = this->query;
                         if (postHandler->getAutoindexFromPost())
                             data.autoIndex = "true";
                         else
@@ -355,18 +325,15 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             }
             std::string boundaryPrefix = "boundary=";
             size_t posBoundary = contentType.find(boundaryPrefix);
-            // std::cout << "==> " << contentType << std::endl;
             if (posBoundary != std::string::npos)
             {
                 size_t startPos = posBoundary + boundaryPrefix.length();
                 boundaryValue = contentType.substr(startPos);
-                // std::cout << "Boundary value: " << boundaryValue << std::endl;
             }
             if (!postHandler)
             {
                 postHandler = new PostHandler();
             }
-            // std::cout << "content length " << contentLength << std::endl;
             postHandler->setSepa( "--" + boundaryValue + "\r\n");
             postHandler->setTer( "--" + boundaryValue + "--");
             postHandler->setExpextedLength(contentLength);
@@ -393,8 +360,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             responses[client_fd] = response;
             if(getHandler->get_is_true_parse() == true)
                 is_Complet = true;
-            // std::cout << is_Complet << std::endl;
-            // std::cout << responses[client_fd] << std::endl;
         }
         else if (method == "DELETE") 
         {
@@ -414,8 +379,9 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             std::string body = request;
             postHandler->initBoundary(body, *this, parser);
         }
-        else 
+        else {
             postHandler->processData(request);
+        }
         
         if (postHandler->isRequestComplete()) {
             std::cout << "complet ++++++++++++\n";
@@ -453,5 +419,4 @@ const int& ParsRequest::getClientFd() const{return client_fd;}
 const std::map<int,std::string>& ParsRequest::getResponses() const { return responses; }
 
 bool ParsRequest::getCGIState() const { return CGI; }
-
 

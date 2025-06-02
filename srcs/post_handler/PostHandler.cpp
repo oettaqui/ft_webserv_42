@@ -269,7 +269,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         {
             indexV = location.getIndex();
             
-            std::string tmp =  getTheValidIndex(indexV, correctPath);
+            std::string tmp = getTheValidIndex(indexV, correctPath);
             // std::cout << "00000000000000000000000000 { " << tmp << " } 0000000000000000000000000000\n";
             if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos))
             {
@@ -281,7 +281,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
                 fileN = correctPath.substr(fp + 1, correctPath.length());
             }
             else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos)){
-                status = 404;
+                this->status = 404;
                 std::cout << "is a CGI but i don't have the extension that i should interprete it \n";
                 return;
             }

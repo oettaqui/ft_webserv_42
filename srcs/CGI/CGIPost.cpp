@@ -21,14 +21,13 @@ void CGIPost::setVarsEnv(dataCGI& data) {
     envVars["UPLOAD_FILE"] = data.file;
     envVars["AUTO_INDEX"] = data.autoIndex;
     envVars["PASS_CGI"] = data.CorrectPassCGI;
+    envVars["QUERY_STRING"] = data.queryString;
     envVars["REDIRECT_STATUS"] = "200";
 
     this->file = data.file;
     this->scriptPath = data.scriptPath;
     this->passCgi = data.CorrectPassCGI;
     this->autoIndex = data.autoIndex;
-    // std::cout << "PATH" << data.path << std::endl;
-    // std::cout << "SCRIPT" << data.scriptPath << std::endl;
 
 
 }
@@ -106,9 +105,15 @@ int CGIPost::executeScript(int fd) {
         ssize_t bytesRead;
         std::string output;
 
+        // i need to remove this and fix it ??
         while ((bytesRead = read(pipefd[0], buffer, sizeof(buffer))) > 0) {
             output.append(buffer, bytesRead);
         }
+        
+        // bytesRead = read(pipefd[0], buffer, sizeof(buffer));
+        // if (bytesRead > 0) 
+        //     output.append(buffer, bytesRead);
+        
 
         close(pipefd[0]);
         wait(NULL);

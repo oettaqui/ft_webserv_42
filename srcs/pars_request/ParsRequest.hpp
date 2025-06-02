@@ -53,6 +53,7 @@ class ParsRequest{
         CGIPost *cgiHandler;
         bool CGI;
         int status;
+        std::string query;
 
         std::map<std::string, std::string> queryData;
 
