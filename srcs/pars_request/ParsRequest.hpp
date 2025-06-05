@@ -55,7 +55,7 @@ class ParsRequest{
         int status;
 
         std::map<std::string, std::string> queryData;
-
+        std::string query;
 
     public:
         ParsRequest();
@@ -64,6 +64,7 @@ class ParsRequest{
         void parseHeaders(const std::string& header_section);
 
         const std::string& getMethod() const;
+        const std::string& getQuery() const;
         const std::string& getPath() const;
         const std::string& getVersion() const;
         const std::map<std::string, std::string>& getHeaders() const;

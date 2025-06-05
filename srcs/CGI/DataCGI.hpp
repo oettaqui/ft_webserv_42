@@ -15,6 +15,7 @@ struct dataCGI {
     std::string scriptPath;
     std::string autoIndex;
     std::string CorrectPassCGI;
+    std::string queryString;
 };
 
 #endif

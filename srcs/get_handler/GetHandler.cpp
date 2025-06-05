@@ -13,6 +13,8 @@ GetHandler::GetHandler()
     size = 0;
     is_true_parse = false;
     contentLength = 0;
+    autoIndex = false;
+    cgiHandler = NULL;
 }
 
 GetHandler::~GetHandler() {
@@ -42,7 +44,7 @@ void GetHandler::generate_header(int flag)
         << "Transfer-Encoding: chunked\r\n"
         << "\r\n";
     }
-    send(client_fd, header.str().c_str(), header.str().length(), 0);
+    final_res += header.str();
     check_put_header = 1;
 } 
 
@@ -127,7 +129,7 @@ void GetHandler::storeContentTypes(ParsRequest &request_data) {
     contentTypes["eot"] = "application/vnd.ms-fontobject";
     
     // Programming and configuration
-    contentTypes["php"] = "application/x-httpd-php";
+    contentTypes["php"] = "text";
     contentTypes["py"] = "text/x-python";
     contentTypes["java"] = "text/x-java-source";
     contentTypes["c"] = "text/x-c";
@@ -266,9 +268,6 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
     }
     for (size_t i = 0; i < items.size(); ++i) {
         std::string url = send_href + "/" + items[i];
-        // std::cout << "|-------------------------------------|\n";
-        // std::cout << "url " << url_encode_question_marks(url) << std::endl;
-        // std::cout << "|-------------------------------------|\n";
         if(isDirectory(base_path + "/" + items[i]))
         {
             html += "            <li class=\"link-item\">\n"
@@ -397,6 +396,7 @@ std::vector<std::string> GetHandler::get_location_server() const
 }
 
 std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser &parser) {
+    final_res.clear();
     storeContentTypes(request_data);
     path_location = this->split(url_decode(request_data.getPath()),'/');
     contentType = "text/html";
@@ -439,19 +439,20 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                 if(location_concerned.getIndex().size() != 0)
                 {
                     index_file = location_concerned.getRoot() + '/' + *location_concerned.getIndex().begin();
-                    content = readFile(index_file);
+                    content = readFile(index_file,request_data);
                     if(content.empty() && check_if == 0)
                     {
                         std::cout << "*************Autoo !content **********\n";
-                        content = readFile("./default/index.html");
+                        content = readFile("./default/index.html",request_data);
                     }
                 }
                 else
-                   content = readFile("./default/index.html");
+                   content = readFile("./default/index.html",request_data);
+                autoIndex = true;
             }
             else if(!isDirectory(index_file))
             {
-                content = readFile(index_file);
+                content = readFile(index_file,request_data);
             }
             else if(isDirectory(index_file))
             {
@@ -488,20 +489,21 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                 if(location_concerned.getIndex().size() != 0)
                 {
                     index_file = location_concerned.getRoot() + '/' + *location_concerned.getIndex().begin();
-                    content = readFile(index_file);
+                    content = readFile(index_file,request_data);
                     if(content.empty() && check_if == 0)
                     {
                         std::cout << "*************Autoo !content **********\n";
-                        content = readFile("./default/index.html");
+                        content = readFile("./default/index.html",request_data);
                     }
                 }
                 else
-                   content = readFile("./default/index.html");
+                   content = readFile("./default/index.html",request_data);
+                autoIndex = true;
             }
             else if(!isDirectory(index_file))
             {
                 std::cout << "haaaaaaaaaaaaaaaaa1\n";
-                content = readFile(index_file);
+                content = readFile(index_file,request_data);
             }
             else if(isDirectory(index_file))
             {
@@ -529,7 +531,8 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
     return generateResponse(content, request_data);
 }
 
-std::string GetHandler::readFile(const std::string& filePath) {
+std::string GetHandler::readFile(const std::string& filePath,ParsRequest &request_data) {
+    (void)request_data;
     std::string extension;
     if(!filePath.empty()) {
         extension = getFileExtension(filePath);
@@ -538,7 +541,41 @@ std::string GetHandler::readFile(const std::string& filePath) {
             contentType = it->second;
         }
     }
-    
+    ///////////////
+    // func(location,path) => ./pathoffile/file.extention | location.
+    // return flase | true
+    // if((extension == "php" || extension == "py") && (location_concerned.getCgi() && location_concerned.getCgiPass().size() > 0))
+    // {
+    //     cgiHandler =  new CGIPost();
+    //     // std::cout << "|" << extension << "|" << std::endl;
+    //     // std::cout << "|" << location_concerned.getCgi() << "|" << std::endl;
+    //     // std::cout << "|" << location_concerned.getCgiPass().size() << "|" << std::endl;
+    //     dataCGI data;
+    //     data.method = request_data.getMethod();
+    //     data.path = request_data.getPath();
+    //     data.version = request_data.getVersion();
+    //     data.file = "";
+    //     data.contentType = contentType;
+    //     data.contentLen = 0;
+    //     data.scriptPath = filePath;
+    //     data.queryString = request_data.getQuery();
+    //     if(autoIndex == true)
+    //         data.autoIndex = "true";
+    //     else
+    //         data.autoIndex = "false";
+    //     // std::map<std::string, std::string> passCGI = location_concerned.getCgiPass();
+    //     // std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + extension);
+    //     // if (passCGIIT != passCGI.end()){
+    //     //     data.CorrectPassCGI = passCGIIT->second;
+    //     //     cgiHandler->setVarsEnv(data);
+    //     //     cgiHandler->executeScript(client_fd);
+    //     //     is_true_parse = true;
+    //     //     check_if = 1;
+    //     // }
+    //     delete cgiHandler;
+    //     // return "";
+    // }
+    ///////////////
     if(!file.is_open())
     {
         std::cout << "dkhal-------------\n";
@@ -571,26 +608,22 @@ std::string GetHandler::readFile(const std::string& filePath) {
 
 std::string GetHandler::readSmallFile(std::ifstream& file) {
     std::string content;
-    // content.reserve(size); // Pre-allocate
     char buffer[BUFFER_SIZE_G];
     memset(buffer, 0, BUFFER_SIZE_G);
     file.read(buffer, BUFFER_SIZE_G);
     content.append(buffer, file.gcount());
-    
-    // Send all at once for small files
-    std::cout << "**********************************\n"; 
+    final_res += content;
+    std::cout << "-**********************************-\n"; 
     std::cout << file.gcount() << std::endl;
-    // std::cout << content << std::endl;
-    // std::cout << buffer << std::endl;
     std::cout << "**********************************\n"; 
-    ssize_t bytesSent = send(client_fd, content.c_str(), content.length(), 0);
-    if (bytesSent < 0) {
+    ssize_t bytesSent = send(client_fd, final_res.c_str(), final_res.length(), 0);
+    if (bytesSent <= 0) {
         std::cout << "Send error: " << strerror(errno) << std::endl;
         close(client_fd);
         file.close();
         return "";
     }
-    totalBytesSent = totalBytesSent + bytesSent;
+    totalBytesSent = totalBytesSent + file.gcount();
     check_if = 1;
     if(totalBytesSent >= size)
     {
@@ -602,66 +635,153 @@ std::string GetHandler::readSmallFile(std::ifstream& file) {
 }
 
 std::string GetHandler::readLargeFileChunked(std::ifstream& file) {
+    std::cout << "=================\n";
+    std::cout << "large file\n";
+    std::cout << "=================\n";
+    
     char buffer[BUFFER_SIZE_G];
-    memset(buffer, 0, BUFFER_SIZE_G);
-    file.read(buffer, BUFFER_SIZE_G);
-    size_t bytesRead = file.gcount();
-    std::cout << "^^^^^^^^^^=> | " << bytesRead << " |<=^^^^^^^^^\n";
+    int add_header = 0;
+    size_t increment_value = 0;
     
-    // Send chunk size in hex + CRLF
-    std::stringstream chunkSize;
-    chunkSize << std::hex << bytesRead << "\r\n";
-    
-    ssize_t bytesSent = send(client_fd, chunkSize.str().c_str(), chunkSize.str().length(), 0);
-    if (bytesSent < 0) {
-        std::cout << "Chunk size send error: " << strerror(errno) << std::endl;
-        close(client_fd);
+    if (!isSocketAlive(client_fd)) {
+        std::cout << "Socket is dead, aborting transfer\n";
         file.close();
         return "";
     }
     
-    // Send chunk data
-    bytesSent = send(client_fd, buffer, bytesRead, 0);
-    if (bytesSent < 0) {
+    memset(buffer, 0, BUFFER_SIZE_G);
+    file.read(buffer, BUFFER_SIZE_G);
+    size_t bytesRead = file.gcount();
+    totalBytesSent += bytesRead;
+    
+    if (!final_res.empty())
+        add_header = 1;
+    
+    std::stringstream chunkSize;
+    chunkSize << std::hex << bytesRead << "\r\n";
+    std::string chunkSizeStr = chunkSize.str();
+    
+    size_t totalChunkSize = chunkSizeStr.length() + bytesRead + 2;
+    
+    if (totalBytesSent >= size)
+        totalChunkSize += 5;
+    
+    if (add_header == 1)
+        totalChunkSize += final_res.length();
+
+    std::vector<char> combinedBuffer(totalChunkSize);
+
+    if (add_header == 1) {
+        std::memcpy(combinedBuffer.data(), final_res.c_str(), final_res.length());
+        increment_value += final_res.length();
+    }
+
+    std::memcpy(combinedBuffer.data() + increment_value, chunkSizeStr.c_str(), chunkSizeStr.length());
+    increment_value += chunkSizeStr.length();
+
+    std::memcpy(combinedBuffer.data() + increment_value, buffer, bytesRead);
+    increment_value += bytesRead;
+
+    std::memcpy(combinedBuffer.data() + increment_value, "\r\n", 2);
+    increment_value += 2;
+
+    if (totalBytesSent >= size) {
+        std::memcpy(combinedBuffer.data() + increment_value, "0\r\n\r\n", 5);
+        increment_value += 5;
+    }
+    
+    std::cout << "^^^^^^^^^^=> | " << bytesRead << " |<=^^^^^^^^^\n";
+    std::cout << "Total chunk size: " << totalChunkSize << std::endl;
+    ssize_t bytesSent = send(client_fd, combinedBuffer.data(), totalChunkSize,MSG_NOSIGNAL);
+    if (bytesSent <= 0) {
         std::cout << "Chunk data send error: " << strerror(errno) << std::endl;
         close(client_fd);
         file.close();
         return "";
     }
-    
-    // Send CRLF after chunk data
-    bytesSent = send(client_fd, "\r\n", 2, 0);
-    if (bytesSent < 0) {
-        std::cout << "Chunk CRLF send error: " << strerror(errno) << std::endl;
-        close(client_fd);
-        file.close();
-        return "";
-    }    
-    totalBytesSent += bytesRead;
-         // Clear buffer
-    // Send final chunk (0-sized chunk + CRLF + CRLF)
-    if(totalBytesSent >= size)
-    {
-        const char* finalChunk = "0\r\n\r\n";
-        ssize_t bytesSent = send(client_fd, finalChunk, 5, 0);
-        if (bytesSent < 0) {
-            std::cout << "Final chunk send error: " << strerror(errno) << std::endl;
-            close(client_fd);
-            file.close();
-            return "";
-        }
-    }
-    
-    if(totalBytesSent >= size)
-    {
+    if (totalBytesSent >= size) {
         std::cout << "Chunked send complete. Total bytes sent: " << totalBytesSent << std::endl;
         file.close();
-        std::cout << "++++++++++++++++++++++++++++++222222222222\n";
         is_true_parse = true;
     }
+    
     check_if = 1;
     return "";
 }
+bool GetHandler::isSocketAlive(int sockfd) {
+    int error = 0;
+    socklen_t len = sizeof(error);
+    int retval = getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len);
+    
+    if (retval != 0 || error != 0) {
+        return false;
+    }
+    
+    return true;
+}
+
+// std::string GetHandler::readLargeFileChunked(std::ifstream& file) {
+//     std::cout << "=================\n";
+//     std::cout << "large file\n";
+//     std::cout << "=================\n";
+//     char buffer[BUFFER_SIZE_G];
+//     int add_header = 0;
+//     ssize_t bytesSent;
+//     ssize_t increment_value = 0;
+//     memset(buffer, 0, BUFFER_SIZE_G);
+//     file.read(buffer, BUFFER_SIZE_G);
+//     size_t bytesRead = file.gcount();
+//     totalBytesSent += bytesRead;
+//     if(!final_res.empty())
+//         add_header = 1;
+//     size_t totalChunkSize = 0;
+//     std::stringstream chunkSize;
+//     chunkSize << std::hex << bytesRead << "\r\n";
+//     std::string chunkSizeStr = chunkSize.str();
+//     if(totalBytesSent >= size)
+//         totalChunkSize = chunkSizeStr.length() + bytesRead + 2 + 5;
+//     else
+//         totalChunkSize = chunkSizeStr.length() + bytesRead + 2;
+//     if(add_header == 1)
+//         totalChunkSize += final_res.length();
+//     std::vector<char> combinedBuffer(totalChunkSize);
+//     if(add_header == 1)
+//     {
+//         std::memcpy(combinedBuffer.data(), final_res.c_str(), final_res.length());
+//         increment_value += final_res.length();
+//     }
+//     std::memcpy(combinedBuffer.data() + increment_value, chunkSizeStr.c_str(), chunkSizeStr.length());
+//     increment_value += chunkSizeStr.length();
+//     std::memcpy(combinedBuffer.data() + increment_value, buffer, bytesRead);
+//     increment_value += bytesRead;
+//     std::memcpy(combinedBuffer.data() + increment_value, "\r\n", 2);
+//     increment_value += 2;
+//     if(totalBytesSent >= size)
+//     {
+//         std::memcpy(combinedBuffer.data() + increment_value, "0\r\n\r\n", 5);
+//         increment_value += 5;
+//     }
+//     std::cout << "^^^^^^^^^^=> | " << bytesRead << " |<=^^^^^^^^^\n";
+//     if(isSocketAlive(client_fd))
+//         std::cout << "============== still alive ===================\n";
+//     else
+//         std::cout << "============== no alive ===================\n";
+//     bytesSent = send(client_fd, combinedBuffer.data(), totalChunkSize, 0);
+//     if (bytesSent <= 0) {
+//         std::cout << "Chunk data send error: " << strerror(errno) << std::endl;
+//         close(client_fd);
+//         file.close();
+//         return "";
+//     }  
+//     if(totalBytesSent >= size)
+//     {
+//         std::cout << "Chunked send complete. Total bytes sent: " << totalBytesSent << std::endl;
+//         file.close();
+//         is_true_parse = true;
+//     }
+//     check_if = 1;
+//     return "";
+// }
 
 bool GetHandler::get_is_true_parse() const
 {
@@ -678,9 +798,10 @@ std::string GetHandler::generateResponse(const std::string& content,ParsRequest 
     {
         std::cout << "trueeeeeeeeeeeeee\n";
         is_true_parse = true;
+        final_res += content;
     }
     response << content;
-    return response.str();
+    return final_res;
 }
 
 std::string GetHandler::url_decode(std::string url) {
@@ -696,11 +817,10 @@ std::string GetHandler::url_decode(std::string url) {
 std::string GetHandler::url_encode_question_marks(std::string url) {
     for (std::string::size_type i = 0; i < url.length(); ++i) {
         if (url[i] == '?') {
-            // Convert '?' (ASCII 63) to hex format %3F
             char hex_buffer[4];
             sprintf(hex_buffer, "%%%.2X", (unsigned char)('?'));
             url.replace(i, 1, hex_buffer);
-            i += 2; // Skip the newly inserted characters to avoid re-processing
+            i += 2;
         }
     }
     return url;

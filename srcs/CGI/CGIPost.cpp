@@ -1,5 +1,4 @@
 #include "./CGIPost.hpp"
-
 CGIPost::CGIPost(){
     // std::cout << "constractor " << std::endl;
 }

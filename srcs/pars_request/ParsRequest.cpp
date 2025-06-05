@@ -393,8 +393,10 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             responses[client_fd] = response;
             if(getHandler->get_is_true_parse() == true)
                 is_Complet = true;
-            // std::cout << is_Complet << std::endl;
+            // std::cout << "|==================================================|\n";
             // std::cout << responses[client_fd] << std::endl;
+            // std::cout << "|==================================================|\n";
+            // sleep(3);
         }
         else if (method == "DELETE") 
         {
@@ -431,13 +433,17 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             std::cout << "is_Complet : true" << std::endl;
         else
             std::cout << "is_Complet : false" << std::endl;
-        std::cout << responses[client_fd] << std::endl;
+        // std::cout << "|==================================================|\n";
+        // std::cout << responses[client_fd] << std::endl;
+        // std::cout << "|==================================================|\n";
+        // sleep(3);
     }
 
 
 }
 
 const std::string& ParsRequest::getMethod() const { return method; }
+const std::string& ParsRequest::getQuery() const { return query; }
 const int& ParsRequest::portMethod() const { return port; }
 const std::string& ParsRequest::hostMethod() const { return host; }
 const std::string& ParsRequest::getPath() const { return path; }

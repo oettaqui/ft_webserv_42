@@ -92,10 +92,10 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             p->parse("",fd, parser);
         else
         {
-            if (!(write_buffers.find(fd) == write_buffers.end())) {
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
                 std::string& res = write_buffers[fd];
                 ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
-                if (bytes_sent == -1) {
+                if (bytes_sent <= -1) {
                     if (errno == EAGAIN || errno == EWOULDBLOCK) {
                         return;
                     }
