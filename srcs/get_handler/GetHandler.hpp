@@ -23,14 +23,18 @@
 #include <dirent.h>   // For opendir, readdir, closedir 
 #include <sys/stat.h> // For stat (file information)
 #include <algorithm>
+///////////
+#include "../CGI/CGI.hpp"
+#include "../CGI/DataCGI.hpp"
 
 #define BUFFER_SIZE_G 8000
 
+class CGI;
 class ParsRequest;
 class GetHandler {
     
     private:
-        std::string readFile(const std::string& filePath);
+        std::string readFile(const std::string& filePath,ParsRequest &request_data);
         std::string generateResponse(const std::string& content,ParsRequest &request_data);
         std::string trim(const std::string& str, char ch);
         std::vector<std::string> path_location;
@@ -57,6 +61,9 @@ class GetHandler {
         ssize_t size;
         bool is_true_parse;
         ssize_t contentLength;
+        ///
+        CGI *cgiHandler;
+        bool autoIndex;
     public:
         GetHandler();
         ~GetHandler();
@@ -77,6 +84,8 @@ class GetHandler {
         std::string readLargeFileChunked(std::ifstream& file);
         std::string readSmallFile(std::ifstream& file);
         bool get_is_true_parse() const;
+        ////
+        std::string url_encode_question_marks(std::string url);
 };
 
 #endif

@@ -5,18 +5,13 @@ import cgitb
 import os
 import html
 
-# Enable CGI error reporting
 cgitb.enable()
 
-# Print HTTP headers
 print("\r\n")
 
-# Get form data
 form = cgi.FieldStorage()
 
-# Check if this is a POST request with form data
 if os.environ.get('REQUEST_METHOD') == 'POST' and form:
-    # Get and sanitize form data
     username = html.escape(form.getvalue('username', ''))
     email = html.escape(form.getvalue('email', ''))
     
@@ -28,7 +23,6 @@ if os.environ.get('REQUEST_METHOD') == 'POST' and form:
     is_adult = age >= 18
     
     if is_adult:
-        # Adult template
         html_content = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -150,16 +144,12 @@ if os.environ.get('REQUEST_METHOD') == 'POST' and form:
         
         <div class="status-badge">✅ Adult Account Verified</div>
         
-        <div class="welcome-message">
-            Welcome to our professional platform! As an adult user, you have access to all features and services. Your registration has been processed successfully.
-        </div>
     </div>
 </body>
 </html>'''
         print(html_content)
     
     else:
-        # Minor template
         html_content = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -352,17 +342,12 @@ if os.environ.get('REQUEST_METHOD') == 'POST' and form:
         </div>
         
         <div class="status-badge">🌟 Youth Account Created!</div>
-        
-        <div class="welcome-message">
-            Hey there, young explorer! Welcome to our fun platform! Since you're under 18, you'll have access to age-appropriate content and features designed just for you. Have fun and stay safe! 🚀
-        </div>
     </div>
 </body>
 </html>'''
         print(html_content)
 
 else:
-    # No POST data or invalid request
     print('''<!DOCTYPE html>
 <html>
 <head>

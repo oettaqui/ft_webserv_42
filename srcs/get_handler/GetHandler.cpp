@@ -13,6 +13,8 @@ GetHandler::GetHandler()
     size = 0;
     is_true_parse = false;
     contentLength = 0;
+    autoIndex = false;
+    cgiHandler = NULL;
 }
 
 GetHandler::~GetHandler() {
@@ -127,7 +129,7 @@ void GetHandler::storeContentTypes(ParsRequest &request_data) {
     contentTypes["eot"] = "application/vnd.ms-fontobject";
     
     // Programming and configuration
-    contentTypes["php"] = "application/x-httpd-php";
+    contentTypes["php"] = "text";
     contentTypes["py"] = "text/x-python";
     contentTypes["java"] = "text/x-java-source";
     contentTypes["c"] = "text/x-c";
@@ -160,15 +162,23 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
     }
     if(base_path != ".")
         path = trim(base_path,'.');
+    std::cout << "======================| location_base |============ :: " << location_base << "|" << std::endl;
+    std::cout << "======================| base_path |============ :: " << base_path << "|" << std::endl;
+    std::cout << "======================| path |============ :: " << path << "|" << std::endl;
     std::cout << "generateAttractivePage\n";
     if(check_root(location_concerned.getRoot()))
     {
         std::cout << "hnaa1\n";
         send_href = location_base + path.substr(location_concerned.getRoot().length() - 1,path.length());
     }
-    else if(path.empty())
+    else if(path.empty() && location_concerned.getPath() == "/")
     {
         send_href = base_path;
+    }
+    else if(path.empty() && location_concerned.getPath() != "/")
+    {
+        std::cout << "hnaa2\n";
+        send_href = location_base;
     }
     else
     {
@@ -176,11 +186,15 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
         std::cout << "======================| location_base |============ :: " << location_base << std::endl;
         std::cout << "======================| base_path |============ :: " << base_path << std::endl;
         std::cout << "======================| path |============ :: " << path << std::endl;
-        send_href = location_base + path.substr(location_concerned.getRoot().length(),path.length());
+        if(location_concerned.getPath() != "/")
+            send_href = location_base + "/" + path.substr(location_concerned.getRoot().length(),path.length());
+        else
+            send_href = location_base + path.substr(location_concerned.getRoot().length(),path.length());
     }
     std::cout << "======================| (2)location_base |============ :: " << location_base << std::endl;
     std::cout << "======================| (2)path |============ :: " << path << std::endl;
     std::cout << "======================| (2)first send_href |============ :: " << send_href << std::endl;
+    std::cout << "======================| dak line |============ :: " << location_base << std::endl;
     std::string html = "<!DOCTYPE html>\n"
                        "<html lang=\"en\">\n"
                        "<head>\n"
@@ -253,16 +267,17 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
         std::cout << "======================| (3)first send_href |============ :: " << send_href << std::endl;
     }
     for (size_t i = 0; i < items.size(); ++i) {
+        std::string url = send_href + "/" + items[i];
         if(isDirectory(base_path + "/" + items[i]))
         {
             html += "            <li class=\"link-item\">\n"
-                    "                <a href=\"" + send_href + "/" + items[i] + "\">"  + items[i] +" 📁</a>\n"
+                    "                <a href=\"" + url_encode_question_marks(url) + "\">" + items[i] +" 📁</a>\n"
                     "            </li>\n";
         }
         else
         {
             html += "            <li class=\"link-item\">\n"
-                    "                <a href=\"" + send_href + "/" + items[i] + "\">"  +  items[i] + " 📄</a>\n"
+                    "                <a href=\"" + url_encode_question_marks(url) + "\">" + items[i] + " 📄</a>\n"
                     "            </li>\n";         
         }
     }
@@ -423,19 +438,20 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                 if(location_concerned.getIndex().size() != 0)
                 {
                     index_file = location_concerned.getRoot() + '/' + *location_concerned.getIndex().begin();
-                    content = readFile(index_file);
+                    content = readFile(index_file,request_data);
                     if(content.empty() && check_if == 0)
                     {
                         std::cout << "*************Autoo !content **********\n";
-                        content = readFile("./default/index.html");
+                        content = readFile("./default/index.html",request_data);
                     }
                 }
                 else
-                   content = readFile("./default/index.html");
+                   content = readFile("./default/index.html",request_data);
+                autoIndex = true;
             }
             else if(!isDirectory(index_file))
             {
-                content = readFile(index_file);
+                content = readFile(index_file,request_data);
             }
             else if(isDirectory(index_file))
             {
@@ -472,20 +488,21 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                 if(location_concerned.getIndex().size() != 0)
                 {
                     index_file = location_concerned.getRoot() + '/' + *location_concerned.getIndex().begin();
-                    content = readFile(index_file);
+                    content = readFile(index_file,request_data);
                     if(content.empty() && check_if == 0)
                     {
                         std::cout << "*************Autoo !content **********\n";
-                        content = readFile("./default/index.html");
+                        content = readFile("./default/index.html",request_data);
                     }
                 }
                 else
-                   content = readFile("./default/index.html");
+                   content = readFile("./default/index.html",request_data);
+                autoIndex = true;
             }
             else if(!isDirectory(index_file))
             {
                 std::cout << "haaaaaaaaaaaaaaaaa1\n";
-                content = readFile(index_file);
+                content = readFile(index_file, request_data);
             }
             else if(isDirectory(index_file))
             {
@@ -501,6 +518,8 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             }
         }
     }
+
+
     if (content.empty() && check_if == 0) {
         statusCode = 404;
         contentType = "text/html";
@@ -513,7 +532,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
     return generateResponse(content, request_data);
 }
 
-std::string GetHandler::readFile(const std::string& filePath) {
+std::string GetHandler::readFile(const std::string& filePath,ParsRequest &request_data) {
     std::string extension;
     if(!filePath.empty()) {
         extension = getFileExtension(filePath);
@@ -522,7 +541,36 @@ std::string GetHandler::readFile(const std::string& filePath) {
             contentType = it->second;
         }
     }
-    
+    if((extension == "php" || extension == "py") && (location_concerned.getCgi() && location_concerned.getCgiPass().size() > 0))
+    {
+        cgiHandler =  new CGI();
+        std::string response;
+        dataCGI data;
+        data.method = request_data.getMethod();
+        data.path = request_data.getPath();
+        data.version = request_data.getVersion();
+        data.file = "";
+        data.contentType = contentType;
+        data.contentLen = 0;
+        data.scriptPath = filePath;
+        data.queryString = request_data.getQuery();
+        if(autoIndex == true)
+            data.autoIndex = "true";
+        else
+            data.autoIndex = "false";
+        std::map<std::string, std::string> passCGI = location_concerned.getCgiPass();
+        std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + extension);
+        if (passCGIIT != passCGI.end()){
+            data.CorrectPassCGI = passCGIIT->second;
+            cgiHandler->setVarsEnv(data);
+            // response = cgiHandler->();
+            is_true_parse = true; 
+            check_if = 1;
+        }
+        // delete cgiHandler;
+        // return response;
+    }
+  
     if(!file.is_open())
     {
         std::cout << "dkhal-------------\n";
@@ -562,7 +610,7 @@ std::string GetHandler::readSmallFile(std::ifstream& file) {
     content.append(buffer, file.gcount());
     
     // Send all at once for small files
-    std::cout << "**********************************\n"; 
+    std::cout << "-**********************************-\n"; 
     std::cout << file.gcount() << std::endl;
     // std::cout << content << std::endl;
     // std::cout << buffer << std::endl;
@@ -677,97 +725,15 @@ std::string GetHandler::url_decode(std::string url) {
     return url;
 }
 
-//     static int hex_to_int(char c) {
-//         if (c >= '0' && c <= '9') return c - '0';
-//         if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-//         if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-//         return -1; // Invalid hex character
-//     }
-    
-//     // Main URL decode function
-//     static std::string url_decode(const std::string& url) {
-//         std::string decoded;
-//         decoded.reserve(url.length()); // Pre-allocate for efficiency
-        
-//         for (size_t i = 0; i < url.length(); ++i) {
-//             if (url[i] == '%' && i + 2 < url.length()) {
-//                 // Get the two hex digits after %
-//                 int high = hex_to_int(url[i + 1]);
-//                 int low = hex_to_int(url[i + 2]);
-                
-//                 // If both are valid hex digits
-//                 if (high != -1 && low != -1) {
-//                     // Convert to character and append
-//                     char decoded_char = static_cast<char>((high * 16) + low);
-//                     decoded += decoded_char;
-//                     i += 2; // Skip the two hex digits
-//                 } else {
-//                     // Invalid encoding, keep the % as is
-//                     decoded += url[i];
-//                 }
-//             } else if (url[i] == '+') {
-//                 // Handle + as space (common in form data)
-//                 decoded += ' ';
-//             } else {
-//                 // Regular character, copy as is
-//                 decoded += url[i];
-//             }
-//         }
-        
-//         return decoded;
-//     }
-// };
-// std::string GetHandler::readFile(const std::string& filePath) {
-//     std::string extension;
-//     if(!filePath.empty())
-//     {
-//         extension = getFileExtension(filePath);
-//         std::map<std::string, std::string>::const_iterator it = contentTypes.find(extension);
-//         if(it != contentTypes.end() && !extension.empty())
-//         {
-//             contentType = it->second;
-//         }
-//     }
-//     std::ifstream file(filePath.c_str(),std::ios::binary);
-//     if (!file) {
-//         std::cout << "failed Read ///////\n";
-//         return "";
-//     }
-//     size_t size = getFileSize(filePath);
-//     std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
-//     const size_t bufferSize = 1024; // Buffer size set to 8000 bytes
-//     char buffer[bufferSize]; 
-//     std::string content; // String to accumulate file content
-//     ssize_t bytesSent = 0;
-//     ssize_t TotalbytesSent = 0;
-//     memset(&buffer, 0, bufferSize);
-//     if(size > bufferSize * bufferSize)
-//         generate_header(1);
-//     else
-//         generate_header(0);
-//     while (file.read(buffer, bufferSize) || file.gcount() > 0) {
-//         std::cout << "^^^^^^^^^^=> | " << file.gcount() << " |<=^^^^^^^^^\n";
-//         std::stringstream size_header;
-//         if(size > bufferSize * bufferSize)
-//         {
-//             size_header  <<  file.gcount() <<  "\r\n";
-//             bytesSent = send(client_fd, size_header.str().c_str(), size_header.str().length(), 0);
-//         }
-//         bytesSent = send(client_fd, buffer, file.gcount(), 0);
-//         if(size > bufferSize * bufferSize)
-//             bytesSent = send(client_fd, "\r\n", 2, 0);
-//         if (bytesSent < 0) {
-//             std::cout << strerror(errno) << std::endl;
-//             close(client_fd);
-//             std::cout << "clooooooooooooooooooooooooooose(2) TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
-//             std::cout << "size : |" << size << "| \n";
-//             file.close();
-//             return "";
-//         }
-//         TotalbytesSent = TotalbytesSent + bytesSent;
-//     }
-//     std::cout << "sennnnnnnnnnnnnnnnnnnnnnd complete TotalbytesSent : " << TotalbytesSent << "| size : " << size << std::endl ;
-//     check_if = 1;
-//     file.close();
-//     return content;
-// }
+std::string GetHandler::url_encode_question_marks(std::string url) {
+    for (std::string::size_type i = 0; i < url.length(); ++i) {
+        if (url[i] == '?') {
+            // Convert '?' (ASCII 63) to hex format %3F
+            char hex_buffer[4];
+            sprintf(hex_buffer, "%%%.2X", (unsigned char)('?'));
+            url.replace(i, 1, hex_buffer);
+            i += 2; // Skip the newly inserted characters to avoid re-processing
+        }
+    }
+    return url;
+}

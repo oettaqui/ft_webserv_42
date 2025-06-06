@@ -258,6 +258,9 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         c = 2;
 
     location = LocationAndPath.second;
+
+    // 
+    // is ture;
     if (location.getCgi())
     {
         std::cout << "=============  IS CGI ========\n";
@@ -270,7 +273,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
             indexV = location.getIndex();
             
             std::string tmp = getTheValidIndex(indexV, correctPath);
-            // std::cout << "00000000000000000000000000 { " << tmp << " } 0000000000000000000000000000\n";
             if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos))
             {
                 correctPath = tmp;
@@ -574,6 +576,7 @@ void PostHandler::processData(const std::string& data) {
     }
     
     file << data;
+    
 
     // body += data;
 
@@ -715,7 +718,7 @@ std::map<std::string, std::string> PostHandler::getCgiPass() const
 
 std::pair<std::string, Location> PostHandler::getCorrectPath(const std::map<std::string, Location>& locations, std::string path){
 
-    std::string tmp = path;
+    std::string tmp = url_decode(path);
     std::string notLocation;
     std::string rest = "";
     
@@ -767,4 +770,14 @@ const std::map<std::string, std::string>& PostHandler::getCgiPassFomPost() const
 
 const std::string& PostHandler::getExtension() const{
     return this->extension;
+}
+
+std::string PostHandler::url_decode(std::string url) {
+    for (size_t i = 0; i < url.length(); ++i) {
+        if (url[i] == '%') {
+            int hex = strtol(url.substr(i+1, 2).c_str(), 0, 16);
+            url.replace(i, 3, 1, char(hex));
+        }
+    }
+    return url;
 }

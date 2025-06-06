@@ -84,15 +84,57 @@ void WebServer::handleNewConnection(int server_fd) {
 
 void WebServer::getResponse(int fd, ConfigParser &parser)
 {
-    std::cout << "getResponse\n";
+    // std::cout << "getResponse\n";
     ParsRequest* p = clients[fd];
     if(p)
     {
         if(p->getMethod() == "GET" && p->isComplet() == false)
             p->parse("",fd, parser);
+        else if (p->getCGIState() && p->isComplet() == false)
+        {
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                std::string& res = write_buffers[fd];
+                ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                if (bytes_sent == -1) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        return;
+                    }
+                    std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    closeConnection(fd);
+                    return;
+                }
+                write_buffers.erase(fd);
+            } 
+            p->parse("",fd, parser);    
+        }
+        else if (p->getCGIState() && p->isComplet() == true){
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                std::string& res = write_buffers[fd];
+                ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                if (bytes_sent == -1) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        return;
+                    }
+                    std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    closeConnection(fd);
+                    return;
+                }
+                write_buffers.erase(fd);
+            }
+            
+            std::cout << "Response sent successfully to client: " << fd << std::endl;
+            struct epoll_event event;
+            event.events = EPOLLIN;
+            event.data.fd = fd;
+            epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            closeConnection(fd);
+        }
         else
         {
-            if (!(write_buffers.find(fd) == write_buffers.end())) {
+            std::cout << write_buffers[fd] << std::endl;
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
                 std::string& res = write_buffers[fd];
                 ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
                 if (bytes_sent == -1) {
@@ -141,7 +183,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
         std::string req;
         req.append(buffer, bytes_read);
         ParsRequest* p = clients[fd];
-        p->parse(req,fd, parser);
+        p->parse(req, fd, parser);
         if(!p->isValid())
         {
             std::cout << !p->isValid() << std::endl;
@@ -162,23 +204,30 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
         }
         if (p->isComplet()) 
         {
-            if(p->getMethod() == "GET")
+            if(p->getMethod() == "GET" && !p->getCGIState())
             {
-                std::cout << "**********<<\n";
+                // std::cout << "**********<<\n";
                 write_buffers[fd] = p->getResponses().find(fd)->second;
             }
             else if(p->getMethod() == "DELETE")
                 write_buffers[fd] = p->getResponses().find(fd)->second;
             else if(!p->getCGIState())
                 write_buffers[fd] = HTML_RESPONSE;
+            else if (p->getCGIState())
+            {
+                // std::cout << "---------\n";
+               write_buffers[fd] = p->getResponses().find(fd)->second;
+            }
+           
             struct epoll_event event;
             event.events = EPOLLOUT;
             event.data.fd = fd;
             epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
             return ;
         }
-        else if(p->getMethod() == "GET")
+        else if(p->getMethod() == "GET" || p->getCGIState())
         {
+            // std::cout << "111111\n";
             struct epoll_event event;
             event.events = EPOLLOUT;
             event.data.fd = fd;
@@ -298,7 +347,6 @@ void WebServer::run(ConfigParser &parser) {
             break;
         }
         for (int i = 0; i < num_events; i++) {
-            std::cout << "num_events = " << num_events << std::endl;
             for (std::vector<int>::const_iterator it = server_fds.begin(); it != server_fds.end(); ++it)
             {
                 if (events[i].data.fd == *it) {

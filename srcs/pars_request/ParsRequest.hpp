@@ -16,10 +16,10 @@
 #include "../post_handler/PostHandler.hpp"
 #include "../get_handler/GetHandler.hpp"
 #include "../delete_handler/DeleteHandler.hpp"
-#include "../CGI/CGIPost.hpp"
+#include "../CGI/CGI.hpp"
 #include "../CGI/DataCGI.hpp"
 
-class CGIPost;
+class CGI;
 class GetHandler;
 class PostHandler;
 class ParsRequest{
@@ -50,12 +50,14 @@ class ParsRequest{
 
         PostHandler* postHandler;
 
-        CGIPost *cgiHandler;
-        bool CGI;
+        CGI *cgiHandler;
+        bool Cgi;
         int status;
         std::string query;
 
         std::map<std::string, std::string> queryData;
+
+        int flagCGI;
 
 
     public:
@@ -80,6 +82,9 @@ class ParsRequest{
         const std::map<int,std::string>& getResponses() const;
 
         bool getCGIState() const;
+        const std::string& getQuery() const;
+
+        int getFlagCGI() const;
 };
 
 #endif

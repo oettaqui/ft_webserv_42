@@ -5,7 +5,7 @@ SRCS =	srcs/main.cpp srcs/Parse_configfile/ConfigParser.cpp srcs/Parse_configfil
 		srcs/Parse_configfile/Server.cpp srcs/build_server/WebServer.cpp\
 		srcs/pars_request/ParsRequest.cpp \
 		srcs/post_handler/PostHandler.cpp srcs/get_handler/GetHandler.cpp srcs/delete_handler/DeleteHandler.cpp\
-		srcs/CGI/CGIPost.cpp
+		srcs/CGI/CGI.cpp
 OBJS = ${SRCS:.cpp=.o}
 RM = rm -f
 
