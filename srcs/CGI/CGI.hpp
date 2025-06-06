@@ -1,5 +1,5 @@
-#ifndef CGIPOST_HPP
-#define CGIPOST_HPP
+#ifndef CGI_HPP
+#define CGI_HPP
 
 
 #include <map>
@@ -15,7 +15,7 @@
 #include "../pars_request/ParsRequest.hpp"
 #include "./DataCGI.hpp"
 
-class CGIPost{
+class CGI{
 
 private:
 
@@ -26,14 +26,25 @@ private:
     std::string file;
     std::string passCgi;
     std::string autoIndex;
+    int status;
+    // std::ostringstream outfileStr;
+    // int outputFd;
+    int flag;
+    bool cgiExecuted;
+    pid_t pid;
+    int pipeFd[2];
+
 
 public:
-    CGIPost();
-    ~CGIPost();
+    CGI();
+    ~CGI();
 
     void setVarsEnv(dataCGI& data);
     char** buildEnvp(std::map<std::string, std::string>& env);
-    int executeScript(int fd);
+    // int executeScript(int fd);
+    std::string executeScript();
+    int getStatusCGI() const;
+    int getCGIFlag() const;
 
 };
 

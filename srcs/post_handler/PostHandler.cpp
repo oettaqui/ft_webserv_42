@@ -258,6 +258,30 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         c = 2;
 
     location = LocationAndPath.second;
+    std::vector<std::string> allow_methods = location.getMethods();
+    if(std::find(allow_methods.begin(), allow_methods.end(), "POST") == allow_methods.end())
+    {
+        std::cout << "POST is not allowed." << std::endl;
+        status = 405;
+        return;
+    }
+    ///// handle the redirection
+    if(location.hasRedirect() == true)
+    {
+        const std::map<int, std::string>::const_iterator redirection = location.getRedirection().begin();
+        std::cout << "<!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!>\n";
+        std::cout << "Should redirect to \n";
+        std::cout << "status = " <<redirection->first << " path = " << redirection->second << std::endl;
+        std::string content = createRedirectResponse(redirection->first,redirection->second);
+        std::cout << "header to send = " << content << std::endl;
+        std::cout << "<!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!>\n";
+        data_req.setResponses(content);
+        data_req.setFlagRedirect();
+        return ;
+    }
+
+    // 
+    // is ture;
     if (location.getCgi())
     {
         std::cout << "=============  IS CGI ========\n";
@@ -269,8 +293,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         {
             indexV = location.getIndex();
             
-            std::string tmp =  getTheValidIndex(indexV, correctPath);
-            // std::cout << "00000000000000000000000000 { " << tmp << " } 0000000000000000000000000000\n";
+            std::string tmp = getTheValidIndex(indexV, correctPath);
             if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos))
             {
                 correctPath = tmp;
@@ -281,7 +304,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
                 fileN = correctPath.substr(fp + 1, correctPath.length());
             }
             else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos)){
-                status = 404;
+                this->status = 404;
                 std::cout << "is a CGI but i don't have the extension that i should interprete it \n";
                 return;
             }
@@ -295,76 +318,74 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     else
         location_path = l;
 
-    std::vector<std::string> allow_methods = location.getMethods();
-    if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
-        std::cout << "Location Path" << location_path << std::endl;
-        status = 200;
-        this->maxBodySize = server.getClientMaxBodySize();
-        
-        std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
-        if (itT != contentTypes.end()) {
-            this->extension = itT->second;
-        } else {
-            if (contentType == "application/x-www-form-urlencoded")
-            {
-                if (fileN.empty())
-                    this->extension = "txt";
+    std::cout << "Location Path" << location_path << std::endl;
+    status = 200;
+    this->maxBodySize = server.getClientMaxBodySize();
+    
+    std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
+    if (itT != contentTypes.end()) {
+        this->extension = itT->second;
+    } else {
+        if (contentType == "application/x-www-form-urlencoded")
+        {
+            if (fileN.empty())
+                this->extension = "txt";
+            else{
+                size_t pointP = fileN.find(".");
+                if (pointP != std::string::npos)
+                {
+                    this->extension = fileN.substr(pointP + 1, fileN.length());
+                    std::cout << "extension " << extension << std::endl;
+                }
                 else{
-                    size_t pointP = fileN.find(".");
-                    if (pointP != std::string::npos)
-                    {
-                        this->extension = fileN.substr(pointP + 1, fileN.length());
-                        std::cout << "extension " << extension << std::endl;
-                    }
-                    else{
-                        std::cout << "==============> " << fileN << std::endl;
-                    }
+                    std::cout << "==============> " << fileN << std::endl;
                 }
             }
-            else
-                std::cout << "Content Type Unsupported" << std::endl;
         }
-        if (expectedLength > maxBodySize && maxBodySize > 0 && expectedLength > 0){
-            std::cout << "This file has a content lenght greater then max body size : " << std::endl;
-            isComplete = true;
-            return;
-        }else{
-            this->filename = createUniqueFile(extension, location_path);
-        }
-        if (!filename.empty()) {
-            std::cout << "Created file: " << this->filename << std::endl;
-        }
-        else{
-            return;
-        }
-        file.open(filename.c_str(), std::ios::binary);
-        if (!file) {
-            std::cerr << "Failed to open file for writing: " << filename << std::endl;
-        }
-        this->isChunked = data_req.isChunked();
-        if (isChunked) {
-            this->expectedLength = 0;
-            this->chunkState = READING_SIZE;
-            this->currentChunkSize = -1;
-            this->currentChunkBytesRead = 0;
-            this->chunkSizeBuffer = "";
-        }
-        
-
-        if (!data_req.getBody().empty()) {
-            if (isChunked) {
-                processChunkedData(data_req.getBody());
-            } else {
-                processData(data_req.getBody());
-                std::cout << "here processData " << std::endl;
-            }
-        }
-
-    }else {
-        std::cout << "POST is not allowed." << std::endl;
-        status = 405;
+        else
+            std::cout << "Content Type Unsupported" << std::endl;
+    }
+    if (expectedLength > maxBodySize && maxBodySize > 0 && expectedLength > 0){
+        std::cout << "This file has a content lenght greater then max body size : " << std::endl;
+        isComplete = true;
+        return;
+    }else{
+        this->filename = createUniqueFile(extension, location_path);
+    }
+    if (!filename.empty()) {
+        std::cout << "Created file: " << this->filename << std::endl;
+    }
+    else{
         return;
     }
+    file.open(filename.c_str(), std::ios::binary);
+    if (!file) {
+        std::cerr << "Failed to open file for writing: " << filename << std::endl;
+    }
+    this->isChunked = data_req.isChunked();
+    if (isChunked) {
+        this->expectedLength = 0;
+        this->chunkState = READING_SIZE;
+        this->currentChunkSize = -1;
+        this->currentChunkBytesRead = 0;
+        this->chunkSizeBuffer = "";
+    }
+    
+
+    if (!data_req.getBody().empty()) {
+        if (isChunked) {
+            processChunkedData(data_req.getBody());
+        } else {
+            processData(data_req.getBody());
+            std::cout << "here processData " << std::endl;
+        }
+    }
+
+    // }else {
+    //     std::cout << "POST is not allowed." << std::endl;
+    //     status = 405;
+    //     return;
+    // }
     
 
 
@@ -574,6 +595,7 @@ void PostHandler::processData(const std::string& data) {
     }
     
     file << data;
+    
 
     // body += data;
 
@@ -715,7 +737,6 @@ std::map<std::string, std::string> PostHandler::getCgiPass() const
 
 std::pair<std::string, Location> PostHandler::getCorrectPath(const std::map<std::string, Location>& locations, std::string path){
 
-
     std::string tmp = url_decode(path);
     std::string notLocation;
     std::string rest = "";
@@ -770,8 +791,6 @@ const std::string& PostHandler::getExtension() const{
     return this->extension;
 }
 
-///****add the uncoding function***/
-
 std::string PostHandler::url_decode(std::string url) {
     for (size_t i = 0; i < url.length(); ++i) {
         if (url[i] == '%') {
@@ -780,4 +799,31 @@ std::string PostHandler::url_decode(std::string url) {
         }
     }
     return url;
+}
+
+
+////////////// new block
+
+std::string PostHandler::createRedirectResponse(int statusCode, const std::string& location) {
+    std::stringstream response;
+    
+    response << "HTTP/1.1 " << statusCode << " ";
+    
+    // Add status text
+    switch(statusCode) {
+        case 301: response << "Moved Permanently"; break;
+        case 302: response << "Found"; break;
+        case 303: response << "See Other"; break;
+        case 307: response << "Temporary Redirect"; break;
+        case 308: response << "Permanent Redirect"; break;
+        default: response << "Redirect"; break;
+    }
+    
+    response << "\r\n";
+    response << "Location: " << location << "\r\n";
+    response << "Content-Length: 0\r\n";
+    response << "Connection: close\r\n";
+    response << "\r\n";
+    
+    return response.str();
 }

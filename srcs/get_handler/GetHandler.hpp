@@ -24,12 +24,12 @@
 #include <sys/stat.h> // For stat (file information)
 #include <algorithm>
 ///////////
-#include "../CGI/CGIPost.hpp"
+#include "../CGI/CGI.hpp"
 #include "../CGI/DataCGI.hpp"
 
 #define BUFFER_SIZE_G 1024
 
-class CGIPost;
+class CGI;
 class ParsRequest;
 class GetHandler {
     
@@ -62,10 +62,12 @@ class GetHandler {
         bool is_true_parse;
         ssize_t contentLength;
         ///
-        CGIPost *cgiHandler;
+        CGI *cgiHandler;
         bool autoIndex;
         //
         std::string final_res;
+        bool cgi_check;
+        int cgi_flag;
     public:
         GetHandler();
         ~GetHandler();
@@ -89,6 +91,11 @@ class GetHandler {
         ////
         std::string url_encode_question_marks(std::string url);
         bool isSocketAlive(int sockfd);
+        ////
+        std::string createRedirectResponse(int statusCode, const std::string& location);
+        /////
+        bool getCgiCheck() const;
+
 };
 
 #endif

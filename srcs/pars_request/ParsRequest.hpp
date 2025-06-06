@@ -16,10 +16,10 @@
 #include "../post_handler/PostHandler.hpp"
 #include "../get_handler/GetHandler.hpp"
 #include "../delete_handler/DeleteHandler.hpp"
-#include "../CGI/CGIPost.hpp"
+#include "../CGI/CGI.hpp"
 #include "../CGI/DataCGI.hpp"
 
-class CGIPost;
+class CGI;
 class GetHandler;
 class PostHandler;
 class ParsRequest{
@@ -50,12 +50,16 @@ class ParsRequest{
 
         PostHandler* postHandler;
 
-        CGIPost *cgiHandler;
-        bool CGI;
+        CGI *cgiHandler;
+        bool Cgi;
         int status;
+        std::string query;
 
         std::map<std::string, std::string> queryData;
-        std::string query;
+
+        int flagCGI;
+        bool FlagRedirect;
+
 
     public:
         ParsRequest();
@@ -64,7 +68,6 @@ class ParsRequest{
         void parseHeaders(const std::string& header_section);
 
         const std::string& getMethod() const;
-        const std::string& getQuery() const;
         const std::string& getPath() const;
         const std::string& getVersion() const;
         const std::map<std::string, std::string>& getHeaders() const;
@@ -78,7 +81,14 @@ class ParsRequest{
         // add now 
         const int& getClientFd() const;
         const std::map<int,std::string>& getResponses() const;
+        void setResponses(std::string resp);
+
         bool getCGIState() const;
+        bool getFlagRedirect() const;
+        void setFlagRedirect();
+        const std::string& getQuery() const;
+
+        int getFlagCGI() const;
 };
 
 #endif

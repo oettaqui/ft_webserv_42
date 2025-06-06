@@ -22,13 +22,12 @@ ParsRequest::ParsRequest() {
     is_boundary = false;
     postHandler = NULL;
     getHandler = NULL;
-
+    FlagRedirect = false;
 }
 
 ParsRequest::~ParsRequest() {
-    if (postHandler) {
+    if (postHandler)
         delete postHandler;
-    }
     if(getHandler)
         delete getHandler;
 }
@@ -54,54 +53,21 @@ void ParsRequest::parseRequestLine(const std::string& line) {
         path = parts[1];
         version = parts[2];
         is_valid = true;
-        // std::cout << "PATH from parsRequestLine function =========> " << path << std::endl;
+        std::cout << "PATH from parsRequestLine function =========> " << path << std::endl;
 
-        // size_t posQuery = path.find_last_of('?');
-        // size_t posEndQuery = path.find_last_of('#');
-        // std::string query;
-        // if (posQuery != std::string::npos){
+        size_t posQuery = path.find('?');
+        size_t posEndQuery = path.find_last_of('#');
+        
+        if (posQuery != std::string::npos){
 
-        //     if (posEndQuery != std::string::npos)
-        //         query = path.substr(posQuery + 1, posEndQuery);
-        //     else
-        //        query = path.substr(posQuery + 1, path.length()); 
-        //     path = path.substr(0, posQuery);
+            if (posEndQuery != std::string::npos)
+                this->query = path.substr(posQuery + 1, posEndQuery);
+            else
+               this->query = path.substr(posQuery + 1, path.length()); 
+            path = path.substr(0, posQuery);
 
-        // }
-        // std::cout << "Query from parsRequestLine function =========> " << query << std::endl;
-        // std::cout << "PATH after update from parsRequestLine function =========> " << path << std::endl;
-        // size_t posQuery = path.find("?");
-        // size_t posEndQuery = path.find_last_of("#", path.length());
-        // if (posQuery != std::string::npos){
-        //     std::string query;
-        //     if (posEndQuery != std::string::npos)
-        //         query = path.substr(posQuery + 1, posEndQuery);
-        //     else
-        //         query = path.substr(posQuery + 1, path.length());
-        //     std::cout << "Query from parsRequestLine function =========> " << query << std::endl;
-        //     path = path.substr(0, posQuery);
-        //     // while(query.length() > 0){
-        //     //     int posK = query.find("=");
-        //     //     if (posK != std::string::npos){
-        //     //         std::string key = query.substr(0, posK);
-        //     //         std::string value = "";
-        //     //         query = query.substr(posK + 1, query.length());
-        //     //         if (query.length() < 1 && value.empty())
-        //     //         {
-        //     //             is_valid = false;
-        //     //             break;
-        //     //         }
-        //     //         else{
-
-        //     //         }
-                    
-        //     //     }else if (){
-        //     //         is_valid = false;
-        //     //         break;
-        //     //     }
-        //     // }
-
-        // }
+        }
+    
         if ((method != "POST" && method != "GET" && method != "DELETE") && (version != "HTTP/1.1" || !path.empty())){
             is_valid = false;
         }
@@ -165,7 +131,6 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         std::string boundary = "multipart/form-data";
 
         std::string valueContentType = headers["Content-Type"];
-        // std::cout << valueContentType << std::endl;
         if (valueContentType.find(boundary) != std::string::npos)
         {
             std::cout << "it is a boundary" << std::endl;
@@ -228,7 +193,8 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
     if (!header_parsed) {
         size_t header_end = requestContent.find("\r\n\r\n");
         if (header_end == std::string::npos) {
-            is_valid = false;
+            // is_valid = false;
+            std::cout << "SHOULD HANDL TIMEOUT\n";
             return;
         }
         
@@ -236,7 +202,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         header_parsed = true;
         std::string header_section = requestContent.substr(0, header_end);
         body = requestContent.substr(header_end + 4);
-        
         std::vector<std::string> lines = split(header_section, '\n');
         if (lines.empty()) {
             is_valid = false;
@@ -257,7 +222,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
 
         
         if (method == "POST" && !is_chunked && !is_boundary) {
-            std::cout << "IS BINARY ========" << std::endl;
             std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
             if (contentTypeIt != headers.end()) {
                 contentType = contentTypeIt->second;
@@ -274,6 +238,14 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     postHandler = new PostHandler();
                 }
                 postHandler->initialize(*this, parser);
+                if(FlagRedirect)
+                {
+                    is_Complet = true;
+                    return ;   
+                }
+                // 
+                //hereeeeeeeeeeeee;
+                // 
                 if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
                 {
                     this->status = postHandler->getStatus();
@@ -281,10 +253,9 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     is_valid = false;
                     is_Complet = true;
                 }
-                if (postHandler->isRequestComplete()) {
-                    if (postHandler->getCGIState()){
-
-                        cgiHandler =  new CGIPost();
+                if (postHandler->isRequestComplete() && postHandler->getCGIState()) {
+                    std::cout << "is a CGI and parsRequest Complete\n";
+                        cgiHandler =  new CGI();
                         dataCGI data;
                         data.method = method;
                         data.path = path;
@@ -293,6 +264,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         data.contentType = postHandler->getContentType();
                         data.contentLen = postHandler->getCurrentLength();
                         data.scriptPath = postHandler->getScriptPath();
+                        data.queryString = this->query;
                         if (postHandler->getAutoindexFromPost())
                             data.autoIndex = "true";
                         else
@@ -307,11 +279,23 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             return;
                         }
 
-                        cgiHandler->setVarsEnv(data);
 
-                        this->status = cgiHandler->executeScript(client_fd);
-                        this->CGI = true;
-                    }
+                        cgiHandler->setVarsEnv(data);
+                        
+                        responses[client_fd] = cgiHandler->executeScript();
+                        this->status = cgiHandler->getStatusCGI();
+                        this->flagCGI = cgiHandler->getCGIFlag();
+                        if (this->status != 200 && responses[client_fd].empty()){
+                            is_valid = false;
+                            is_Complet = true;
+                        }
+                        this->Cgi = true;
+                }
+                else if (!postHandler->isRequestComplete() && postHandler->getCGIState()){
+                    std::cout << "is a CGI and parsRequest not Complete\n";
+                }
+                else if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
+                    std::cout << "is a not a CGI and parsRequest Complete\n";
                     is_Complet = true;
                 }
             }
@@ -355,18 +339,15 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             }
             std::string boundaryPrefix = "boundary=";
             size_t posBoundary = contentType.find(boundaryPrefix);
-            // std::cout << "==> " << contentType << std::endl;
             if (posBoundary != std::string::npos)
             {
                 size_t startPos = posBoundary + boundaryPrefix.length();
                 boundaryValue = contentType.substr(startPos);
-                // std::cout << "Boundary value: " << boundaryValue << std::endl;
             }
             if (!postHandler)
             {
                 postHandler = new PostHandler();
             }
-            // std::cout << "content length " << contentLength << std::endl;
             postHandler->setSepa( "--" + boundaryValue + "\r\n");
             postHandler->setTer( "--" + boundaryValue + "--");
             postHandler->setExpextedLength(contentLength);
@@ -393,6 +374,8 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             responses[client_fd] = response;
             if(getHandler->get_is_true_parse() == true)
                 is_Complet = true;
+            if(getHandler->getCgiCheck() == true)
+                this->Cgi = true;
             // std::cout << "|==================================================|\n";
             // std::cout << responses[client_fd] << std::endl;
             // std::cout << "|==================================================|\n";
@@ -416,11 +399,25 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             std::string body = request;
             postHandler->initBoundary(body, *this, parser);
         }
-        else 
-            postHandler->processData(request);
+        else {
+            if (postHandler->isRequestComplete())
+            {
+                if (postHandler->getCGIState() && this->cgiHandler){
+                    responses[client_fd] = cgiHandler->executeScript();
+                    this->status = cgiHandler->getStatusCGI();
+                    this->flagCGI = cgiHandler->getCGIFlag();
+                    
+                    if (this->flagCGI == 5){
+                        is_Complet = true;
+                    }
+                }
+
+            }else{
+                postHandler->processData(request);
+            }
+        }
         
-        if (postHandler->isRequestComplete()) {
-            std::cout << "complet ++++++++++++\n";
+        if (postHandler->isRequestComplete() && !postHandler->getCGIState()) {
             is_Complet = true;
         }
     }
@@ -429,6 +426,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         std::string response = getHandler->handleGetRequest(*this, parser);
         responses[client_fd] = response;
         is_Complet = getHandler->get_is_true_parse();
+        this->Cgi = getHandler->getCgiCheck();
         if(is_Complet == true)
             std::cout << "is_Complet : true" << std::endl;
         else
@@ -441,9 +439,11 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
 
 
 }
-
+void ParsRequest::setResponses(std::string resp)
+{
+    responses[client_fd] = resp;
+}
 const std::string& ParsRequest::getMethod() const { return method; }
-const std::string& ParsRequest::getQuery() const { return query; }
 const int& ParsRequest::portMethod() const { return port; }
 const std::string& ParsRequest::hostMethod() const { return host; }
 const std::string& ParsRequest::getPath() const { return path; }
@@ -458,6 +458,12 @@ bool ParsRequest::isBoundary() const { return is_boundary; }
 const int& ParsRequest::getClientFd() const{return client_fd;}
 const std::map<int,std::string>& ParsRequest::getResponses() const { return responses; }
 
-bool ParsRequest::getCGIState() const { return CGI; }
+bool ParsRequest::getCGIState() const { return Cgi; }
+bool ParsRequest::getFlagRedirect() const { return FlagRedirect; }
+void ParsRequest::setFlagRedirect(){ FlagRedirect = true; }
 
+const std::string& ParsRequest::getQuery() const { return query; }
 
+int ParsRequest::getFlagCGI() const{
+    return flagCGI;
+}

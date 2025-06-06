@@ -2,7 +2,7 @@
 #include <iostream>
 #include <algorithm>
 
-Location::Location() : autoindex(false), cgi(false), client_max_body_size(0) {}
+Location::Location() : autoindex(false), cgi(false), client_max_body_size(0), redirect(false) {}
 
 Location::~Location() {}
 
@@ -30,6 +30,28 @@ void Location::setAutoindex(bool value)
 { 
     autoindex = value; 
 }
+/////////////
+void Location::setRedirect() 
+{ 
+    redirect = true; 
+}
+
+bool Location::hasRedirect() const
+{
+    return redirect;
+}
+
+void Location::setRedirection(const int& status, const std::string& path)
+{
+    redirection[status] = path;
+}
+
+const std::map<int, std::string>&  Location::getRedirection() const
+{
+    return redirection;
+}
+
+/////////
 
 void Location::setCgi(bool value) 
 { 

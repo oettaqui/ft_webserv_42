@@ -224,6 +224,43 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
                 location.addCgiPass(directive,value);
             }
         }
+        else if(directive == "return")
+        {
+            // std::cout << "in the server " << server.getHost() << " the location " <<  location.getPath() <<" is with redirection\n";
+            
+            // Check if location already has a redirect
+            if (location.hasRedirect()) {
+                std::cerr << "Warning: Multiple redirects in location " << location.getPath() 
+                        << " - ignoring: " << line << std::endl;
+                continue;  // Skip this redirect
+            }
+            
+            // Parse status code and redirect path
+            size_t spacePos = value.find(" ");
+            if (spacePos == std::string::npos) {
+                std::cerr << "Error: Invalid return directive syntax: " << line << std::endl;
+                continue;
+            }
+            
+            std::string statusStr = value.substr(0, spacePos);
+            std::string redirectPath = value.substr(spacePos + 1);
+            trim(redirectPath);
+            
+            // Convert status code to integer
+            int statusCode = atoi(statusStr.c_str());
+            
+            // Validate status code
+            if (statusCode < 300 || statusCode >= 400) {
+                std::cerr << "Warning: Invalid redirect status code " << statusCode 
+                        << " - using 301 instead" << std::endl;
+                statusCode = 301;
+            }
+            
+            // Set redirect in location
+            location.setRedirection(statusCode, redirectPath);
+            location.setRedirect();
+            // std::cout << "Redirect configured: " << statusCode << " -> " << redirectPath << std::endl;
+        }
     }
 
     server.addLocation(path, location);
