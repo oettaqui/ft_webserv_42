@@ -22,6 +22,7 @@ class ConfigParser {
         const std::vector<Server>& getServers() const;
         const Server& getServer(const std::string &host_p,const int& port_p) const;
         void all_server_data() const;
+        void prapare_servers();
 };
 
 #endif

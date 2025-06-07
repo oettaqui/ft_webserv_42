@@ -15,10 +15,18 @@
 #include "../Parse_configfile/ConfigParser.hpp"
 #include "../post_handler/PostHandler.hpp"
 #include "../get_handler/GetHandler.hpp"
+#include "../delete_handler/DeleteHandler.hpp"
+#include "../CGI/CGI.hpp"
+#include "../CGI/DataCGI.hpp"
 
+class CGI;
+class GetHandler;
 class PostHandler;
 class ParsRequest{
     private:
+        // new member
+        GetHandler* getHandler;
+        //--------
         std::string method;
         std::string path;
         std::string version;
@@ -42,6 +50,18 @@ class ParsRequest{
 
         PostHandler* postHandler;
 
+        CGI *cgiHandler;
+        bool Cgi;
+        int status;
+        std::string query;
+
+        std::map<std::string, std::string> queryData;
+
+        int flagCGI;
+        bool FlagRedirect;
+        bool flagTimeOUT;
+
+
     public:
         ParsRequest();
         ~ParsRequest();
@@ -62,6 +82,15 @@ class ParsRequest{
         // add now 
         const int& getClientFd() const;
         const std::map<int,std::string>& getResponses() const;
-};
+        void setResponses(std::string resp);
+
+        bool getCGIState() const;
+        bool getFlagRedirect() const;
+        void setFlagRedirect();
+        const std::string& getQuery() const;
+        
+        int getFlagCGI() const;
+        bool getFlagTimeOUT() const;
+    };
 
 #endif

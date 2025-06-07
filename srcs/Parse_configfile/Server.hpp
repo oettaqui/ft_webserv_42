@@ -43,7 +43,7 @@ class Server {
 
         bool isValid() const;
         bool parse_host(const std::string &host_p) const;
-        bool hasRequiredLocations() const;
+        // bool hasRequiredLocations() const;
 };
 
 #endif

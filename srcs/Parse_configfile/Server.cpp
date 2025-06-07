@@ -150,11 +150,11 @@ bool Server::isValid() const {
     return true;
 }
 
-bool Server::hasRequiredLocations() const {
-    // Check if root location exists
-    if (locations.find("/") == locations.end()) {
-        std::cerr << "Error: Root location '/' is required" << std::endl;
-        return false;
-    }
-    return true;
-}
+// bool Server::hasRequiredLocations() const {
+//     // Check if root location exists
+//     // if (locations.find("/") == locations.end()) {
+//     //     std::cerr << "Error: Root location '/' is required" << std::endl;
+//     //     return false;
+//     // }
+//     return true;
+// }

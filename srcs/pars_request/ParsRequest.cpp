@@ -1,5 +1,19 @@
 #include "./ParsRequest.hpp"
 
+const std::string HTML_BADREQUEST = 
+"HTTP/1.1 400 Bad Request\r\n"
+"Content-Type: text/html\r\n"
+"Connection: close\r\n\r\n"
+"<!DOCTYPE html>\r\n"
+    "<html>\r\n"
+    "<head>\r\n"
+    "    <title>not yeeeet</title>\r\n"
+    "</head>\r\n"
+    "<body>\r\n"
+    "    <h1>not yeeee</h1>\r\n"
+    "</body>\r\n"
+    "</html>\r\n";
+
 ParsRequest::ParsRequest() {
     header_parsed = false;
     is_valid = false;
@@ -7,13 +21,16 @@ ParsRequest::ParsRequest() {
     is_chunked = false;
     is_boundary = false;
     postHandler = NULL;
-
+    getHandler = NULL;
+    FlagRedirect = false;
+    flagTimeOUT = false;
 }
 
 ParsRequest::~ParsRequest() {
-    if (postHandler) {
+    if (postHandler)
         delete postHandler;
-    }
+    if(getHandler)
+        delete getHandler;
 }
 
 
@@ -37,6 +54,20 @@ void ParsRequest::parseRequestLine(const std::string& line) {
         path = parts[1];
         version = parts[2];
         is_valid = true;
+        std::cout << "PATH from parsRequestLine function =========> " << path << std::endl;
+
+        size_t posQuery = path.find('?');
+        size_t posEndQuery = path.find_last_of('#');
+        
+        if (posQuery != std::string::npos){
+
+            if (posEndQuery != std::string::npos)
+                this->query = path.substr(posQuery + 1, posEndQuery);
+            else
+               this->query = path.substr(posQuery + 1, path.length()); 
+            path = path.substr(0, posQuery);
+
+        }
     
         if ((method != "POST" && method != "GET" && method != "DELETE") && (version != "HTTP/1.1" || !path.empty())){
             is_valid = false;
@@ -76,7 +107,7 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
     }
 
     if (headers.find("Host") == headers.end()) {
-        is_valid = false; 
+        is_valid = false;
     }
     
     
@@ -101,15 +132,17 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         std::string boundary = "multipart/form-data";
 
         std::string valueContentType = headers["Content-Type"];
-
         if (valueContentType.find(boundary) != std::string::npos)
         {
             std::cout << "it is a boundary" << std::endl;
             is_boundary = true;
         }
     }else{
-        std::cout << "content type not found " << std::endl;
-        is_valid = false;
+        if (method == "POST")
+        {
+            std::cout << "content type not found " << std::endl;
+            is_valid = false;
+        }
     }
 
     if (headers.find("Content-Length") != headers.end() && 
@@ -120,10 +153,10 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
     if (headers.find("Content-Length") == headers.end() && 
         headers.find("Transfer-Encoding") != headers.end())
     {
-        // std::cout << "hnaaa 2" << std::endl;
         std::string check = "chunked";
         if (headers["Transfer-Encoding"] != check) {
-            is_valid = false;
+            if (method == "POST")
+                is_valid = false;
         }
         else{
             is_chunked = true;
@@ -139,14 +172,14 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         std::cout << "Error is boundary and chunked in the same time !!! " << std::endl;
         is_valid = false;
     }
-    for (std::map<std::string, std::string>::iterator it = headers.begin(); 
-        it != headers.end(); ++it) {
-        if (it->second.empty()) {
-            is_valid = false;
-            std::cout << "in this block " << std::endl;
-            break;
-        }
-    }
+    // for (std::map<std::string, std::string>::iterator it = headers.begin(); 
+    //     it != headers.end(); ++it) {
+    //     if (it->second.empty()) {
+    //         is_valid = false;
+    //         std::cout << "in this block " << std::endl;
+    //         break;
+    //     }
+    // }
 }
 
 
@@ -161,46 +194,121 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
     if (!header_parsed) {
         size_t header_end = requestContent.find("\r\n\r\n");
         if (header_end == std::string::npos) {
-            is_valid = false;
-            return;
-        }
-        
-        
-        header_parsed = true;
-        std::string header_section = requestContent.substr(0, header_end);
-        body = requestContent.substr(header_end + 4);
-        
-        std::vector<std::string> lines = split(header_section, '\n');
-        if (lines.empty()) {
-            is_valid = false;
-            return;
-        }
-        
-        parseRequestLine(lines[0]);
-        if (!is_valid){
-            std::cout << "A BAD REQUEST 1" << std::endl;
-            return;
-        }
-        parseHeaders(header_section);
-        if (!is_valid){
-            std::cout << "A BAD REQUEST 2" << std::endl;
-            return;
-        }
+            // is_valid = false;
+            std::cout << "SHOULD HANDL TIMEOUT\n";
+            this->flagTimeOUT = true;
+            // return;
+        }else{
+            if (this->flagTimeOUT == true)
+                this->flagTimeOUT = false;
 
+            header_parsed = true;
+            std::string header_section = requestContent.substr(0, header_end);
+            body = requestContent.substr(header_end + 4);
+            std::vector<std::string> lines = split(header_section, '\n');
+            if (lines.empty()) {
+                is_valid = false;
+                return;
+            }
+            
+            parseRequestLine(lines[0]);
+            if (!is_valid){
+                std::cout << "A BAD REQUEST 1" << std::endl;
+                return;
+            }
+            parseHeaders(header_section);
+            if (!is_valid){
+                std::cout << "A BAD REQUEST 2" << std::endl;
+                return;
+            }
         
-        if (method == "POST" && !is_chunked && !is_boundary) {
+    
             
-            std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
-            if (contentTypeIt != headers.end()) {
-                contentType = contentTypeIt->second;
-            }
-            
-            std::map<std::string, std::string>::iterator contentLengthIt = headers.find("Content-Length");
-            if (contentLengthIt != headers.end()) {
-                contentLength = std::strtoul(contentLengthIt->second.c_str(), NULL, 10);
-            }
-            
-            if (contentLength > 0 ) {
+            if (method == "POST" && !is_chunked && !is_boundary) {
+                std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
+                if (contentTypeIt != headers.end()) {
+                    contentType = contentTypeIt->second;
+                }
+                
+                std::map<std::string, std::string>::iterator contentLengthIt = headers.find("Content-Length");
+                if (contentLengthIt != headers.end()) {
+                    contentLength = std::strtoul(contentLengthIt->second.c_str(), NULL, 10);
+                }
+                
+                if (contentLength > 0 ) {
+                    if (!postHandler)
+                    {
+                        postHandler = new PostHandler();
+                    }
+                    postHandler->initialize(*this, parser);
+                    // redirection
+                    if(FlagRedirect)
+                    {
+                        is_Complet = true;
+                        return ;   
+                    }
+                    
+                    if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
+                    {
+                        this->status = postHandler->getStatus();
+                        std::cout << "ERROR " << std::endl;
+                        is_valid = false;
+                        is_Complet = true;
+                    }
+                    if (postHandler->isRequestComplete() && postHandler->getCGIState()) {
+                        std::cout << "is a CGI and parsRequest Complete\n";
+                            cgiHandler =  new CGI();
+                            dataCGI data;
+                            data.method = method;
+                            data.path = path;
+                            data.version = version;
+                            data.file = postHandler->getFilename();
+                            data.contentType = postHandler->getContentType();
+                            data.contentLen = postHandler->getCurrentLength();
+                            data.scriptPath = postHandler->getScriptPath();
+                            data.queryString = this->query;
+                            if (postHandler->getAutoindexFromPost())
+                                data.autoIndex = "true";
+                            else
+                                data.autoIndex = "false";
+                            std::map<std::string, std::string> passCGI = postHandler->getCgiPassFomPost();
+                            std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + postHandler->getExtension());
+                            if (passCGIIT != passCGI.end()){
+                                data.CorrectPassCGI = passCGIIT->second;
+                            }else{
+                                is_valid = false;
+                                std::cout << "Pass CGI not found " << std::endl;
+                                return;
+                            }
+    
+    
+                            cgiHandler->setVarsEnv(data);
+                            
+                            responses[client_fd] = cgiHandler->executeScript();
+                            this->status = cgiHandler->getStatusCGI();
+                            this->flagCGI = cgiHandler->getCGIFlag();
+                            if (this->status != 200 && responses[client_fd].empty()){
+                                is_valid = false;
+                                is_Complet = true;
+                            }else if (this->status == 504 && !responses[client_fd].empty())
+                                is_Complet = true;
+                            this->Cgi = true;
+                    }
+                    else if (!postHandler->isRequestComplete() && postHandler->getCGIState()){
+                        std::cout << "is a CGI and parsRequest not Complete\n";
+                    }
+                    else if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
+                        std::cout << "is a not a CGI and parsRequest Complete\n";
+                        is_Complet = true;
+                    }
+                }
+            } 
+            else if (method == "POST" && is_chunked && !is_boundary){
+                std::cout << "at the first time is chunked =====  " << std::endl;
+                std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
+                if (contentTypeIt != headers.end()) {
+                    contentType = contentTypeIt->second;
+                }
                 if (!postHandler)
                 {
                     postHandler = new PostHandler();
@@ -208,118 +316,131 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 postHandler->initialize(*this, parser);
                 if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
                 {
+                    this->status = postHandler->getStatus();
                     std::cout << "ERROR " << std::endl;
                     is_valid = false;
                     is_Complet = true;
                 }
                 if (postHandler->isRequestComplete()) {
-                    std::cout << "true " << std::endl;
+                        
+                        is_valid = false;
+                        is_Complet = true;
+                }
+    
+            }else if (method == "POST" && !is_chunked && is_boundary){
+    
+                std::cout << "here i will hendl the boundary " << std::endl;
+    
+                std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
+                if (contentTypeIt != headers.end()) {
+                    contentType = contentTypeIt->second;
+                }
+                std::map<std::string, std::string>::iterator contentLengthIt = headers.find("Content-Length");
+                if (contentLengthIt != headers.end()) {
+                    contentLength = std::strtoul(contentLengthIt->second.c_str(), NULL, 10);
+                }
+                std::string boundaryPrefix = "boundary=";
+                size_t posBoundary = contentType.find(boundaryPrefix);
+                if (posBoundary != std::string::npos)
+                {
+                    size_t startPos = posBoundary + boundaryPrefix.length();
+                    boundaryValue = contentType.substr(startPos);
+                }
+                if (!postHandler)
+                {
+                    postHandler = new PostHandler();
+                }
+                postHandler->setSepa( "--" + boundaryValue + "\r\n");
+                postHandler->setTer( "--" + boundaryValue + "--");
+                postHandler->setExpextedLength(contentLength);
+                postHandler->initBoundary(body, *this, parser);
+                if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
+                {
+                    this->status = postHandler->getStatus();
+                    std::cout << "ERROR " << std::endl;
+                    is_valid = false;
+                    is_Complet = true;
+                }
+                if (postHandler->isRequestComplete())
+                {
+                    std::cout << "boundary is complete" << std::endl;
                     is_Complet = true;
                 }
             }
-        } 
-        else if (method == "POST" && is_chunked && !is_boundary){
-            std::cout << "at the first time is chunked =====  " << std::endl;
-            std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
-            if (contentTypeIt != headers.end()) {
-                contentType = contentTypeIt->second;
-            }
-            if (!postHandler)
+            else if(method == "GET") 
             {
-                postHandler = new PostHandler();
-            }
-            postHandler->initialize(*this, parser);
-            if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
-            {
-                std::cout << "ERROR " << std::endl;
-                is_valid = false;
-                is_Complet = true;
-            }
-            if (postHandler->isRequestComplete()) {
-                    is_valid = false;
-                    is_Complet = true;
-            }
-
-        }else if (method == "POST" && !is_chunked && is_boundary){
-
-            std::cout << "here i will hendl the boundary " << std::endl;
-
-            std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
-            if (contentTypeIt != headers.end()) {
-                contentType = contentTypeIt->second;
-            }
-            // std::cout << contentType << std::endl;
-            std::map<std::string, std::string>::iterator contentLengthIt = headers.find("Content-Length");
-            if (contentLengthIt != headers.end()) {
-                contentLength = std::strtoul(contentLengthIt->second.c_str(), NULL, 10);
-            }
-            std::string boundaryPrefix = "boundary=";
-            size_t posBoundary = contentType.find(boundaryPrefix);
-            // std::cout << "==> " << contentType << std::endl;
-            if (posBoundary != std::string::npos)
-            {
-                size_t startPos = posBoundary + boundaryPrefix.length();
-                boundaryValue = contentType.substr(startPos);
-                // std::cout << "Boundary value: " << boundaryValue << std::endl;
-            }
-            if (!postHandler)
-            {
-                postHandler = new PostHandler();
-            }
-            // std::cout << "content length " << contentLength << std::endl;
-            postHandler->setExpextedLength(contentLength);
-            postHandler->initBoundary(body, boundaryValue, *this, parser);
-            if (postHandler->getStatus() == 404)
-            {
-                std::cout << "ERROR 404" << std::endl;
-                is_valid = false;
-                is_Complet = true;
-            }
-            if (postHandler->isRequestComplete())
-            {
-                std::cout << "boundary is complete" << std::endl;
-                is_Complet = true;
-            }
-        }
-        else {
-            std::cout << "*****non-POST requests" <<std::endl;
-            if (method == "GET"){
-                GetHandler* getHandler = new GetHandler();
+                std::cout << "*****GET requests " <<std::endl;
+                if(!getHandler)
+                    getHandler = new GetHandler();
                 std::string response = getHandler->handleGetRequest(*this, parser);
                 responses[client_fd] = response;
-                is_Complet = true;
-                delete getHandler;
+                if(getHandler->get_is_true_parse() == true)
+                    is_Complet = true;
+                if(getHandler->getCgiCheck() == true)
+                    this->Cgi = true;
+               
             }
-            is_Complet = true;
+            else if (method == "DELETE") 
+            {
+                std::cout << "*****DELETE requests " <<std::endl;
+                DeleteHandler* deleteHandler = new DeleteHandler();
+                std::string response = deleteHandler->handleDeleteRequest(*this, parser);
+                responses[client_fd] = response;
+                is_Complet = true;
+                delete deleteHandler;
+            }
         }
-    }
 
-    else if (method == "POST" && postHandler) {
-        if (is_chunked) {
-            // std::cout << "at the second time is chunked =====  " << std::endl;
+    }else if (method == "POST" && postHandler) {
+        if (is_chunked) 
             postHandler->processChunkedData(request);
-            // std::cout << "here continue" << std::endl;
-        }
         else if (is_boundary)
         {
-            // postHandler->processBoundaryData(body, boundaryValue, *this, parser);
-            postHandler->initBoundary(request, boundaryValue, *this, parser);
+            std::string body = request;
+            postHandler->initBoundary(body, *this, parser);
         }
         else {
-            // std::cout << "continue here if the post req is binary " << std::endl;
-            postHandler->processData(request);
+            if (postHandler->isRequestComplete())
+            {
+                if (postHandler->getCGIState() && this->cgiHandler){
+                    responses[client_fd] = cgiHandler->executeScript();
+                    this->status = cgiHandler->getStatusCGI();
+                    this->flagCGI = cgiHandler->getCGIFlag();
+                    
+                    if (this->flagCGI == 5){
+                        is_Complet = true;
+                    }
+                }
+
+            }else{
+                postHandler->processData(request);
+            }
         }
         
-        if (postHandler->isRequestComplete()) {
-            std::cout << "complet ++++++++++++\n";
+        if (postHandler->isRequestComplete() && !postHandler->getCGIState()) {
             is_Complet = true;
-            // return;
         }
     }
+    else if(method == "GET" && getHandler)
+    {
+        std::string response = getHandler->handleGetRequest(*this, parser);
+        responses[client_fd] = response;
+        is_Complet = getHandler->get_is_true_parse();
+        this->Cgi = getHandler->getCgiCheck();
+        if(is_Complet == true)
+            std::cout << "is_Complet : true" << std::endl;
+        else
+            std::cout << "is_Complet : false" << std::endl;
+    }
+        
+        
 
 
 }
-
+void ParsRequest::setResponses(std::string resp)
+{
+    responses[client_fd] = resp;
+}
 const std::string& ParsRequest::getMethod() const { return method; }
 const int& ParsRequest::portMethod() const { return port; }
 const std::string& ParsRequest::hostMethod() const { return host; }
@@ -335,3 +456,13 @@ bool ParsRequest::isBoundary() const { return is_boundary; }
 const int& ParsRequest::getClientFd() const{return client_fd;}
 const std::map<int,std::string>& ParsRequest::getResponses() const { return responses; }
 
+bool ParsRequest::getCGIState() const { return Cgi; }
+bool ParsRequest::getFlagRedirect() const { return FlagRedirect; }
+void ParsRequest::setFlagRedirect(){ FlagRedirect = true; }
+
+const std::string& ParsRequest::getQuery() const { return query; }
+
+int ParsRequest::getFlagCGI() const{
+    return flagCGI;
+}
+bool ParsRequest::getFlagTimeOUT() const { return flagTimeOUT; }

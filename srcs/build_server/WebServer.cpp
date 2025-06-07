@@ -25,7 +25,7 @@ const std::string HTML_BADREQUEST =
     "    <title>Bad Request</title>\r\n"
     "</head>\r\n"
     "<body>\r\n"
-    "    <h1>Bad Request</h1>\r\n"
+    "    <h1>Bad Request11</h1>\r\n"
     "</body>\r\n"
     "</html>\r\n";
 
@@ -45,7 +45,7 @@ bool WebServer::setNonBlocking(int sockfd) {
 
 bool WebServer::addToEpoll(int sockfd) {
     struct epoll_event event;
-    event.events = EPOLLIN | EPOLLET;
+    event.events = EPOLLIN;
     event.data.fd = sockfd;
     
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sockfd, &event) == -1) {
@@ -59,14 +59,13 @@ void WebServer::handleNewConnection(int server_fd) {
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
     
-    while (true) { 
         int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
         if (client_fd == -1) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                break;
+                return;
             } else {
                 std::cerr << "Accept failed: " << strerror(errno) << std::endl;
-                break;
+                return;
             }
         }
         
@@ -75,93 +74,222 @@ void WebServer::handleNewConnection(int server_fd) {
                   
         if (!setNonBlocking(client_fd)) {
             close(client_fd);
-            continue;
         }
         
         if (!addToEpoll(client_fd)) {
             close(client_fd);
-            continue;
         }
         clients[client_fd] = new ParsRequest();
-    }
 }
 
-void WebServer::getResponse(int fd)
+void WebServer::getResponse(int fd, ConfigParser &parser)
 {
-    if (write_buffers.find(fd) == write_buffers.end()) {
-        return;
-    }
-    
-    std::string& res = write_buffers[fd];
-    // std::cout << res << std::endl;
-    ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
-    
-    if (bytes_sent == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            return;
-        }
-        std::cerr << "send failed: " << strerror(errno) << std::endl;
-        closeConnection(fd);
-        return;
-    }
-    
-
-    write_buffers.erase(fd);
-    
-    std::cout << "Response sent successfully to client: " << fd << std::endl;
-    usleep(100000);
-    closeConnection(fd);
-}
-void WebServer::handleClientData(int fd, ConfigParser &parser) {
-
-    char buffer[BUFFER_SIZE];
-    memset(buffer, 0, BUFFER_SIZE);
-    ssize_t bytes_read;
-    
-    while (true) {
-        bytes_read = read(fd, buffer, BUFFER_SIZE);
-        if (bytes_read <= 0) {
-            if (errno == EAGAIN  || errno != EWOULDBLOCK) {
-                std::cerr << "Failed read operation " << std::endl;
-                break;
-            }
-            else
+    // std::cout << "getResponse\n";
+    ParsRequest* p = clients[fd];
+    if(p)
+    {
+        ///
+        if(p->getMethod() == "GET" && p->isComplet() == false)
+        {
+            if(p->getCGIState())
             {
-                write_buffers[fd] = HTML_BADREQUEST;
-                // closeConnection(fd);
-                std::cout << "Client disconnected: hhhh" << fd << std::endl;
-                break;
-
+                write_buffers[fd] = p->getResponses().find(fd)->second;
+                if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                    std::string& res = write_buffers[fd];
+                    ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                    if (bytes_sent == -1) {
+                        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                            return;
+                        }
+                        std::cerr << "send failed: " << strerror(errno) << std::endl;
+                        closeConnection(fd);
+                        return;
+                    }
+                    write_buffers.erase(fd);
+                }
             }
+            p->parse("",fd, parser);
         }
-        else {
-            std::string req;
-            req.append(buffer, bytes_read);
-            ParsRequest* p = clients[fd];
-            p->parse(req,fd, parser);
-            if(!p->isValid())
-            {
-                if(p->getMethod() == "GET")
-                    write_buffers[fd] = p->getResponses().find(fd)->second;
-                else
-                    write_buffers[fd] = HTML_BADREQUEST;
-                return;
+        else if (p->getMethod() == "GET" && p->getCGIState() && p->isComplet() == true){
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                std::string& res = write_buffers[fd];
+                ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                if (bytes_sent == -1) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        return;
+                    }
+                    std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    closeConnection(fd);
+                    return;
+                }
+                write_buffers.erase(fd);
             }
             
-            if (p->isComplet()) {
-                std::cout << "Complete request received, preparing response" << std::endl;
-                std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
-                if(p->getMethod() == "GET")
-                    write_buffers[fd] = p->getResponses().find(fd)->second;
-                else
-                    write_buffers[fd] = HTML_RESPONSE;
-                break;
-            }
+            std::cout << "Response sent successfully to client: " << fd << std::endl;
+            struct epoll_event event;
+            event.events = EPOLLIN;
+            event.data.fd = fd;
+            epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            closeConnection(fd);
         }
+        else if ((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == false))
+        {
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                std::string& res = write_buffers[fd];
+                ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                if (bytes_sent == -1) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        return;
+                    }
+                    std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    closeConnection(fd);
+                    return;
+                }
+                write_buffers.erase(fd);
+            } 
+            p->parse("",fd, parser);    
+        }
+        else if ((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == true)
+        || (p->getMethod() == "POST" && p->isComplet() == true && p->getFlagRedirect())){
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                std::string& res = write_buffers[fd];
+                ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                if (bytes_sent == -1) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        return;
+                    }
+                    std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    closeConnection(fd);
+                    return;
+                }
+                write_buffers.erase(fd);
+            }
+            
+            std::cout << "Response sent successfully to client: " << fd << std::endl;
+            struct epoll_event event;
+            event.events = EPOLLIN;
+            event.data.fd = fd;
+            epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            closeConnection(fd);
+        }
+        else
+        {
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                std::string& res = write_buffers[fd];
+                ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                if (bytes_sent == -1) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        return;
+                    }
+                    std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    closeConnection(fd);
+                    return;
+                }
+                write_buffers.erase(fd);
+            }
+            
+            std::cout << "Response sent successfully to client: " << fd << std::endl;
+            struct epoll_event event;
+            event.events = EPOLLIN;
+            event.data.fd = fd;
+            epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            closeConnection(fd);
+        }
+    }
+    else
+    {
+        struct epoll_event event;
+        event.events = EPOLLIN;
+        event.data.fd = fd;
+        epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+        closeConnection(fd);
+    }
+}
+void WebServer::handleClientData(int fd, ConfigParser &parser) {
+    char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+    ssize_t bytes_read = read(fd, buffer, BUFFER_SIZE);
+
+    if (bytes_read <= 0) {
+        if (bytes_read < 0 && errno != EAGAIN) {
+            std::cerr << "Failed read operation " << std::endl;
+        }
+        closeConnection(fd);
+        std::cout << "Client disconnected1: " << fd << std::endl;
+        return;
+    }
+    else
+    {
+        std::string req;
+        req.append(buffer, bytes_read);
+        ParsRequest* p = clients[fd];
+        p->parse(req, fd, parser);
+        ////
+        std::cout << "===================================================================================\n";
+        if(!p->isValid())
+        {
+            // if (p->getFlagTimeOUT())
+            // {
+            //     struct epoll_event event;
+            //     event.events = EPOLLIN;
+            //     event.data.fd = fd;
+            //     epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            //     return;
+            // }
+            if(p->getMethod() == "GET")
+            {
+                if (!p->getResponses().find(fd)->second.empty())
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+            }
+            else if(p->getMethod() == "DELETE")
+                write_buffers[fd] = p->getResponses().find(fd)->second;
+            else
+                write_buffers[fd] = HTML_BADREQUEST;
+            struct epoll_event event;
+            event.events = EPOLLOUT;
+            event.data.fd = fd;
+            epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            return;
+        }
+        if (p->isComplet()) 
+        {
+            if(p->getMethod() == "GET" && !p->getCGIState())
+            {
+                // std::cout << "**********<<\n";
+                write_buffers[fd] = p->getResponses().find(fd)->second;
+            }
+            else if(p->getMethod() == "DELETE")
+                write_buffers[fd] = p->getResponses().find(fd)->second;
+            else if(!p->getCGIState())
+                write_buffers[fd] = HTML_RESPONSE;
+            else if (p->getCGIState())
+            {
+                // std::cout << "---------\n";
+               write_buffers[fd] = p->getResponses().find(fd)->second;
+            }
+           
+            struct epoll_event event;
+            event.events = EPOLLOUT;
+            event.data.fd = fd;
+            epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            return ;
+        }
+        else if(p->getMethod() == "GET" || p->getCGIState())
+        {
+            // std::cout << "+111111\n";
+            struct epoll_event event;
+            event.events = EPOLLOUT;
+            event.data.fd = fd;
+            epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+        }
+        
     }
 }
 
-WebServer::WebServer() : epoll_fd(-1) {}
+WebServer::WebServer() : epoll_fd(-1)  {}
         
 WebServer::~WebServer() {
     for (std::vector<int>::const_iterator it = server_fds.begin(); it != server_fds.end(); it++)
@@ -177,7 +305,10 @@ void WebServer::linking_servers(ConfigParser &parser)
     for (std::vector<Server>::const_iterator it = parser.getServers().begin(); it != parser.getServers().end(); ++it) {
         if (!this->initialize(it)) {
             std::vector<std::string>::const_iterator it_names = it->getServerNames().begin();
-            std::cerr << "Failed to initialize server " << *it_names << std::endl;
+            if(it_names != it->getServerNames().end())
+                std::cerr << "Failed to initialize server " << *it_names << std::endl;
+            else
+                std::cerr << "Failed to initialize server with host : " << it->getHost() << " and port : " << it->getPort() << std::endl;
         }
     }
     this->run(parser);
@@ -231,7 +362,10 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
     }
     server_fds.push_back(server_fd);
     std::vector<std::string>::const_iterator it_names = server->getServerNames().begin();
-    std::cerr << "server " << *it_names << " is alive on port " << server->getPort() << " and host " << server->getHost() << std::endl;
+    if(it_names != server->getServerNames().end())
+        std::cerr << "server " << *it_names << " is alive on port " << server->getPort() << " and host " << server->getHost() << std::endl;
+    else
+        std::cerr << "this server is alive on port " << server->getPort() << " and host " << server->getHost() << std::endl;
     return true;
 }
 
@@ -273,10 +407,23 @@ void WebServer::run(ConfigParser &parser) {
                 }
             }
             if(check == 0) {
-                handleClientData(events[i].data.fd, parser);
-                getResponse(events[i].data.fd);
+                /////
+                // clients[events[i].data.fd] // set st = 526352187634 |
+                if (events[i].events & EPOLLIN) {
+                    handleClientData(events[i].data.fd, parser);
+                }
+                if(events[i].events & EPOLLOUT)
+                {
+                    getResponse(events[i].data.fd,parser);;
+                }
+                if ((events[i].events & EPOLLERR) || 
+                    (events[i].events & EPOLLHUP) ||
+                    (!(events[i].events & EPOLLIN) && !(events[i].events & EPOLLOUT))) {
+                    closeConnection(events[i].data.fd);
+                }
             }
             check = 0;
         }
     }
 }
+
