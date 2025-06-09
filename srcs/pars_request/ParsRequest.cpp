@@ -15,6 +15,7 @@ const std::string HTML_BADREQUEST =
     "</html>\r\n";
 
 ParsRequest::ParsRequest() {
+    port = -1;
     header_parsed = false;
     is_valid = false;
     is_Complet = false;
@@ -71,9 +72,11 @@ void ParsRequest::parseRequestLine(const std::string& line) {
     
         if ((method != "POST" && method != "GET" && method != "DELETE") && (version != "HTTP/1.1" || !path.empty())){
             is_valid = false;
+            header_parsed = false;
         }
     }else{
         is_valid = false;
+        header_parsed = false;
     }
 }
 
@@ -104,11 +107,18 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             std::stringstream ss(parts[1]);
             ss >> port;
         }
+        else
+        {
+            is_valid = false;
+            header_parsed = false;
+        }
+    }else
+    {
+        is_valid = false;
+        header_parsed = false;
     }
 
-    if (headers.find("Host") == headers.end()) {
-        is_valid = false;
-    }
+    
     
     
     std::map<std::string, std::string>::const_iterator cl = headers.find("Content-Length");
@@ -118,6 +128,7 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         for (size_t i = 0; i < clValue.length(); i++) {
             if (!isdigit(clValue[i])) {
                 is_valid = false;
+                header_parsed = false;
                 break;
             }
         }
@@ -125,6 +136,7 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             long contentLength = strtol(clValue.c_str(), NULL, 10);
             if (contentLength < 0) {
                 is_valid = false;
+                header_parsed = false;
             }
         }
     }
@@ -142,6 +154,7 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         {
             std::cout << "content type not found " << std::endl;
             is_valid = false;
+            header_parsed = false;
         }
     }
 
@@ -149,28 +162,34 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         headers.find("Transfer-Encoding") != headers.end()) {
             // std::cout << "hnaaa 1" << std::endl;
             is_valid = false;
+            header_parsed = false;
     }
     if (headers.find("Content-Length") == headers.end() && 
         headers.find("Transfer-Encoding") != headers.end())
     {
         std::string check = "chunked";
         if (headers["Transfer-Encoding"] != check) {
-            if (method == "POST")
+            if (method == "POST"){
                 is_valid = false;
+                header_parsed = false;
+            }
         }
         else{
             is_chunked = true;
         }
     }else if (headers.find("Content-Length") == headers.end() && 
     headers.find("Transfer-Encoding") == headers.end()){
-        if (method == "POST")
+        if (method == "POST"){
             is_valid = false;
+            header_parsed = false;
+        }
     }
 
     if (is_boundary && is_chunked)
     {
         std::cout << "Error is boundary and chunked in the same time !!! " << std::endl;
         is_valid = false;
+        header_parsed = false;
     }
     // for (std::map<std::string, std::string>::iterator it = headers.begin(); 
     //     it != headers.end(); ++it) {
@@ -194,14 +213,16 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
     if (!header_parsed) {
         size_t header_end = requestContent.find("\r\n\r\n");
         if (header_end == std::string::npos) {
-            // is_valid = false;
+
+            std::cout << "requestContent => " << requestContent << std::endl;
             std::cout << "SHOULD HANDL TIMEOUT\n";
             this->flagTimeOUT = true;
-            // return;
-        }else{
+            
+        } else{
             if (this->flagTimeOUT == true)
-                this->flagTimeOUT = false;
-
+            this->flagTimeOUT = false;
+            std::cout << "requestContent => " << requestContent << std::endl;
+            std::cout << "here find the end of the header\n" << std::endl;
             header_parsed = true;
             std::string header_section = requestContent.substr(0, header_end);
             body = requestContent.substr(header_end + 4);
@@ -466,3 +487,4 @@ int ParsRequest::getFlagCGI() const{
     return flagCGI;
 }
 bool ParsRequest::getFlagTimeOUT() const { return flagTimeOUT; }
+bool ParsRequest::getFlagParsingHeader() const { return header_parsed; }

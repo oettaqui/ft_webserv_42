@@ -91,6 +91,7 @@ class ParsRequest{
         
         int getFlagCGI() const;
         bool getFlagTimeOUT() const;
+        bool getFlagParsingHeader() const;
     };
 
 #endif

@@ -29,6 +29,12 @@ const std::string HTML_BADREQUEST =
     "</body>\r\n"
     "</html>\r\n";
 
+long WebServer::getCurrentTimeMs() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
 bool WebServer::setNonBlocking(int sockfd) {
     int flags = fcntl(sockfd, F_GETFL, 0);
     if (flags == -1) {
@@ -80,16 +86,15 @@ void WebServer::handleNewConnection(int server_fd) {
             close(client_fd);
         }
         clients[client_fd] = new ParsRequest();
+        client_request_start[client_fd] = getCurrentTimeMs();
 }
 
 void WebServer::getResponse(int fd, ConfigParser &parser)
 {
-    // std::cout << "getResponse\n";
     ParsRequest* p = clients[fd];
     if(p)
     {
-        ///
-        if(p->getMethod() == "GET" && p->isComplet() == false)
+        if(p->getMethod() == "GET" && p->isComplet() == false && p->getFlagParsingHeader())
         {
             if(p->getCGIState())
             {
@@ -133,7 +138,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
             closeConnection(fd);
         }
-        else if ((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == false))
+        else if ((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == false && p->getFlagParsingHeader()))
         {
             write_buffers[fd] = p->getResponses().find(fd)->second;
             if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
@@ -177,6 +182,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
         }
         else
         {
+            std::cout << "hnaaaaaaaaaaaaaaaaa\n";
             if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
                 std::string& res = write_buffers[fd];
                 ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
@@ -227,24 +233,38 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
         req.append(buffer, bytes_read);
         ParsRequest* p = clients[fd];
         p->parse(req, fd, parser);
-        ////
-        std::cout << "===================================================================================\n";
-        if(!p->isValid())
-        {
-            // if (p->getFlagTimeOUT())
-            // {
-            //     struct epoll_event event;
-            //     event.events = EPOLLIN;
-            //     event.data.fd = fd;
-            //     epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
-            //     return;
-            // }
-            if(p->getMethod() == "GET")
+        if(!p->isValid()){
+            if (p->getFlagTimeOUT() && getCurrentTimeMs() - client_request_start[fd] > REQUEST_TIMEOUT) {
+                std::string timeout_response = 
+                    "HTTP/1.1 408 Request Timeout\r\n"
+                    "Content-Type: text/html\r\n"
+                    "Content-Length: 62\r\n"
+                    "Connection: close\r\n"
+                    // "Cache-Control: no-cache\r\n"
+                    "\r\n"
+                    "<html><body><h1>408 Request Timeout</h1></body></html>";
+            
+                write_buffers[fd] = timeout_response;
+                struct epoll_event event;
+                event.events = EPOLLOUT;
+                event.data.fd = fd;
+                epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+                return;
+            }else if (p->getFlagTimeOUT())
             {
+                struct epoll_event event;
+                event.events = EPOLLIN;
+                event.data.fd = fd;
+                epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+                return;
+            }
+            if(p->getMethod() == "GET" && p->getFlagParsingHeader())
+            {
+               
                 if (!p->getResponses().find(fd)->second.empty())
                     write_buffers[fd] = p->getResponses().find(fd)->second;
             }
-            else if(p->getMethod() == "DELETE")
+            else if(p->getMethod() == "DELETE"  && p->getFlagParsingHeader())
                 write_buffers[fd] = p->getResponses().find(fd)->second;
             else
                 write_buffers[fd] = HTML_BADREQUEST;
@@ -279,7 +299,6 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
         }
         else if(p->getMethod() == "GET" || p->getCGIState())
         {
-            // std::cout << "+111111\n";
             struct epoll_event event;
             event.events = EPOLLOUT;
             event.data.fd = fd;
@@ -386,6 +405,7 @@ void WebServer::closeConnection(int fd) {
         clients.erase(fd);
     }
     write_buffers.erase(fd);
+    client_request_start.erase(fd);
 }
 
 void WebServer::run(ConfigParser &parser) {
@@ -407,8 +427,6 @@ void WebServer::run(ConfigParser &parser) {
                 }
             }
             if(check == 0) {
-                /////
-                // clients[events[i].data.fd] // set st = 526352187634 |
                 if (events[i].events & EPOLLIN) {
                     handleClientData(events[i].data.fd, parser);
                 }
@@ -424,6 +442,9 @@ void WebServer::run(ConfigParser &parser) {
             }
             check = 0;
         }
+
     }
 }
+
+
 

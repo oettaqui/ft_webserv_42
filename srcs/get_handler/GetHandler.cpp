@@ -476,6 +476,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         // location_base = request_data.getPath();
         it_find_location_server = server_socket.getLocations().find("/");
         location_concerned =  it_find_location_server->second;
+        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++ tfargi3a l foo9 \n";
         index_file = get_path_to_get();
         std::cout << " find_vec.size() == 0 ==> index_file : " << index_file << std::endl;
         if(!(std::find(location_concerned.getMethods().begin(),location_concerned.getMethods().end(),"GET") 

@@ -16,6 +16,8 @@
 #define MAX_EVENTS 10
 #define BUFFER_SIZE 1024
 
+#define REQUEST_TIMEOUT 5000
+
 
 class WebServer {
     private:
@@ -25,13 +27,16 @@ class WebServer {
         std::map<int, std::string > req_clients;
         std::map<int, ParsRequest* > clients;
         std::map<int, std::string> write_buffers;
+        // time out 
+        std::map<int, time_t> client_request_start;
+
         bool setNonBlocking(int sockfd);
         bool addToEpoll(int sockfd);
         void handleNewConnection(int server_fd);
         void handleClientData(int fd, ConfigParser &parser);
         void getResponse(int fd,ConfigParser &parser);
         void closeConnection(int fd);
-        // int count;
+        long getCurrentTimeMs();
     public:
         WebServer();
         ~WebServer() ;
