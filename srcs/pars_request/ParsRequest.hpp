@@ -11,6 +11,7 @@
 #include <sstream>
 #include <iomanip>
 #define MAX_CONTENT_LENGTH 10485760 
+#define MAX_URL_LENGTH 8192 
 
 #include "../Parse_configfile/ConfigParser.hpp"
 #include "../post_handler/PostHandler.hpp"
@@ -18,8 +19,6 @@
 #include "../delete_handler/DeleteHandler.hpp"
 #include "../CGI/CGI.hpp"
 #include "../CGI/DataCGI.hpp"
-
-class CGI;
 class GetHandler;
 class PostHandler;
 class ParsRequest{

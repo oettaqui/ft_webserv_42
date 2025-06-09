@@ -55,11 +55,17 @@ void ParsRequest::parseRequestLine(const std::string& line) {
         path = parts[1];
         version = parts[2];
         is_valid = true;
-        std::cout << "PATH from parsRequestLine function =========> " << path << std::endl;
-
+        std::cout << "PATH from parsRequestLine function =========> " << path.length() << std::endl;
         size_t posQuery = path.find('?');
         size_t posEndQuery = path.find_last_of('#');
         
+        if(path.length() > MAX_URL_LENGTH)
+        {
+            is_valid = false;
+            header_parsed = false;
+            status = 414;
+            return;
+        }
         if (posQuery != std::string::npos){
 
             if (posEndQuery != std::string::npos)
@@ -69,7 +75,6 @@ void ParsRequest::parseRequestLine(const std::string& line) {
             path = path.substr(0, posQuery);
 
         }
-    
         if ((method != "POST" && method != "GET" && method != "DELETE") && (version != "HTTP/1.1" || !path.empty())){
             is_valid = false;
             header_parsed = false;
@@ -214,14 +219,14 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         size_t header_end = requestContent.find("\r\n\r\n");
         if (header_end == std::string::npos) {
 
-            std::cout << "requestContent => " << requestContent << std::endl;
+            // std::cout << "requestContent => " << requestContent << std::endl;
             std::cout << "SHOULD HANDL TIMEOUT\n";
             this->flagTimeOUT = true;
             
         } else{
             if (this->flagTimeOUT == true)
             this->flagTimeOUT = false;
-            std::cout << "requestContent => " << requestContent << std::endl;
+            // std::cout << "requestContent => " << requestContent << std::endl;
             std::cout << "here find the end of the header\n" << std::endl;
             header_parsed = true;
             std::string header_section = requestContent.substr(0, header_end);

@@ -118,13 +118,13 @@ std::vector<std::string> DeleteHandler::check_root_location(std::string director
     if (!fileList.empty()) {
         std::cout << "Files in directory '" << directoryPath << "':" << std::endl;
         for (std::vector<std::string>::const_iterator it = fileList.begin(); it != fileList.end(); ++it) {
-            std::cout << *it << std::endl;
+            // std::cout << *it << std::endl;
             std::string fullPath = directoryPath + "/" + *it;
-            if (isDirectory(fullPath)) {
-                std::cout << "  (Directory)" << std::endl;
-            } else {
-                std::cout << "  (File)" << std::endl;
-            }
+            // if (isDirectory(fullPath)) {
+            //     std::cout << "  (Directory)" << std::endl;
+            // } else {
+            //     std::cout << "  (File)" << std::endl;
+            // }
         }
     } 
     else {
@@ -200,6 +200,13 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
         {
             statusCode = 403;
             status_message = "Forbidden";
+            std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
+            if(itse != server_socket.getErrorPages().end())
+            {
+                std::string return_value = readFile(itse->second);
+                if(check_if == 1)
+                    return generateResponse(return_value, request_data);
+            }
             generate_header();
             return generateResponse("<h1>403 the client doesn't have permission to DELETE</h1>", request_data);
         }
@@ -248,9 +255,15 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
         if(!(std::find(location_concerned.getMethods().begin(),location_concerned.getMethods().end(),"DELETE") 
         != location_concerned.getMethods().end()))
         {
-            std::cout << "imposiiiii \n";
-            statusCode = 403;
             status_message = "Forbidden";
+            statusCode = 403;
+            std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
+            if(itse != server_socket.getErrorPages().end())
+            {
+                std::string return_value = readFile(itse->second);
+                if(check_if == 1)
+                    return generateResponse(return_value, request_data);
+            }
             generate_header();
             return generateResponse("<h1>403 the client doesn't have permission to DELETE</h1>", request_data);
         }
@@ -294,6 +307,13 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
         check_put_header = 1;
         statusCode = 404;
         status_message = "Not Found";
+        std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
+        if(itse != server_socket.getErrorPages().end())
+        {
+            std::string return_value = readFile(itse->second);
+            if(check_if == 1)
+                return generateResponse(return_value, request_data);
+        }
         std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
         generate_header();
         return generateResponse("<h1>404 Not Found</h1>", request_data);

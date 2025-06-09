@@ -20,7 +20,8 @@ GetHandler::GetHandler()
 }
 
 GetHandler::~GetHandler() {
-    // Destructor
+    if(cgiHandler)
+        delete cgiHandler;
 }
 
 void GetHandler::generate_header(int flag)
@@ -346,7 +347,7 @@ std::vector<std::string> GetHandler::check_root_location(std::string directoryPa
     if (!fileList.empty()) {
         std::cout << "Files in directory '" << directoryPath << "':" << std::endl;
         for (std::vector<std::string>::const_iterator it = fileList.begin(); it != fileList.end(); ++it) {
-            std::cout << *it << std::endl;
+            // std::cout << *it << std::endl;
             std::string fullPath = directoryPath + "/" + *it;
             // if (isDirectory(fullPath)) {
             //     std::cout << "  (Directory)" << std::endl;
@@ -400,6 +401,9 @@ std::vector<std::string> GetHandler::get_location_server() const
 std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser &parser) {
     final_res.clear();
     storeContentTypes(request_data);
+    std::cout << "*/////////////////////////////////////////*\n";
+    std::cout << request_data.getPath() << std::endl;
+    std::cout << "*/////////////////////////////////////////*\n";
     path_location = this->split(url_decode(request_data.getPath()),'/');
     contentType = "text/html";
     server_socket = parser.getServer(request_data.hostMethod(),request_data.portMethod());
@@ -428,6 +432,13 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         {
             statusCode = 403;
             status_message = "Forbidden";
+            std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
+            if(itse != server_socket.getErrorPages().end())
+            {
+                std::string return_value = readFile(itse->second,request_data);
+                if(check_if == 1)
+                    return generateResponse(return_value, request_data);
+            }
             contentType = "text/html";
             contentLength = 54;
             generate_header(0);
@@ -476,15 +487,20 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         // location_base = request_data.getPath();
         it_find_location_server = server_socket.getLocations().find("/");
         location_concerned =  it_find_location_server->second;
-        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++ tfargi3a l foo9 \n";
         index_file = get_path_to_get();
         std::cout << " find_vec.size() == 0 ==> index_file : " << index_file << std::endl;
         if(!(std::find(location_concerned.getMethods().begin(),location_concerned.getMethods().end(),"GET") 
         != location_concerned.getMethods().end()))
         {
             contentType = "text/html";
-            std::cout << "imposiiiii \n";
             statusCode = 403;
+            std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
+            if(itse != server_socket.getErrorPages().end())
+            {
+                std::string return_value = readFile(itse->second,request_data);
+                if(check_if == 1)
+                    return generateResponse(return_value, request_data);
+            }
             status_message = "Forbidden";
             contentLength = 54;
             generate_header(0);
@@ -536,8 +552,15 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
     }
     if (content.empty() && check_if == 0) {
         statusCode = 404;
-        contentType = "text/html";
         status_message = "Not Found";
+        std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
+        if(itse != server_socket.getErrorPages().end())
+        {
+            std::string return_value = readFile(itse->second,request_data);
+            if(check_if == 1)
+                return generateResponse(return_value, request_data);
+        }
+        contentType = "text/html";
         std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
         contentLength = 22;
         generate_header(0);
@@ -586,6 +609,13 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
             {
                 contentType = "text/html";
                 statusCode = 500;
+                std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
+                if(itse != server_socket.getErrorPages().end())
+                {
+                    std::string return_value = readFile(itse->second,request_data);
+                    if(check_if == 1)
+                        return return_value;
+                }
                 status_message = "Internal Server Error";
                 contentLength = 34;
                 generate_header(0);
@@ -596,6 +626,13 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
             if (cgiHandler->getStatusCGI() != 200 && response_cgi.empty()){
                 contentType = "text/html";
                 statusCode = 500;
+                std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
+                if(itse != server_socket.getErrorPages().end())
+                {
+                    std::string return_value = readFile(itse->second,request_data);
+                    if(check_if == 1)
+                        return return_value;
+                }
                 status_message = "Internal Server Error";
                 contentLength = 34;
                 generate_header(0);
