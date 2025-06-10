@@ -25,7 +25,6 @@ class ParsRequest{
     private:
         // new member
         GetHandler* getHandler;
-        //--------
         std::string method;
         std::string path;
         std::string version;
@@ -60,6 +59,7 @@ class ParsRequest{
         bool FlagRedirect;
         bool flagTimeOUT;
 
+        std::map<int, std::string> statusMap;
 
     public:
         ParsRequest();
@@ -91,6 +91,9 @@ class ParsRequest{
         int getFlagCGI() const;
         bool getFlagTimeOUT() const;
         bool getFlagParsingHeader() const;
+        int getStatus() const;
+
+        void trim_crlf(std::string &str);
     };
 
 #endif

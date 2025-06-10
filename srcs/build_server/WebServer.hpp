@@ -16,7 +16,8 @@
 #define MAX_EVENTS 10
 #define BUFFER_SIZE 1024
 
-#define REQUEST_TIMEOUT 5000
+#define REQUEST_TIMEOUT 7000
+#define CLIENT_TIMEOUT_MS 10000
 
 
 class WebServer {
@@ -29,6 +30,8 @@ class WebServer {
         std::map<int, std::string> write_buffers;
         // time out 
         std::map<int, time_t> client_request_start;
+        std::map<int, time_t> client_last_activity;
+        
 
         bool setNonBlocking(int sockfd);
         bool addToEpoll(int sockfd);
@@ -43,4 +46,5 @@ class WebServer {
         bool initialize(std::vector<Server>::const_iterator &server) ;
         void linking_servers(ConfigParser &parser) ;
         void run(ConfigParser &parser);
+        void checkInactiveClients();
     };

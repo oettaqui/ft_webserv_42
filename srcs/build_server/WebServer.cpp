@@ -29,6 +29,9 @@ const std::string HTML_BADREQUEST =
     "</body>\r\n"
     "</html>\r\n";
 
+
+
+
 long WebServer::getCurrentTimeMs() {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -87,6 +90,7 @@ void WebServer::handleNewConnection(int server_fd) {
         }
         clients[client_fd] = new ParsRequest();
         client_request_start[client_fd] = getCurrentTimeMs();
+        client_last_activity[client_fd] = getCurrentTimeMs();
 }
 
 void WebServer::getResponse(int fd, ConfigParser &parser)
@@ -94,6 +98,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
     ParsRequest* p = clients[fd];
     if(p)
     {
+        client_last_activity[fd] = getCurrentTimeMs();
         if(p->getMethod() == "GET" && p->isComplet() == false && p->getFlagParsingHeader())
         {
             if(p->getCGIState())
@@ -182,7 +187,6 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
         }
         else
         {
-            std::cout << "hnaaaaaaaaaaaaaaaaa\n";
             if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
                 std::string& res = write_buffers[fd];
                 ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
@@ -218,7 +222,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
     ssize_t bytes_read = read(fd, buffer, BUFFER_SIZE);
-
+    
     if (bytes_read <= 0) {
         if (bytes_read < 0 && errno != EAGAIN) {
             std::cerr << "Failed read operation " << std::endl;
@@ -233,6 +237,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
         req.append(buffer, bytes_read);
         ParsRequest* p = clients[fd];
         p->parse(req, fd, parser);
+        client_last_activity[fd] = getCurrentTimeMs();
         if(!p->isValid()){
             if (p->getFlagTimeOUT() && getCurrentTimeMs() - client_request_start[fd] > REQUEST_TIMEOUT) {
                 std::string timeout_response = 
@@ -240,7 +245,6 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
                     "Content-Type: text/html\r\n"
                     "Content-Length: 62\r\n"
                     "Connection: close\r\n"
-                    // "Cache-Control: no-cache\r\n"
                     "\r\n"
                     "<html><body><h1>408 Request Timeout</h1></body></html>";
             
@@ -267,7 +271,9 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             else if(p->getMethod() == "DELETE"  && p->getFlagParsingHeader())
                 write_buffers[fd] = p->getResponses().find(fd)->second;
             else
-                write_buffers[fd] = HTML_BADREQUEST;
+            {
+                write_buffers[fd] = p->getResponses().find(fd)->second;
+            }
             struct epoll_event event;
             event.events = EPOLLOUT;
             event.data.fd = fd;
@@ -406,6 +412,7 @@ void WebServer::closeConnection(int fd) {
     }
     write_buffers.erase(fd);
     client_request_start.erase(fd);
+    client_last_activity.erase(fd);
 }
 
 void WebServer::run(ConfigParser &parser) {
@@ -413,7 +420,7 @@ void WebServer::run(ConfigParser &parser) {
     int check = 0;
     while (true) 
     {
-        int num_events = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+        int num_events = epoll_wait(epoll_fd, events, MAX_EVENTS, 500);
         if (num_events == -1) {
             std::cerr << "epoll_wait failed: " << strerror(errno) << std::endl;
             break;
@@ -442,9 +449,28 @@ void WebServer::run(ConfigParser &parser) {
             }
             check = 0;
         }
+        checkInactiveClients();
 
     }
 }
 
 
 
+void WebServer::checkInactiveClients() {
+    std::vector<int> to_close;
+    
+    for (std::map<int, long>::iterator it = client_last_activity.begin(); 
+         it != client_last_activity.end(); ++it) {
+        int fd = it->first;
+        long last_activity = it->second;
+        if (getCurrentTimeMs() - last_activity > CLIENT_TIMEOUT_MS) {
+            std::cout << "Client " << fd << " timed out" << std::endl;
+            to_close.push_back(fd);
+        }
+    }
+    
+
+    for (std::vector<int>::iterator it = to_close.begin(); it != to_close.end(); ++it) {
+        closeConnection(*it);
+    }
+}

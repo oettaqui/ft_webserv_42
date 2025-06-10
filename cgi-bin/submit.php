@@ -1,6 +1,6 @@
 <?php
 // Check request method
-while(true){}
+// while(true){}
 $requestMethod = $_SERVER['REQUEST_METHOD'];
 
 // If GET method is used, show error message

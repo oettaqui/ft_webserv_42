@@ -2,7 +2,7 @@
 
 PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false){
     storeContentTypes();
-    this->status = 0;
+    this->status = 200;
     this->filename= "";
 
     this->extension = "";
@@ -126,7 +126,6 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
     if (directoryExists(location_path))
     {
         if (!location_path.empty() && location_path[location_path.length() - 1] != '/' ) {
-            // std::cout << "herererere \n";
             location_path += '/';
             filename  << location_path.c_str() << "file_" << tv.tv_sec << "_" << tv.tv_usec;
         }
@@ -226,7 +225,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     if ( Ppos != std::string::npos && Ppos + 1 < correctPath.length() && correctPath[Ppos + 1] != '/')
     {
         correctPath = correctPath.substr(0, Ppos + 1) + "/" + correctPath.substr(Ppos + 1, correctPath.length());  
-        std::cout << "************* CORRECT PATH UPDATE ( " << correctPath << " )*****************" << std::endl;
+        std::cout << "************* CORRECT PATH UPDATE ( " << correctPath << " )*****************111" << std::endl;
     }
     if (correctPath.empty()){
         std::cout << "Location Not found 404 \n";
@@ -265,12 +264,12 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     if(location.hasRedirect() == true)
     {
         const std::map<int, std::string>::const_iterator redirection = location.getRedirection().begin();
-        std::cout << "<!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!>\n";
-        std::cout << "Should redirect to \n";
-        std::cout << "status = " <<redirection->first << " path = " << redirection->second << std::endl;
+        // std::cout << "<!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!>\n";
+        // std::cout << "Should redirect to \n";
+        // std::cout << "status = " <<redirection->first << " path = " << redirection->second << std::endl;
         std::string content = createRedirectResponse(redirection->first,redirection->second);
-        std::cout << "header to send = " << content << std::endl;
-        std::cout << "<!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!>\n";
+        // std::cout << "header to send = " << content << std::endl;
+        // std::cout << "<!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!>\n";
         data_req.setResponses(content);
         data_req.setFlagRedirect();
         return ;
@@ -312,7 +311,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         location_path = l;
 
     std::cout << "Location Path" << location_path << std::endl;
-    status = 200;
     this->maxBodySize = server.getClientMaxBodySize();
     
     std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
@@ -340,20 +338,28 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     }
     if (expectedLength > maxBodySize && maxBodySize > 0 && expectedLength > 0){
         std::cout << "This file has a content lenght greater then max body size : " << std::endl;
+        std::cout << "Payload Too Large (413)" << std::endl;
         isComplete = true;
+        this->status = 413;
         return;
     }else{
         this->filename = createUniqueFile(extension, location_path);
+        if (status == 404)
+        {
+            return;
+        }
+        if (filename.empty()) {
+            std::cerr << "Failed to Create File (500)" << std::endl;
+            status = 500;
+            return;
+        }
     }
-    if (!filename.empty()) {
-        std::cout << "Created file: " << this->filename << std::endl;
-    }
-    else{
-        return;
-    }
+    
     file.open(filename.c_str(), std::ios::binary);
-    if (!file) {
-        std::cerr << "Failed to open file for writing: " << filename << std::endl;
+    if (!file.is_open()) {
+        std::cerr << "Failed to Open File (500)" << std::endl;
+        status = 500;
+        return;
     }
     this->isChunked = data_req.isChunked();
     if (isChunked) {
@@ -364,7 +370,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         this->chunkSizeBuffer = "";
     }
     
-
     if (!data_req.getBody().empty()) {
         if (isChunked) {
             processChunkedData(data_req.getBody());
@@ -373,12 +378,9 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
             std::cout << "here processData " << std::endl;
         }
     }
+    status = 200;
 
-    // }else {
-    //     std::cout << "POST is not allowed." << std::endl;
-    //     status = 405;
-    //     return;
-    // }
+    
     
 
 
@@ -464,10 +466,13 @@ void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_r
                         this->file.close();
                     }
                     this->filename = createUniqueFile(extension, location_path);
+                    if (this->status == 404)
+                        return;
                     if (!filename.empty()) {
                         std::cout << "Created file: " << filename << std::endl;
                     }
                     else{
+                        this->status = 500;
                         return;
                     }
                     file.open(filename.c_str(), std::ios::binary);
@@ -551,7 +556,7 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
             this->autoIndex = location.getAutoindex();
 
         }else{
-            std::cout << "=============  IS NOT CGI FROM BOUNDARY ========\n";
+            // std::cout << "=============  IS NOT CGI FROM BOUNDARY ========\n";
             this->isCGI = false;
         }
         location_path = correctPath;

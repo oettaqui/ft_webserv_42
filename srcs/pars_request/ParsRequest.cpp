@@ -25,6 +25,95 @@ ParsRequest::ParsRequest() {
     getHandler = NULL;
     FlagRedirect = false;
     flagTimeOUT = false;
+    this->status = 200;
+
+
+
+
+     statusMap[200] = "HTTP/1.1 200 OK\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Success</title></head>"
+                     "<body><h1>Page loaded successfully</h1></body></html>";
+    
+    statusMap[400] = "HTTP/1.1 400 Bad Request\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Bad Request</title></head>"
+                     "<body><h1>Invalid request syntax</h1></body></html>";
+    
+    statusMap[404] = "HTTP/1.1 404 Not Found\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Not Found</title></head>"
+                     "<body><h1>Resource not found</h1></body></html>";
+    
+    statusMap[405] = "HTTP/1.1 405 Method Not Allowed\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "Allow: GET, POST, DELETE\r\n"
+                     "\r\n"
+                     "<html><head><title>Method Not Allowed</title></head>"
+                     "<body><h1>Method not allowed</h1></body></html>";
+    
+    statusMap[414] = "HTTP/1.1 414 URI Too Long\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>URI Too Long</title></head>"
+                     "<body><h1>Request URI too long</h1></body></html>";
+    
+    statusMap[500] = "HTTP/1.1 500 Internal Server Error\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Server Error</title></head>"
+                     "<body><h1>Internal server error</h1></body></html>";
+    
+    statusMap[504] = "HTTP/1.1 504 Gateway Timeout\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Gateway Timeout</title></head>"
+                     "<body><h1>CGI script timeout</h1></body></html>";
+    
+    statusMap[408] = "HTTP/1.1 408 Request Timeout\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Request Timeout</title></head>"
+                     "<body><h1>Request timeout</h1></body></html>";
+    
+    statusMap[411] = "HTTP/1.1 411 Length Required\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Length Required</title></head>"
+                     "<body><h1>Content-Length required</h1></body></html>";
+    
+    statusMap[413] = "HTTP/1.1 413 Payload Too Large\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Payload Too Large</title></head>"
+                     "<body><h1>Request entity too large</h1></body></html>";
+    
+    statusMap[501] = "HTTP/1.1 501 Not Implemented\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Not Implemented</title></head>"
+                     "<body><h1>Method not implemented</h1></body></html>";
+
+    statusMap[505] = "HTTP/1.1 505 HTTP Version Not Supported\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Version Not Supported</title></head>"
+                     "<body><h1>HTTP version not supported</h1></body></html>";
 }
 
 ParsRequest::~ParsRequest() {
@@ -47,42 +136,111 @@ std::vector<std::string> ParsRequest::split(const std::string& str, char delim) 
     }
     return tokens;
 }
+void ParsRequest::trim_crlf(std::string &str) {
+    while (!str.empty() && (str[str.size() - 1] == '\r' || str[str.size() - 1] == '\n')) {
+        str.erase(str.size() - 1);
+    }
+}
+
+// void ParsRequest::parseRequestLine(const std::string& line) {
+//     std::vector<std::string> parts = split(line, ' ');
+//     if (parts.size() == 3) {
+//         method = parts[0];
+//         path = parts[1];
+//         version = parts[2];
+//         trim_crlf(version);
+//         is_valid = true;
+//         // std::cout << "PATH from parsRequestLine function =========> " << path.length() << std::endl;
+//         size_t posQuery = path.find('?');
+//         size_t posEndQuery = path.find_last_of('#');
+        
+//         if(path.length() > MAX_URL_LENGTH)
+//         {
+//             is_valid = false;
+//             header_parsed = false;
+//             this->status = 414;
+//             return;
+//         }
+//         if (posQuery != std::string::npos){
+
+//             if (posEndQuery != std::string::npos)
+//                 this->query = path.substr(posQuery + 1, posEndQuery);
+//             else
+//                this->query = path.substr(posQuery + 1, path.length()); 
+//             path = path.substr(0, posQuery);
+
+//         }
+//         if (version != "HTTP/1.1") {
+//             is_valid = false;
+//             header_parsed = false;
+//             this->status = 505;
+//             return;
+//         }
+//         if ((method != "POST" && method != "GET" && method != "DELETE") || (path.empty())){
+//             is_valid = false;
+//             this->status = 400;
+//             header_parsed = false;
+//         }
+
+//     }else{
+//         is_valid = false;
+//         this->status = 400;
+//         header_parsed = false;
+//     }
+// }
 
 void ParsRequest::parseRequestLine(const std::string& line) {
     std::vector<std::string> parts = split(line, ' ');
-    if (parts.size() == 3) {
-        method = parts[0];
-        path = parts[1];
-        version = parts[2];
-        is_valid = true;
-        std::cout << "PATH from parsRequestLine function =========> " << path.length() << std::endl;
-        size_t posQuery = path.find('?');
-        size_t posEndQuery = path.find_last_of('#');
-        
-        if(path.length() > MAX_URL_LENGTH)
-        {
-            is_valid = false;
-            header_parsed = false;
-            status = 414;
-            return;
-        }
-        if (posQuery != std::string::npos){
-
-            if (posEndQuery != std::string::npos)
-                this->query = path.substr(posQuery + 1, posEndQuery);
-            else
-               this->query = path.substr(posQuery + 1, path.length()); 
-            path = path.substr(0, posQuery);
-
-        }
-        if ((method != "POST" && method != "GET" && method != "DELETE") && (version != "HTTP/1.1" || !path.empty())){
-            is_valid = false;
-            header_parsed = false;
-        }
-    }else{
+ 
+    if (parts.size() != 3) {
         is_valid = false;
         header_parsed = false;
+        this->status = 400;
+        return;
     }
+
+    method = parts[0];
+    path = parts[1];
+    version = parts[2];
+    trim_crlf(version);
+    if (path.length() > MAX_URL_LENGTH) {
+        is_valid = false;
+        header_parsed = false;
+        this->status = 414;
+        return;
+    }
+
+    if (method != "POST" && method != "GET" && method != "DELETE") {
+        is_valid = false;
+        header_parsed = false;
+        this->status = 405;
+        return;
+    }
+    if (version != "HTTP/1.1") {
+        is_valid = false;
+        header_parsed = false;
+        this->status = 505;
+        return;
+    }
+
+    if (path.empty()) {
+        is_valid = false;
+        header_parsed = false;
+        this->status = 400;
+        return;
+    }
+
+    size_t posQuery = path.find('?');
+    if (posQuery != std::string::npos) {
+        size_t posEndQuery = path.find_last_of('#');
+        if (posEndQuery != std::string::npos)
+            this->query = path.substr(posQuery + 1, posEndQuery);
+        else
+            this->query = path.substr(posQuery + 1, path.length());
+        path = path.substr(0, posQuery);
+    }
+
+    is_valid = true;
 }
 
 void ParsRequest::parseHeaders(const std::string& header_section) {
@@ -116,15 +274,16 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         {
             is_valid = false;
             header_parsed = false;
+            this->status = 400;
+            return ;
         }
     }else
     {
         is_valid = false;
         header_parsed = false;
+        this->status = 400;
+        return ;
     }
-
-    
-    
     
     std::map<std::string, std::string>::const_iterator cl = headers.find("Content-Length");
     if (cl != headers.end()) {
@@ -134,7 +293,8 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             if (!isdigit(clValue[i])) {
                 is_valid = false;
                 header_parsed = false;
-                break;
+                this->status = 400;
+                return;;
             }
         }
         if (is_valid) {
@@ -142,6 +302,8 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             if (contentLength < 0) {
                 is_valid = false;
                 header_parsed = false;
+                this->status = 400;
+                return;
             }
         }
     }
@@ -160,14 +322,19 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             std::cout << "content type not found " << std::endl;
             is_valid = false;
             header_parsed = false;
+            this->status = 400;
+            return;
         }
     }
 
     if (headers.find("Content-Length") != headers.end() && 
         headers.find("Transfer-Encoding") != headers.end()) {
-            // std::cout << "hnaaa 1" << std::endl;
-            is_valid = false;
-            header_parsed = false;
+            if (method == "POST"){
+                is_valid = false;
+                header_parsed = false;
+                this->status = 400;
+                return;
+            }
     }
     if (headers.find("Content-Length") == headers.end() && 
         headers.find("Transfer-Encoding") != headers.end())
@@ -177,6 +344,8 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
             if (method == "POST"){
                 is_valid = false;
                 header_parsed = false;
+                this->status = 501;
+                return;
             }
         }
         else{
@@ -187,6 +356,8 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         if (method == "POST"){
             is_valid = false;
             header_parsed = false;
+            this->status = 411;
+            return;
         }
     }
 
@@ -195,15 +366,10 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
         std::cout << "Error is boundary and chunked in the same time !!! " << std::endl;
         is_valid = false;
         header_parsed = false;
+        this->status = 400;
+        return;
     }
-    // for (std::map<std::string, std::string>::iterator it = headers.begin(); 
-    //     it != headers.end(); ++it) {
-    //     if (it->second.empty()) {
-    //         is_valid = false;
-    //         std::cout << "in this block " << std::endl;
-    //         break;
-    //     }
-    // }
+
 }
 
 
@@ -219,15 +385,12 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         size_t header_end = requestContent.find("\r\n\r\n");
         if (header_end == std::string::npos) {
 
-            // std::cout << "requestContent => " << requestContent << std::endl;
-            std::cout << "SHOULD HANDL TIMEOUT\n";
             this->flagTimeOUT = true;
+            return;
             
         } else{
             if (this->flagTimeOUT == true)
-            this->flagTimeOUT = false;
-            // std::cout << "requestContent => " << requestContent << std::endl;
-            std::cout << "here find the end of the header\n" << std::endl;
+                this->flagTimeOUT = false;
             header_parsed = true;
             std::string header_section = requestContent.substr(0, header_end);
             body = requestContent.substr(header_end + 4);
@@ -239,12 +402,15 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             
             parseRequestLine(lines[0]);
             if (!is_valid){
-                std::cout << "A BAD REQUEST 1" << std::endl;
+
+                std::cout << "A BAD REQUEST 1 " << this->status << std::endl;
+                this->responses[client_fd] = statusMap[this->status];
                 return;
             }
             parseHeaders(header_section);
             if (!is_valid){
-                std::cout << "A BAD REQUEST 2" << std::endl;
+                std::cout << "A BAD REQUEST 2 " << this->status << std::endl;
+                this->responses[client_fd] = statusMap[this->status];
                 return;
             }
         
@@ -267,19 +433,21 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         postHandler = new PostHandler();
                     }
                     postHandler->initialize(*this, parser);
-                    // redirection
+    
                     if(FlagRedirect)
                     {
                         is_Complet = true;
                         return ;   
                     }
                     
-                    if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
+                    if (postHandler->getStatus() != 200 )
                     {
                         this->status = postHandler->getStatus();
-                        std::cout << "ERROR " << std::endl;
+                        std::cout << "ERROR 1" << std::endl;
                         is_valid = false;
                         is_Complet = true;
+                        this->responses[client_fd] = statusMap[this->status];
+                        return ;
                     }
                     if (postHandler->isRequestComplete() && postHandler->getCGIState()) {
                         std::cout << "is a CGI and parsRequest Complete\n";
@@ -328,6 +496,14 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         is_Complet = true;
                     }
                 }
+                else{
+                    std::cout << "content length negative\n";
+                    is_valid = false;
+                    header_parsed = false;
+                    this->status = 400;
+                    this->responses[client_fd] = statusMap[this->status];
+                    return;
+                }
             } 
             else if (method == "POST" && is_chunked && !is_boundary){
                 std::cout << "at the first time is chunked =====  " << std::endl;
@@ -340,17 +516,60 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     postHandler = new PostHandler();
                 }
                 postHandler->initialize(*this, parser);
-                if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
+                if (postHandler->getStatus() != 200 )
                 {
                     this->status = postHandler->getStatus();
-                    std::cout << "ERROR " << std::endl;
+                    std::cout << "ERROR 2" << std::endl;
                     is_valid = false;
                     is_Complet = true;
+                    this->responses[client_fd] = statusMap[this->status];
+                    return ;
                 }
-                if (postHandler->isRequestComplete()) {
-                        
-                        is_valid = false;
-                        is_Complet = true;
+                if (postHandler->isRequestComplete() && postHandler->getCGIState()) {
+                        std::cout << "is a CGI and parsRequest Complete\n";
+                            cgiHandler =  new CGI();
+                            dataCGI data;
+                            data.method = method;
+                            data.path = path;
+                            data.version = version;
+                            data.file = postHandler->getFilename();
+                            data.contentType = postHandler->getContentType();
+                            data.contentLen = postHandler->getCurrentLength();
+                            data.scriptPath = postHandler->getScriptPath();
+                            data.queryString = this->query;
+                            if (postHandler->getAutoindexFromPost())
+                                data.autoIndex = "true";
+                            else
+                                data.autoIndex = "false";
+                            std::map<std::string, std::string> passCGI = postHandler->getCgiPassFomPost();
+                            std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + postHandler->getExtension());
+                            if (passCGIIT != passCGI.end()){
+                                data.CorrectPassCGI = passCGIIT->second;
+                            }else{
+                                is_valid = false;
+                                std::cout << "Pass CGI not found " << std::endl;
+                                return;
+                            }
+    
+    
+                            cgiHandler->setVarsEnv(data);
+                            
+                            responses[client_fd] = cgiHandler->executeScript();
+                            this->status = cgiHandler->getStatusCGI();
+                            this->flagCGI = cgiHandler->getCGIFlag();
+                            if (this->status != 200 && responses[client_fd].empty()){
+                                is_valid = false;
+                                is_Complet = true;
+                            }else if (this->status == 504 && !responses[client_fd].empty())
+                                is_Complet = true;
+                            this->Cgi = true;
+                }
+                else if (!postHandler->isRequestComplete() && postHandler->getCGIState()){
+                    std::cout << "is a CGI and parsRequest not Complete\n";
+                }
+                else if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
+                    std::cout << "is a not a CGI and parsRequest Complete\n";
+                    is_Complet = true;
                 }
     
             }else if (method == "POST" && !is_chunked && is_boundary){
@@ -380,10 +599,11 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 postHandler->setTer( "--" + boundaryValue + "--");
                 postHandler->setExpextedLength(contentLength);
                 postHandler->initBoundary(body, *this, parser);
-                if (postHandler->getStatus() == 404 || postHandler->getStatus() == 405)
+                if (postHandler->getStatus() != 200)
                 {
                     this->status = postHandler->getStatus();
-                    std::cout << "ERROR " << std::endl;
+                    std::cout << "ERROR 3 "  << status << std::endl;
+                    this->responses[client_fd] = statusMap[this->status];
                     is_valid = false;
                     is_Complet = true;
                 }
@@ -418,12 +638,32 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         }
 
     }else if (method == "POST" && postHandler) {
-        if (is_chunked) 
-            postHandler->processChunkedData(request);
+        if (is_chunked) {
+            if (postHandler->isRequestComplete())
+            {
+                if (postHandler->getCGIState() && this->cgiHandler){
+                    responses[client_fd] = cgiHandler->executeScript();
+                    this->status = cgiHandler->getStatusCGI();
+                    this->flagCGI = cgiHandler->getCGIFlag();
+                    
+                    if (this->flagCGI == 5){
+                        is_Complet = true;
+                    }
+                }
+
+            }else
+                postHandler->processChunkedData(request);
+        }
         else if (is_boundary)
         {
             std::string body = request;
             postHandler->initBoundary(body, *this, parser);
+            if (postHandler->getStatus() != 200){
+                this->status = postHandler->getStatus();
+                this->responses[client_fd] = statusMap[this->status];
+                is_valid = false;
+                is_Complet = true;
+            }
         }
         else {
             if (postHandler->isRequestComplete())
@@ -488,8 +728,8 @@ void ParsRequest::setFlagRedirect(){ FlagRedirect = true; }
 
 const std::string& ParsRequest::getQuery() const { return query; }
 
-int ParsRequest::getFlagCGI() const{
-    return flagCGI;
-}
+int ParsRequest::getFlagCGI() const{ return flagCGI; }
 bool ParsRequest::getFlagTimeOUT() const { return flagTimeOUT; }
 bool ParsRequest::getFlagParsingHeader() const { return header_parsed; }
+
+int ParsRequest::getStatus() const { return status; }

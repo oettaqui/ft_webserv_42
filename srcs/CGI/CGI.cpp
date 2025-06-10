@@ -74,6 +74,7 @@ std::string CGI::executeScript(){
     if (flag >= 0 && flag <= 4) {
         // std::cout << "++++++++++++++++++++++\n";
         if (isTimeout()) {
+            
             std::cout << "CGI timeout exceeded, terminating process\n";
             if (pid > 0) {
                 kill(pid, SIGTERM);  
@@ -227,7 +228,6 @@ std::string CGI::executeScript(){
         return response; 
        
     }else if (flag == 4){
-        // std::cout << "how many time here \n";
         char buffer[1024];
         ssize_t bytesRead;
         std::string output = "";
@@ -238,7 +238,7 @@ std::string CGI::executeScript(){
             output.append(buffer, bytesRead);
         if (bytesRead <= 0 || output.empty())
         {
-            std::cout << "end of file 1\n";
+            // std::cout << "end of file 1\n";
             flag = 5;
             return "";
         }
