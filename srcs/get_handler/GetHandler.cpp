@@ -430,19 +430,23 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         if(!(std::find(location_concerned.getMethods().begin(),location_concerned.getMethods().end(),"GET") 
         != location_concerned.getMethods().end()))
         {
-            statusCode = 403;
-            status_message = "Forbidden";
+            statusCode = 405;
+            status_message = "Method Not Allowed";
             std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
             if(itse != server_socket.getErrorPages().end())
             {
-                std::string return_value = readFile(itse->second,request_data);
-                if(check_if == 1)
-                    return generateResponse(return_value, request_data);
+                std::string ex_error = getFileExtension(itse->second);
+                if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+                {
+                    std::string return_value = readFile(itse->second,request_data);
+                    if(check_if == 1)
+                        return generateResponse(return_value, request_data);
+                }
             }
             contentType = "text/html";
             contentLength = 54;
             generate_header(0);
-            return generateResponse("<h1>403 the client doesn't have permission to GET</h1>", request_data);
+            return generateResponse("<h1>405 the client doesn't have permission to GET</h1>", request_data);
         }
         else
         {
@@ -493,18 +497,22 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         != location_concerned.getMethods().end()))
         {
             contentType = "text/html";
-            statusCode = 403;
+            statusCode = 405;
             std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
             if(itse != server_socket.getErrorPages().end())
             {
-                std::string return_value = readFile(itse->second,request_data);
-                if(check_if == 1)
-                    return generateResponse(return_value, request_data);
+                std::string ex_error = getFileExtension(itse->second);
+                if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+                {
+                    std::string return_value = readFile(itse->second,request_data);
+                    if(check_if == 1)
+                        return generateResponse(return_value, request_data);
+                }
             }
-            status_message = "Forbidden";
+            status_message = "Method Not Allowed";
             contentLength = 54;
             generate_header(0);
-            return generateResponse("<h1>403 the client doesn't have permission to GET</h1>", request_data);
+            return generateResponse("<h1>405 the client doesn't have permission to GET</h1>", request_data);
         }
         else
         {
@@ -556,9 +564,13 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
         if(itse != server_socket.getErrorPages().end())
         {
-            std::string return_value = readFile(itse->second,request_data);
-            if(check_if == 1)
-                return generateResponse(return_value, request_data);
+            std::string ex_error = getFileExtension(itse->second);
+            if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+            {
+                std::string return_value = readFile(itse->second,request_data);
+                if(check_if == 1)
+                    return generateResponse(return_value, request_data);
+            }
         }
         contentType = "text/html";
         std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
@@ -581,7 +593,7 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
     }
 
     /////////
-    if((extension == "php" || extension == "py") && (location_concerned.getCgi() && location_concerned.getCgiPass().size() > 0))
+    if((extension == "php" || extension == "py" || extension == "perl") && (location_concerned.getCgi() && location_concerned.getCgiPass().size() > 0))
     {
         std::string response_cgi;
         if(!cgiHandler)
@@ -612,9 +624,13 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
                 std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
                 if(itse != server_socket.getErrorPages().end())
                 {
-                    std::string return_value = readFile(itse->second,request_data);
-                    if(check_if == 1)
-                        return return_value;
+                    std::string ex_error = getFileExtension(itse->second);
+                    if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+                    {
+                        std::string return_value = readFile(itse->second,request_data);
+                        if(check_if == 1)
+                            return generateResponse(return_value, request_data);
+                    }
                 }
                 status_message = "Internal Server Error";
                 contentLength = 34;
@@ -629,9 +645,13 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
                 std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
                 if(itse != server_socket.getErrorPages().end())
                 {
-                    std::string return_value = readFile(itse->second,request_data);
-                    if(check_if == 1)
-                        return return_value;
+                    std::string ex_error = getFileExtension(itse->second);
+                    if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+                    {
+                        std::string return_value = readFile(itse->second,request_data);
+                        if(check_if == 1)
+                            return generateResponse(return_value, request_data);
+                    }
                 }
                 status_message = "Internal Server Error";
                 contentLength = 34;
@@ -649,6 +669,17 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
             if (cgiHandler->getStatusCGI() != 200 && response_cgi.empty()){
                 contentType = "text/html";
                 statusCode = 500;
+                std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
+                if(itse != server_socket.getErrorPages().end())
+                {
+                    std::string ex_error = getFileExtension(itse->second);
+                    if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+                    {
+                        std::string return_value = readFile(itse->second,request_data);
+                        if(check_if == 1)
+                            return generateResponse(return_value, request_data);
+                    }
+                }
                 status_message = "Internal Server Error";
                 contentLength = 34;
                 generate_header(0);

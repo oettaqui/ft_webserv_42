@@ -31,7 +31,6 @@ class WebServer {
         // time out 
         std::map<int, time_t> client_request_start;
         std::map<int, time_t> client_last_activity;
-        
 
         bool setNonBlocking(int sockfd);
         bool addToEpoll(int sockfd);

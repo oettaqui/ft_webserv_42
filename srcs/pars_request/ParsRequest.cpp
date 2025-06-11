@@ -26,11 +26,26 @@ ParsRequest::ParsRequest() {
     FlagRedirect = false;
     flagTimeOUT = false;
     this->status = 200;
+    errorFromConfig = false;
+    errorReadComplete = false;
+    contentType = "text/html";
+    size = 0;
+    totalBytesSent = 0;
 
+    statusMessages[200] = "OK";
+    statusMessages[400] = "Bad Request";
+    statusMessages[404] = "Not Found";
+    statusMessages[405] = "Method Not Allowed";
+    statusMessages[408] = "Request Timeout";
+    statusMessages[411] = "Length Required";
+    statusMessages[413] = "Payload Too Large";
+    statusMessages[414] = "URI Too Long";
+    statusMessages[500] = "Internal Server Error";
+    statusMessages[501] = "Not Implemented";
+    statusMessages[504] = "Gateway Timeout";
+    statusMessages[505] = "HTTP Version Not Supported";
 
-
-
-     statusMap[200] = "HTTP/1.1 200 OK\r\n"
+    statusMap[200] = "HTTP/1.1 200 OK\r\n"
                      "Content-Type: text/html\r\n"
                      "Connection: close\r\n"
                      "\r\n"
@@ -114,6 +129,81 @@ ParsRequest::ParsRequest() {
                      "\r\n"
                      "<html><head><title>Version Not Supported</title></head>"
                      "<body><h1>HTTP version not supported</h1></body></html>";
+
+    contentTypes_1["html"] = "text/html";
+    contentTypes_1["css"] = "text/css";
+    contentTypes_1["xml"] = "text/xml";
+    contentTypes_1["txt"] = "text/plain";
+    contentTypes_1["md"] = "text/markdown";
+    contentTypes_1["js"] = "text/javascript";
+    contentTypes_1["json"] = "application/json";
+    contentTypes_1["csv"] = "text/csv";
+    
+    // Image formats
+    contentTypes_1["gif"] = "image/gif";
+    contentTypes_1["jpeg"] = "image/jpeg";
+    contentTypes_1["jpg"] = "image/jpg";
+    contentTypes_1["png"] = "image/png";
+    contentTypes_1["webp"] = "image/webp";
+    contentTypes_1["svg"] = "image/svg+xml";
+    contentTypes_1["ico"] = "image/x-icon";
+    contentTypes_1["bmp"] = "image/bmp";
+    contentTypes_1["tiff"] = "image/tiff";
+    
+    // Audio formats
+    contentTypes_1["mp3"] = "audio/mpeg";
+    contentTypes_1["wav"] = "audio/wav";
+    contentTypes_1["ogg"] = "audio/ogg";
+    contentTypes_1["m4a"] = "audio/mp4";
+    contentTypes_1["aac"] = "audio/aac";
+    contentTypes_1["flac"] = "audio/flac";
+    contentTypes_1["mid"] = "audio/midi";
+    
+    // Video formats
+    contentTypes_1["mp4"] = "video/mp4";
+    contentTypes_1["webm"] = "video/webm";
+    contentTypes_1["avi"] = "video/x-msvideo";
+    contentTypes_1["mpg"] = "video/mpeg";
+    contentTypes_1["mov"] = "video/quicktime";
+    contentTypes_1["wmv"] = "video/x-ms-wmv";
+    contentTypes_1["flv"] = "video/x-flv";
+    
+    // Application formats
+    contentTypes_1["pdf"] = "application/pdf";
+    contentTypes_1["doc"] = "application/msword";
+    contentTypes_1["docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    contentTypes_1["xls"] = "application/vnd.ms-excel";
+    contentTypes_1["xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    contentTypes_1["ppt"] = "application/vnd.ms-powerpoint";
+    contentTypes_1["pptx"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    contentTypes_1["zip"] = "application/zip";
+    contentTypes_1["gz"] = "application/gzip";
+    contentTypes_1["tar"] = "application/x-tar";
+    contentTypes_1["rar"] = "application/x-rar-compressed";
+    contentTypes_1["7z"] = "application/x-7z-compressed";
+    contentTypes_1["exe"] = "application/x-msdownload";
+    contentTypes_1["swf"] = "application/x-shockwave-flash";
+    
+    // Web fonts
+    contentTypes_1["woff"] = "font/woff";
+    contentTypes_1["woff2"] = "font/woff2";
+    contentTypes_1["ttf"] = "font/ttf";
+    contentTypes_1["otf"] = "font/otf";
+    contentTypes_1["eot"] = "application/vnd.ms-fontobject";
+    
+    // Programming and configuration
+    contentTypes_1["php"] = "text";
+    contentTypes_1["py"] = "text/x-python";
+    contentTypes_1["java"] = "text/x-java-source";
+    contentTypes_1["c"] = "text/x-c";
+    contentTypes_1["cpp"] = "text/x-c++";
+    contentTypes_1["rb"] = "text/x-ruby";
+    contentTypes_1["sh"] = "application/x-sh";
+    contentTypes_1["pl"] = "text/x-perl";
+    contentTypes_1["sql"] = "application/sql";
+    contentTypes_1["xml"] = "application/xml";
+    contentTypes_1["yaml"] = "text/yaml";
+    contentTypes_1[""] = "application/octet-stream";
 }
 
 ParsRequest::~ParsRequest() {
@@ -142,56 +232,9 @@ void ParsRequest::trim_crlf(std::string &str) {
     }
 }
 
-// void ParsRequest::parseRequestLine(const std::string& line) {
-//     std::vector<std::string> parts = split(line, ' ');
-//     if (parts.size() == 3) {
-//         method = parts[0];
-//         path = parts[1];
-//         version = parts[2];
-//         trim_crlf(version);
-//         is_valid = true;
-//         // std::cout << "PATH from parsRequestLine function =========> " << path.length() << std::endl;
-//         size_t posQuery = path.find('?');
-//         size_t posEndQuery = path.find_last_of('#');
-        
-//         if(path.length() > MAX_URL_LENGTH)
-//         {
-//             is_valid = false;
-//             header_parsed = false;
-//             this->status = 414;
-//             return;
-//         }
-//         if (posQuery != std::string::npos){
-
-//             if (posEndQuery != std::string::npos)
-//                 this->query = path.substr(posQuery + 1, posEndQuery);
-//             else
-//                this->query = path.substr(posQuery + 1, path.length()); 
-//             path = path.substr(0, posQuery);
-
-//         }
-//         if (version != "HTTP/1.1") {
-//             is_valid = false;
-//             header_parsed = false;
-//             this->status = 505;
-//             return;
-//         }
-//         if ((method != "POST" && method != "GET" && method != "DELETE") || (path.empty())){
-//             is_valid = false;
-//             this->status = 400;
-//             header_parsed = false;
-//         }
-
-//     }else{
-//         is_valid = false;
-//         this->status = 400;
-//         header_parsed = false;
-//     }
-// }
-
-void ParsRequest::parseRequestLine(const std::string& line) {
+void ParsRequest::parseRequestLine( std::string& line) {
+    trim_crlf(line);
     std::vector<std::string> parts = split(line, ' ');
- 
     if (parts.size() != 3) {
         is_valid = false;
         header_parsed = false;
@@ -209,7 +252,6 @@ void ParsRequest::parseRequestLine(const std::string& line) {
         this->status = 414;
         return;
     }
-
     if (method != "POST" && method != "GET" && method != "DELETE") {
         is_valid = false;
         header_parsed = false;
@@ -372,15 +414,60 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
 
 }
 
+std::string ParsRequest::getFileExtension(const std::string& filename) {
+    size_t dotPos = filename.find_last_of(".");
+    if (dotPos != std::string::npos) {
+        return filename.substr(dotPos + 1);
+    }
+    return ""; // No extension found
+}
+
+size_t ParsRequest::getFileSize(const std::string& filename) {
+    struct stat stat_buf;
+    int rc = stat(filename.c_str(), &stat_buf);
+    
+    return rc == 0 ? stat_buf.st_size : -1;
+}
+
+std::string ParsRequest::readSmallFile(std::string filePath) {
+    if(!file_error.is_open())
+    {
+        file_error.open(filePath.c_str(), std::ios::binary);
+        if (!file_error) {
+            // std::cout << "failed Read ///////\n";
+            return "";
+        }
+    }
+    if(totalBytesSent >= size)
+    {
+        file_error.close();
+        errorReadComplete = true;
+        return "";
+    }
+    std::string content;
+    char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+    file_error.read(buffer, BUFFER_SIZE);
+    content.append(buffer, file_error.gcount());
+    final_res += content;
+    totalBytesSent = totalBytesSent + file_error.gcount();
+    return final_res;
+}
 
 void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &parser) {
+    // std::cout << "|" << request << "|\n"; 
     this->client_fd = client_fd;
     requestContent += request;
     std::string contentType = "";
     size_t contentLength = 0;
     std::string boundaryValue= "";
     
-    
+    if (errorFromConfig)
+    {
+        std::string content = readSmallFile(file_error_path);
+        this->responses[client_fd] =  content;
+        return ;
+    }
     if (!header_parsed) {
         size_t header_end = requestContent.find("\r\n\r\n");
         if (header_end == std::string::npos) {
@@ -389,6 +476,9 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             return;
             
         } else{
+            if (header_end == 0){
+                return;
+            }
             if (this->flagTimeOUT == true)
                 this->flagTimeOUT = false;
             header_parsed = true;
@@ -399,21 +489,60 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 is_valid = false;
                 return;
             }
-            
             parseRequestLine(lines[0]);
             if (!is_valid){
 
-                std::cout << "A BAD REQUEST 1 " << this->status << std::endl;
+                // std::cout << "A BAD REQUEST 1 " << this->status << std::endl;
+                /// zidni hna
                 this->responses[client_fd] = statusMap[this->status];
-                return;
+                // return;
             }
-            parseHeaders(header_section);
-            if (!is_valid){
-                std::cout << "A BAD REQUEST 2 " << this->status << std::endl;
+            else
+            {
+                parseHeaders(header_section);
+                if (!is_valid){
+                    // std::cout << "A BAD REQUEST 2 " << this->status << std::endl;
+                    /// zidni hna
+                    this->responses[client_fd] = statusMap[this->status];
+                    // return;
+                }
+            }
+
+            server_it = parser.getServer_parser(this->host,this->port);
+            if(server_it == parser.getServers().end())
+            {
+                if(status != 414)
+                    status = 400;
                 this->responses[client_fd] = statusMap[this->status];
+                is_valid = false;
+                header_parsed = false;
                 return;
+
             }
-        
+            // std::cout << request << std::endl;
+            if(!is_valid)
+            {
+                std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                if(itse != server_it->getErrorPages().end())
+                {
+                    size = getFileSize(itse->second);
+                    contentType = getFileExtension(itse->second);
+                    std::stringstream  header;
+                    header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                            << "Content-Length: " << size << "\r\n"
+                    << "Content-Type: " << contentType << "\r\n"
+                    << "Connection: close\r\n"
+                    << "\r\n";
+                    final_res += header.str();
+                    file_error_path = itse->second;
+                    errorFromConfig = true;
+                    this->responses[client_fd] = final_res;
+                    final_res.clear();
+                    return ;
+                }
+                else
+                    return ;
+            }
     
             
             if (method == "POST" && !is_chunked && !is_boundary) {
@@ -446,10 +575,30 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         std::cout << "ERROR 1" << std::endl;
                         is_valid = false;
                         is_Complet = true;
+                        /// zidni hna
+                        // std::cout << "11111\n";
+                        std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                        if(itse != server_it->getErrorPages().end())
+                        {
+                            size = getFileSize(itse->second);
+                            contentType = getFileExtension(itse->second);
+                            std::stringstream  header;
+                            header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                            << "Content-Type: " << contentType << "\r\n"
+                            << "Content-Length: " << size << "\r\n"
+                            << "Connection: close\r\n"
+                            << "\r\n";
+                            final_res += header.str();
+                            file_error_path = itse->second;
+                            errorFromConfig = true;
+                            this->responses[client_fd] = final_res;
+                            final_res.clear();
+                            return ;
+                        }
                         this->responses[client_fd] = statusMap[this->status];
                         return ;
                     }
-                    if (postHandler->isRequestComplete() && postHandler->getCGIState()) {
+                    if (postHandler->isRequestComplete() && postHandler->getCGIState() ) {
                         std::cout << "is a CGI and parsRequest Complete\n";
                             cgiHandler =  new CGI();
                             dataCGI data;
@@ -501,6 +650,26 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     is_valid = false;
                     header_parsed = false;
                     this->status = 400;
+                    /// zidni hna
+                    std::cout << "2222\n";
+                    std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                    if(itse != server_it->getErrorPages().end())
+                    {
+                        size = getFileSize(itse->second);
+                        contentType = getFileExtension(itse->second);
+                        std::stringstream  header;
+                        header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                        << "Content-Type: " << contentType << "\r\n"
+                        << "Content-Length: " << size << "\r\n"
+                        << "Connection: close\r\n"
+                        << "\r\n";
+                        final_res += header.str();
+                        file_error_path = itse->second;
+                        errorFromConfig = true;
+                        this->responses[client_fd] = final_res;
+                        final_res.clear();
+                        return ;
+                    }
                     this->responses[client_fd] = statusMap[this->status];
                     return;
                 }
@@ -522,6 +691,26 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     std::cout << "ERROR 2" << std::endl;
                     is_valid = false;
                     is_Complet = true;
+                    /// zidni hna
+                    std::cout << "3333\n";
+                    std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                    if(itse != server_it->getErrorPages().end())
+                    {
+                        size = getFileSize(itse->second);
+                        contentType = getFileExtension(itse->second);
+                        std::stringstream  header;
+                        header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                        << "Content-Type: " << contentType << "\r\n"
+                        << "Content-Length: " << size << "\r\n"
+                        << "Connection: close\r\n"
+                        << "\r\n";
+                        final_res += header.str();
+                        file_error_path = itse->second;
+                        errorFromConfig = true;
+                        this->responses[client_fd] = final_res;
+                        final_res.clear();
+                        return ;
+                    }
                     this->responses[client_fd] = statusMap[this->status];
                     return ;
                 }
@@ -603,9 +792,30 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 {
                     this->status = postHandler->getStatus();
                     std::cout << "ERROR 3 "  << status << std::endl;
-                    this->responses[client_fd] = statusMap[this->status];
                     is_valid = false;
                     is_Complet = true;
+                    /// zidni hna
+                    std::cout << "4444\n";
+                    std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                    if(itse != server_it->getErrorPages().end())
+                    {
+                        size = getFileSize(itse->second);
+                        contentType = getFileExtension(itse->second);
+                        std::stringstream  header;
+                        header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                        << "Content-Type: " << contentType << "\r\n"
+                        << "Content-Length: " << size << "\r\n"
+                        << "Connection: close\r\n"
+                        << "\r\n";
+                        final_res += header.str();
+                        file_error_path = itse->second;
+                        errorFromConfig = true;
+                        this->responses[client_fd] = final_res;
+                        final_res.clear();
+                        return ;
+                    }
+                    this->responses[client_fd] = statusMap[this->status];
+                    return;
                 }
                 if (postHandler->isRequestComplete())
                 {
@@ -660,9 +870,30 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             postHandler->initBoundary(body, *this, parser);
             if (postHandler->getStatus() != 200){
                 this->status = postHandler->getStatus();
-                this->responses[client_fd] = statusMap[this->status];
                 is_valid = false;
                 is_Complet = true;
+                /// zidni hna
+                std::cout << "5555\n";
+                std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                if(itse != server_it->getErrorPages().end())
+                {
+                    size = getFileSize(itse->second);
+                    contentType = getFileExtension(itse->second);
+                    std::stringstream  header;
+                    header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                    << "Content-Type: " << contentType << "\r\n"
+                    << "Content-Length: " << size << "\r\n"
+                    << "Connection: close\r\n"
+                    << "\r\n";
+                    final_res += header.str();
+                    file_error_path = itse->second;
+                    errorFromConfig = true;
+                    this->responses[client_fd] = final_res;
+                    final_res.clear();
+                    return ;
+                }
+                this->responses[client_fd] = statusMap[this->status];
+                return;
             }
         }
         else {
@@ -730,6 +961,13 @@ const std::string& ParsRequest::getQuery() const { return query; }
 
 int ParsRequest::getFlagCGI() const{ return flagCGI; }
 bool ParsRequest::getFlagTimeOUT() const { return flagTimeOUT; }
+
+//
+bool ParsRequest::getErrorFromConfig() const { return errorFromConfig; }
+void ParsRequest::setErrorFromConfig(){ errorFromConfig = false; }
+bool ParsRequest::getErrorReadComplete() const { return errorReadComplete; }
+void ParsRequest::setErrorReadComplete(){ errorReadComplete = false; }
+//
 bool ParsRequest::getFlagParsingHeader() const { return header_parsed; }
 
 int ParsRequest::getStatus() const { return status; }

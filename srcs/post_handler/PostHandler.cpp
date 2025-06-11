@@ -242,8 +242,9 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     std::vector<std::string> indexV;
     
     int c = 0;
-    if (p.find(".php") != std::string::npos || p.find(".py") != std::string::npos)
+    if (p.find(".php") != std::string::npos || p.find(".py") != std::string::npos || p.find(".perl") != std::string::npos)
     {
+        std::cout << "hnaaaa\n";
         this->scriptPath = p;
         c = 1;
         fp = p.find_last_of("/", p.length());
@@ -264,12 +265,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     if(location.hasRedirect() == true)
     {
         const std::map<int, std::string>::const_iterator redirection = location.getRedirection().begin();
-        // std::cout << "<!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!>\n";
-        // std::cout << "Should redirect to \n";
-        // std::cout << "status = " <<redirection->first << " path = " << redirection->second << std::endl;
         std::string content = createRedirectResponse(redirection->first,redirection->second);
-        // std::cout << "header to send = " << content << std::endl;
-        // std::cout << "<!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!>\n";
         data_req.setResponses(content);
         data_req.setFlagRedirect();
         return ;
@@ -286,7 +282,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
             indexV = location.getIndex();
             
             std::string tmp = getTheValidIndex(indexV, correctPath);
-            if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos))
+            if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos || tmp.find(".perl") != std::string::npos))
             {
                 correctPath = tmp;
                 this->scriptPath = correctPath;
@@ -295,7 +291,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
                 l = correctPath.substr(0, fp);
                 fileN = correctPath.substr(fp + 1, correctPath.length());
             }
-            else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos)){
+            else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos && tmp.find(".perl") == std::string::npos)){
                 this->status = 404;
                 std::cout << "is a CGI but i don't have the extension that i should interprete it \n";
                 return;

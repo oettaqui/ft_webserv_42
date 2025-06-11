@@ -99,7 +99,29 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
     if(p)
     {
         client_last_activity[fd] = getCurrentTimeMs();
-        if(p->getMethod() == "GET" && p->isComplet() == false && p->getFlagParsingHeader())
+        if(p->getErrorFromConfig() && !p->getErrorReadComplete())
+        {
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            // std::cout << "========================\n";
+            // std::cout << write_buffers[fd] << std::endl;
+            // std::cout << "========================\n";
+                if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty())
+                {
+                    std::string& res = write_buffers[fd];
+                    ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                    if (bytes_sent == -1) {
+                        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                            return;
+                        }
+                        std::cerr << "send failed: " << strerror(errno) << std::endl;
+                        closeConnection(fd);
+                        return;
+                    }
+                    write_buffers.erase(fd);
+                }
+            p->parse("",fd, parser);
+        }
+        else if(p->getMethod() == "GET" && p->isComplet() == false && p->getFlagParsingHeader() && !p->getErrorFromConfig())
         {
             if(p->getCGIState())
             {
@@ -120,7 +142,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             }
             p->parse("",fd, parser);
         }
-        else if (p->getMethod() == "GET" && p->getCGIState() && p->isComplet() == true){
+        else if (p->getMethod() == "GET" && p->getCGIState() && p->isComplet() == true && !p->getErrorFromConfig()){
             write_buffers[fd] = p->getResponses().find(fd)->second;
             if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
                 std::string& res = write_buffers[fd];
@@ -143,7 +165,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
             closeConnection(fd);
         }
-        else if ((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == false && p->getFlagParsingHeader()))
+        else if ((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == false && p->getFlagParsingHeader()) && !p->getErrorFromConfig())
         {
             write_buffers[fd] = p->getResponses().find(fd)->second;
             if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
@@ -161,8 +183,8 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             } 
             p->parse("",fd, parser);    
         }
-        else if ((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == true)
-        || (p->getMethod() == "POST" && p->isComplet() == true && p->getFlagRedirect())){
+        else if (((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == true)
+        || (p->getMethod() == "POST" && p->isComplet() == true && p->getFlagRedirect())) && !p->getErrorFromConfig()){
             write_buffers[fd] = p->getResponses().find(fd)->second;
             if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
                 std::string& res = write_buffers[fd];
@@ -239,6 +261,14 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
         p->parse(req, fd, parser);
         client_last_activity[fd] = getCurrentTimeMs();
         if(!p->isValid()){
+            if(p->getErrorFromConfig())
+            {
+                struct epoll_event event;
+                event.events = EPOLLOUT;
+                event.data.fd = fd;
+                epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+                return ;
+            }
             if (p->getFlagTimeOUT() && getCurrentTimeMs() - client_request_start[fd] > REQUEST_TIMEOUT) {
                 std::string timeout_response = 
                     "HTTP/1.1 408 Request Timeout\r\n"
