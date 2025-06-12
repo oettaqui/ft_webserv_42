@@ -66,6 +66,9 @@ private:
     
 
     bool fileExistsAndNotEmpty(const std::string& filename);
+    std::string buffer; 
+    size_t bufferOffset;
+    void processBufferedData() ;
 
     
     

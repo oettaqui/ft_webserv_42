@@ -72,7 +72,7 @@ char** CGI::buildEnvp(std::map<std::string, std::string>& env) {
 std::string CGI::executeScript(){
 
     if (flag >= 0 && flag <= 4) {
-        // std::cout << "++++++++++++++++++++++\n";
+        std::cout << "++++++++++++++++++++++\n";
         if (isTimeout()) {
             
             std::cout << "CGI timeout exceeded, terminating process\n";
@@ -101,23 +101,52 @@ std::string CGI::executeScript(){
     }
 
     if (flag == 0){
+        std::cout << "0\n";
         if (envVars["REQUEST_METHOD"] == "POST") {
             if (access(this->file.c_str(), R_OK) == -1) {
+                std::cout << "try to remove tmp file\n";
+            if (envVars["REQUEST_METHOD"] == "POST") {
+                if (unlink(this->file.c_str()) == 0) {
+                    std::cout << "File deleted successfully.\n";
+                } else {
+                    perror("Error deleting the file");
+                }
+            }
                 this->status = 500;
+                flag = 5;
                 return "";
             }
         }
         if (access(this->passCgi.c_str(), X_OK) == -1) {
-                this->status = 500;
-                return "";
+            std::cout << "try to remove tmp file\n";
+            if (envVars["REQUEST_METHOD"] == "POST") {
+                if (unlink(this->file.c_str()) == 0) {
+                    std::cout << "File deleted successfully.\n";
+                } else {
+                    perror("Error deleting the file");
+                }
+            }
+            this->status = 500;
+            flag = 5;
+            return "";
         }
         if (pipe(pipeFd) == -1){
+            std::cout << "try to remove tmp file\n";
+            if (envVars["REQUEST_METHOD"] == "POST") {
+                if (unlink(this->file.c_str()) == 0) {
+                    std::cout << "File deleted successfully.\n";
+                } else {
+                    perror("Error deleting the file");
+                }
+            }
+            flag = 5;
             this->status = 500;
             return "";
         }
         flag = 1;
     }else if (flag == 1)
     {
+        std::cout << "1\n";
         char **envp = buildEnvp(this->envVars);
         char* argv[3];
         argv[0] = (char*)this->passCgi.c_str();
@@ -128,11 +157,12 @@ std::string CGI::executeScript(){
             perror("fork failed");
             this->status = 500;
             for (size_t i = 0; envp[i]; ++i)
-                free(envp[i]);
+            free(envp[i]);
             delete[] envp;
+            flag = 5;
             return "";
         }
-    
+        
         if (pid == 0) {
             
             if (envVars["REQUEST_METHOD"] == "POST") {
@@ -152,12 +182,13 @@ std::string CGI::executeScript(){
             execve(argv[0], argv, &envp[0]);
             perror("execve failed");
             exit(1);
-
+            
         }
         // this->startTime = getCurrentTimeMs();
         flag = 2;
     }else if (flag == 2){
-
+        std::cout << "2\n";
+        
         int status;
         pid_t result = waitpid(this->pid, &status, WNOHANG);
         
@@ -165,6 +196,14 @@ std::string CGI::executeScript(){
             if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
                 std::cout << "CGI script exited with error code: " << WEXITSTATUS(status) << std::endl;
                 this->status = 500;
+                std::cout << "try to remove tmp file\n";
+                if (envVars["REQUEST_METHOD"] == "POST") {
+                    if (unlink(this->file.c_str()) == 0) {
+                        std::cout << "File deleted successfully.\n";
+                    } else {
+                        perror("Error deleting the file");
+                    }
+                }
                 flag = 5;
                 return "";
             }
@@ -172,6 +211,14 @@ std::string CGI::executeScript(){
         } else if (result == -1) {
             perror("waitpid failed");
             this->status = 500;
+            std::cout << "try to remove tmp file\n";
+            if (envVars["REQUEST_METHOD"] == "POST") {
+                if (unlink(this->file.c_str()) == 0) {
+                    std::cout << "File deleted successfully.\n";
+                } else {
+                    perror("Error deleting the file");
+                }
+            }
             flag = 5;
             return "";
         }
@@ -189,6 +236,7 @@ std::string CGI::executeScript(){
         }
     }
     else if (flag == 3){
+        std::cout << "3\n";
         char buffer[1024];
         ssize_t bytesRead;
         std::string output = "";
@@ -196,7 +244,7 @@ std::string CGI::executeScript(){
         
         bytesRead = read(pipeFd[0], buffer, sizeof(buffer));
         if (bytesRead > 0) 
-            output.append(buffer, bytesRead);
+        output.append(buffer, bytesRead);
         if (bytesRead <= 0 || output.empty())
         {
             flag = 5;
@@ -224,10 +272,11 @@ std::string CGI::executeScript(){
         flag = 4;
         if (bytesRead < 1024)
             flag = 5;
-        // std::cout << "{" << response << "}" << std::endl;
+            // std::cout << "{" << response << "}" << std::endl;
         return response; 
-       
+            
     }else if (flag == 4){
+        std::cout << "4\n";
         char buffer[1024];
         ssize_t bytesRead;
         std::string output = "";

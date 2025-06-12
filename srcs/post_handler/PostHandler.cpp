@@ -19,6 +19,8 @@ PostHandler::PostHandler() : bodyLength(0), expectedLength(0), isComplete(false)
     this->scriptPath = "";
 
     this->autoIndex = false;
+
+    bufferOffset = 0;
 }
 
 PostHandler::~PostHandler() {
@@ -140,8 +142,8 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
         
     }
     else{
-        status = 404;
-        std::cout << "directory not found\n";
+        status = 403;
+        std::cout << "\n";
         return "";
     }
     
@@ -168,6 +170,8 @@ bool PostHandler::fileExistsAndNotEmpty(const std::string& filename) {
 
 std::string PostHandler::getTheValidIndex(std::vector<std::string> index, std::string path) {
     std::cout << "*****======== PATH ======*****" << std::endl;
+    std::cout << path<< std::endl;
+    std::cout << "*****======== PATH ======*****" << std::endl;
 
 
     if (path.empty() || path[path.length() - 1] != '/') {
@@ -193,6 +197,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     std::string contentType = "";
     size_t contentLength = 0;
     std::map<std::string, std::string> headers = data_req.getHeaders();
+    this->isChunked = data_req.isChunked();
    
     std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
     if (contentTypeIt != headers.end()) {
@@ -222,7 +227,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     correctPath = LocationAndPath.first;
     std::cout << "************* CORRECT PATH ( " << correctPath << " )*****************" << std::endl;
     size_t Ppos = correctPath.find(".");
-    if ( Ppos != std::string::npos && Ppos + 1 < correctPath.length() && correctPath[Ppos + 1] != '/')
+    if ( Ppos != std::string::npos && Ppos + 1 < correctPath.length() && correctPath[Ppos + 1] != '/' && Ppos == 0)
     {
         correctPath = correctPath.substr(0, Ppos + 1) + "/" + correctPath.substr(Ppos + 1, correctPath.length());  
         std::cout << "************* CORRECT PATH UPDATE ( " << correctPath << " )*****************111" << std::endl;
@@ -242,9 +247,9 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     std::vector<std::string> indexV;
     
     int c = 0;
-    if (p.find(".php") != std::string::npos || p.find(".py") != std::string::npos || p.find(".perl") != std::string::npos)
+    if (p.find(".php") != std::string::npos || p.find(".py") != std::string::npos || p.find(".pl") != std::string::npos)
     {
-        std::cout << "hnaaaa\n";
+        std::cout << "hnaaaa2222222222222222222222222222222222222222\n";
         this->scriptPath = p;
         c = 1;
         fp = p.find_last_of("/", p.length());
@@ -253,7 +258,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     }
     else if (p.find_last_of(".", p.length()) != std::string::npos)
         c = 2;
-
+    std::cout << "P " << p << std::endl;
     location = LocationAndPath.second;
     std::vector<std::string> allow_methods = location.getMethods();
     if(std::find(allow_methods.begin(), allow_methods.end(), "POST") == allow_methods.end())
@@ -272,39 +277,105 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     }
     if (location.getCgi())
     {
-        std::cout << "=============  IS CGI ========\n";
-        this->cgiPassMap = location.getCgiPass();
         this->isCGI = true;
+        // if (isChunked)
+        // {
+        //     std::cout << "=============  IS CGI and CHUNKED ========\n";
+        //     this->status = 400;
+        //     std::cout << "is a CGI but the Chunked cannot support the CGI  \n";
+        //     return;
+        // }
+        this->cgiPassMap = location.getCgiPass();
+        
         this->cgi_pass = location.getCgiPass();
         this->autoIndex = location.getAutoindex();
-        if (c == 2)
+        std::cout << "=============  IS CGI ========" << isChunked << std::endl;
+        if (c != 1)
         {
-            indexV = location.getIndex();
-            
-            std::string tmp = getTheValidIndex(indexV, correctPath);
-            if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos || tmp.find(".perl") != std::string::npos))
+            location_path = correctPath;
+            std::cout << "if111 " <<location_path << std::endl;
+        }
+        else{
+            location_path = l;
+            std::cout << "else " <<location_path << std::endl;
+        }
+        // if (c == 1)
+        // {
+        //     // if (this->autoIndex)
+        //     // {
+        //         std::cout << "iffffff " <<location_path << std::endl;
+        //         sleep(3);
+        //         // // indexV = location.getIndex();
+                
+        //         // // std::string tmp = getTheValidIndex(indexV, location_path);
+        //         // std::string tmp = location_path.substr(location_path.find_last_of('/') + 1, location_path.length());
+        //         // std::cout << "TMP ========= " << tmp << std::endl;
+        //         // if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos || tmp.find(".perl") != std::string::npos))
+        //         // {
+        //         //     location_path = tmp;
+        //         //     this->scriptPath = location_path;
+        //         //     c = 1;
+        //         //     fp = location_path.find_last_of("/", p.length());
+        //         //     l = location_path.substr(0, fp);
+        //         //     fileN = location_path.substr(fp + 1, location_path.length());
+        //         // }
+        //         // else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos && tmp.find(".perl") == std::string::npos)){
+        //         //     this->status = 404;
+        //         //     std::cout << "is a CGI but i don't have the extension that i should interprete it \n";
+        //         //     return;
+        //         // }
+        //     // }
+        //     // else{}
+
+
+
+        // }
+        if (c != 1){
+            std::cout << "elseeee " <<location_path << std::endl;
+            // sleep(10);
+            if (this->autoIndex)
             {
-                correctPath = tmp;
-                this->scriptPath = correctPath;
-                c = 1;
-                fp = correctPath.find_last_of("/", p.length());
-                l = correctPath.substr(0, fp);
-                fileN = correctPath.substr(fp + 1, correctPath.length());
+                indexV = location.getIndex();
+                
+                std::string tmp = getTheValidIndex(indexV, location_path);
+                std::cout << "TMP ========= " << tmp << std::endl;
+                if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos || tmp.find(".perl") != std::string::npos))
+                {
+                    location_path = tmp;
+                    this->scriptPath = location_path;
+                    c = 1;
+                    fp = location_path.find_last_of("/", p.length());
+                    l = location_path.substr(0, fp);
+                    fileN = location_path.substr(fp + 1, location_path.length());
+                }
+                else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos && tmp.find(".perl") == std::string::npos)){
+                    this->status = 403;
+                    std::cout << "is a CGI but i don't have the extension that i should interprete it \n";
+                    return;
+                }
             }
-            else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos && tmp.find(".perl") == std::string::npos)){
-                this->status = 404;
-                std::cout << "is a CGI but i don't have the extension that i should interprete it \n";
+            else{
+                std::cout << "PPPPPPPPPPPP\n";
+                this->isCGI = false;
+                this->status = 403;
                 return;
             }
+
         }
     }else{
         // std::cout << "=============  IS NOT CGI ========\n";
         this->isCGI = false;
+        c = 2;
     }
     if (c != 1)
+    {
         location_path = correctPath;
-    else
+        std::cout << "if " << location_path << std::endl;
+    }
+    else{
         location_path = l;
+        std::cout << "else " <<location_path << std::endl;
+    }
 
     std::cout << "Location Path" << location_path << std::endl;
     this->maxBodySize = server.getClientMaxBodySize();
@@ -312,6 +383,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
     if (itT != contentTypes.end()) {
         this->extension = itT->second;
+       
     } else {
         if (contentType == "application/x-www-form-urlencoded")
         {
@@ -331,6 +403,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         }
         else
             std::cout << "Content Type Unsupported" << std::endl;
+            // shoudl check this !
     }
     if (expectedLength > maxBodySize && maxBodySize > 0 && expectedLength > 0){
         std::cout << "This file has a content lenght greater then max body size : " << std::endl;
@@ -340,8 +413,9 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         return;
     }else{
         this->filename = createUniqueFile(extension, location_path);
-        if (status == 404)
+        if (status == 403)
         {
+            std::cout << "403!!!!\n";
             return;
         }
         if (filename.empty()) {
@@ -357,7 +431,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         status = 500;
         return;
     }
-    this->isChunked = data_req.isChunked();
     if (isChunked) {
         this->expectedLength = 0;
         this->chunkState = READING_SIZE;
@@ -368,6 +441,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     
     if (!data_req.getBody().empty()) {
         if (isChunked) {
+            std::cout << "here processChunkedData " << std::endl;
             processChunkedData(data_req.getBody());
         } else {
             processData(data_req.getBody());
@@ -375,8 +449,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         }
     }
     status = 200;
-
-    
     
 
 
@@ -414,7 +486,6 @@ void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_r
     size_t hPos = 0;
     this->leftoverData = "";
 
-    // Find terminator
     tPos = body.find(terminator);
     if (tPos != std::string::npos){
 
@@ -518,8 +589,7 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
     this->bodyLength = 0;
     this->isComplete = false;
     
-    // std::cout << "{ BODY " << initBody << " }" << std::endl;
-    // std::cout << "{ BOUNDARY VALUE " << boundaryValue << " }" << std::endl;
+
     Server server = parser.getServer(data_req.hostMethod(), data_req.portMethod());
     locations = server.getLocations();
     
@@ -546,10 +616,19 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
         location = LocationAndPath.second;
         if (location.getCgi())
         {
+            if (data_req.isBoundary())
+            {
+                std::cout << "=============  IS CGI and Boundary ========\n";
+                this->status = 400;
+                std::cout << "is a CGI but the boundaty cannot support the CGI  \n";
+                return;
+            }
             std::cout << "=============  IS CGI FROM BOUNDARY ========\n";
             this->isCGI = true;
             this->cgi_pass = location.getCgiPass();
             this->autoIndex = location.getAutoindex();
+            status = 400;
+            return;
 
         }else{
             // std::cout << "=============  IS NOT CGI FROM BOUNDARY ========\n";
@@ -577,11 +656,6 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
 
 
 
-
-
-
-
-
 void PostHandler::processData(const std::string& data) {
     if (!file.is_open()) {
         std::cerr << "Error: File is not open when trying to process data" << std::endl;
@@ -603,82 +677,202 @@ void PostHandler::processData(const std::string& data) {
     }
 }
 
+// void PostHandler::processChunkedData(const std::string& data) {
+//     size_t pos = 0;
+//     while (pos < data.length())
+//     {
+//         switch (chunkState)
+//         {
+//             case READING_SIZE:{
+//                 size_t endPos = data.find("\r\n", pos);
+//                 if (endPos == std::string::npos) {
+//                     chunkSizeBuffer.append(data.substr(pos, data.length()));
+//                     pos = data.length();
+//                     // std::cout << "chunkSizeBuffer ===> " << chunkSizeBuffer << std::endl;
+//                 }
+//                 else{
+//                     chunkSizeBuffer.append(data.substr(pos, endPos - pos));
+//                     // std::cout << "chunkSizeBuffer +++++> " << chunkSizeBuffer << std::endl;
+//                     std::string sizeStr = chunkSizeBuffer;
+
+                    
+//                     std::istringstream ss(sizeStr);
+//                     int size;
+//                     ss >> std::hex >> size;
+//                     std::cout << "int =>" << size << std::endl;
+
+//                     if (size == 0){
+//                         chunkState = END_OF_CHUNKS;
+//                         isComplete = true;
+//                         file.flush();
+//                         file.close();
+//                         std::cout << "Chunked upload complete: " << filename << " (" << bodyLength << " bytes)" << std::endl;
+//                     }else{
+//                         currentChunkSize = size;
+//                         currentChunkBytesRead = 0;
+//                         chunkState = READING_DATA;
+//                     }
+//                     pos = endPos + 2;
+//                     chunkSizeBuffer.clear();
+//                 }
+//                 break;
+//             }
+//             case READING_DATA:{
+
+//                 int bytesRemaining = currentChunkSize - currentChunkBytesRead;
+//                 // std::cout << "data lenght " << data.length() << " bytesRemaining " << bytesRemaining << std:: endl;
+//                 int bytesToRead = std::min((int)(data.length() - pos), bytesRemaining);
+
+//                 if (bytesToRead > 0)
+//                 {
+//                     file.write(data.c_str() + pos, bytesToRead);
+//                     bodyLength += bytesToRead;
+//                     currentChunkBytesRead += bytesToRead;
+//                     pos += bytesToRead;
+//                 }
+//                 if (currentChunkBytesRead >= currentChunkSize)
+//                 {
+//                     chunkState = READING_TRAILING_CRLF;
+//                 }
+//                 break;
+
+//             }
+//             case READING_TRAILING_CRLF: {
+//                 if (data.length() - pos >= 2) {
+//                     pos += 2; 
+//                     chunkState = READING_SIZE;
+//                 } else {
+//                     pos = data.length();
+//                 }
+//                 break;
+//             }
+//             case END_OF_CHUNKS:
+//                 pos = data.length();
+//                 break;
+//         }
+
+//     }
+// }
+
+
 void PostHandler::processChunkedData(const std::string& data) {
-    size_t pos = 0;
-    while (pos < data.length())
-    {
-        switch (chunkState)
-        {
-            case READING_SIZE:{
-                size_t endPos = data.find("\r\n", pos);
+    // Append new data to the buffer
+    buffer.append(data);
+    
+    // Process the buffered data
+    processBufferedData();
+}
+
+
+void PostHandler::processBufferedData() {
+    size_t pos = bufferOffset;
+    
+    while (pos < buffer.length()) {
+        switch (chunkState) {
+            case READING_SIZE: {
+                size_t endPos = buffer.find("\r\n", pos);
                 if (endPos == std::string::npos) {
-                    chunkSizeBuffer.append(data.substr(pos));
-                    pos = data.length();
-                    // std::cout << "chunkSizeBuffer ===> " << chunkSizeBuffer << std::endl;
+                    chunkSizeBuffer = buffer.substr(pos); // Replace instead of append
+                    bufferOffset = pos;
+                    return;
                 }
-                else{
-                    chunkSizeBuffer.append(data.substr(pos, endPos - pos));
-                    // std::cout << "chunkSizeBuffer +++++> " << chunkSizeBuffer << std::endl;
-                    std::string sizeStr = chunkSizeBuffer;
-
-                    // convert hex to int
-                    std::istringstream ss(sizeStr);
-                    int size;
-                    ss >> std::hex >> size;
-                    // std::cout << "int =>" << size << std::endl;
-
-                    if (size == 0){
-                        chunkState = END_OF_CHUNKS;
-                        isComplete = true;
-                        file.flush();
-                        file.close();
-                        std::cout << "Chunked upload complete: " << filename << " (" << bodyLength << " bytes)" << std::endl;
-                    }else{
-                        currentChunkSize = size;
-                        currentChunkBytesRead = 0;
-                        chunkState = READING_DATA;
-                    }
-                    pos = endPos + 2;
-                    chunkSizeBuffer.clear();
+                
+                chunkSizeBuffer = buffer.substr(pos, endPos - pos); // Replace instead of append
+                pos = endPos + 2;
+                
+                std::istringstream ss(chunkSizeBuffer);
+                ss >> std::hex >> currentChunkSize;
+                
+                if (currentChunkSize == 0) {
+                    chunkState = END_OF_CHUNKS;
+                    isComplete = true;
+                    file.flush();
+                    file.close();
+                    std::cout << "Chunked upload complete: " << filename 
+                              << " (" << bodyLength << " bytes)" << std::endl;
+                    buffer.clear();
+                    bufferOffset = 0;
+                    return;
                 }
+                
+                currentChunkBytesRead = 0;
+                chunkState = READING_DATA;
                 break;
             }
-            case READING_DATA:{
-
-                int bytesRemaining = currentChunkSize - currentChunkBytesRead;
-                // std::cout << "data lenght " << data.length() << " bytesRemaining " << bytesRemaining << std:: endl;
-                int bytesToRead = std::min((int)(data.length() - pos), bytesRemaining);
-
-                if (bytesToRead > 0)
-                {
-                    file.write(data.c_str() + pos, bytesToRead);
+            
+            case READING_DATA: {
+                size_t bytesRemaining = currentChunkSize - currentChunkBytesRead;
+                size_t bytesAvailable = buffer.length() - pos;
+                
+                // Add protection against zero-length reads
+                if (bytesRemaining == 0) {
+                    chunkState = READING_TRAILING_CRLF;
+                    break;
+                }
+                
+                if (bytesAvailable == 0) {
+                    bufferOffset = pos;
+                    return;
+                }
+                
+                size_t bytesToRead = std::min(bytesAvailable, bytesRemaining);
+                
+                if (bytesToRead > 0) {
+                    file.write(buffer.c_str() + pos, bytesToRead);
                     bodyLength += bytesToRead;
                     currentChunkBytesRead += bytesToRead;
                     pos += bytesToRead;
                 }
-                if (currentChunkBytesRead >= currentChunkSize)
-                {
+                
+                if (currentChunkBytesRead >= currentChunkSize) {
                     chunkState = READING_TRAILING_CRLF;
                 }
                 break;
-
             }
+            
             case READING_TRAILING_CRLF: {
-                if (data.length() - pos >= 2) {
-                    pos += 2; 
-                    chunkState = READING_SIZE;
-                } else {
-                    pos = data.length();
+                if (buffer.length() - pos < 2) {
+                    bufferOffset = pos;
+                    return;
                 }
+                
+                // Verify it's actually CRLF
+                if (buffer[pos] != '\r' || buffer[pos+1] != '\n') {
+                    // Handle protocol error
+                    chunkState = END_OF_CHUNKS;
+                    isComplete = true;
+                    file.close();
+                    std::cerr << "Invalid chunk trailing CRLF" << std::endl;
+                    buffer.clear();
+                    bufferOffset = 0;
+                    return;
+                }
+                
+                pos += 2;
+                chunkState = READING_SIZE;
                 break;
             }
+            
             case END_OF_CHUNKS:
-                pos = data.length();
-                break;
+                buffer.clear();
+                bufferOffset = 0;
+                return;
         }
-
+        
+        // Clean processed data from buffer periodically
+        if (pos > 1024) {  // Arbitrary threshold
+            buffer.erase(0, pos);
+            pos = 0;
+            bufferOffset = 0;
+        }
     }
+    
+    // Clear buffer if we processed everything
+    buffer.clear();
+    bufferOffset = 0;
 }
+
+
 
 bool PostHandler::isRequestComplete() const {
     return isComplete;

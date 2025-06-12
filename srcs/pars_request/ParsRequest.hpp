@@ -12,7 +12,7 @@
 #include <iomanip>
 #define MAX_CONTENT_LENGTH 10485760 
 #define MAX_URL_LENGTH 8192 
-#define BUFFER_SIZE 1024 
+#define BUFFER_SIZE_P 1024 
 
 #include "../Parse_configfile/ConfigParser.hpp"
 #include "../post_handler/PostHandler.hpp"

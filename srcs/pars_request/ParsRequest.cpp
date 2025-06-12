@@ -34,6 +34,7 @@ ParsRequest::ParsRequest() {
 
     statusMessages[200] = "OK";
     statusMessages[400] = "Bad Request";
+    statusMessages[403] = "Forbidden";
     statusMessages[404] = "Not Found";
     statusMessages[405] = "Method Not Allowed";
     statusMessages[408] = "Request Timeout";
@@ -58,6 +59,13 @@ ParsRequest::ParsRequest() {
                      "\r\n"
                      "<html><head><title>Bad Request</title></head>"
                      "<body><h1>Invalid request syntax</h1></body></html>";
+
+    statusMap[403] = "HTTP/1.1 403 Forbidden\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Forbidden</title></head>"
+                     "<body><h1>Forbidden</h1></body></html>";
     
     statusMap[404] = "HTTP/1.1 404 Not Found\r\n"
                      "Content-Type: text/html\r\n"
@@ -445,9 +453,9 @@ std::string ParsRequest::readSmallFile(std::string filePath) {
         return "";
     }
     std::string content;
-    char buffer[BUFFER_SIZE];
-    memset(buffer, 0, BUFFER_SIZE);
-    file_error.read(buffer, BUFFER_SIZE);
+    char buffer[BUFFER_SIZE_P];
+    memset(buffer, 0, BUFFER_SIZE_P);
+    file_error.read(buffer, BUFFER_SIZE_P);
     content.append(buffer, file_error.gcount());
     final_res += content;
     totalBytesSent = totalBytesSent + file_error.gcount();
@@ -465,7 +473,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
     if (errorFromConfig)
     {
         std::string content = readSmallFile(file_error_path);
-        this->responses[client_fd] =  content;
+        this->responses[client_fd] = content;
         return ;
     }
     if (!header_parsed) {
@@ -483,7 +491,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 this->flagTimeOUT = false;
             header_parsed = true;
             std::string header_section = requestContent.substr(0, header_end);
-            body = requestContent.substr(header_end + 4);
+            this->body = requestContent.substr(header_end + 4);
             std::vector<std::string> lines = split(header_section, '\n');
             if (lines.empty()) {
                 is_valid = false;
@@ -546,6 +554,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
     
             
             if (method == "POST" && !is_chunked && !is_boundary) {
+                std::cout << "BINARY \n";
                 std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
                 if (contentTypeIt != headers.end()) {
                     contentType = contentTypeIt->second;
@@ -572,11 +581,9 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     if (postHandler->getStatus() != 200 )
                     {
                         this->status = postHandler->getStatus();
-                        std::cout << "ERROR 1" << std::endl;
+                       std::cout << "ERROR 1 | " << this->status <<  std::endl;
                         is_valid = false;
                         is_Complet = true;
-                        /// zidni hna
-                        // std::cout << "11111\n";
                         std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                         if(itse != server_it->getErrorPages().end())
                         {
@@ -598,7 +605,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         this->responses[client_fd] = statusMap[this->status];
                         return ;
                     }
-                    if (postHandler->isRequestComplete() && postHandler->getCGIState() ) {
+                    if (postHandler->isRequestComplete() && postHandler->getCGIState()) {
                         std::cout << "is a CGI and parsRequest Complete\n";
                             cgiHandler =  new CGI();
                             dataCGI data;
@@ -609,36 +616,127 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             data.contentType = postHandler->getContentType();
                             data.contentLen = postHandler->getCurrentLength();
                             data.scriptPath = postHandler->getScriptPath();
+                            size_t pos = postHandler->getScriptPath().find_last_of(".");
+                            std::string ext ;
                             data.queryString = this->query;
                             if (postHandler->getAutoindexFromPost())
                                 data.autoIndex = "true";
                             else
                                 data.autoIndex = "false";
-                            std::map<std::string, std::string> passCGI = postHandler->getCgiPassFomPost();
-                            std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + postHandler->getExtension());
-                            if (passCGIIT != passCGI.end()){
-                                data.CorrectPassCGI = passCGIIT->second;
-                            }else{
-                                is_valid = false;
-                                std::cout << "Pass CGI not found " << std::endl;
-                                return;
+                            if(pos != std::string::npos)
+                            {
+                                ext = postHandler->getScriptPath().substr(pos + 1, postHandler->getScriptPath().length());
                             }
+                            else 
+                            {
+                                ext = "";
+                                std::cout << "NO EXTENTION\n";
+                            }
+                            
+                            std::map<std::string, std::string> passCGI = postHandler->getCgiPassFomPost();
+                            if (!ext.empty())
+                            {
+                                std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + ext);
+                                if (passCGIIT != passCGI.end()){
+                                    data.CorrectPassCGI = passCGIIT->second;
+                                }else{
+
+                                    is_valid = false;
+                                    std::cout << "filename " << postHandler->getScriptPath()<< std::endl;
+                                    std::cout << "Pass CGI not found " << postHandler->getExtension() << std::endl;
+                                    this->status = 404;
+                                    this->responses[client_fd] = statusMap[this->status];
+                                    return;
+                                }
+                                std::cout << "EXtension" << postHandler->getExtension() << std::endl;
+        
     
-    
+                            }
                             cgiHandler->setVarsEnv(data);
                             
                             responses[client_fd] = cgiHandler->executeScript();
                             this->status = cgiHandler->getStatusCGI();
                             this->flagCGI = cgiHandler->getCGIFlag();
                             if (this->status != 200 && responses[client_fd].empty()){
+                                responses[client_fd] = statusMap[this->status];
                                 is_valid = false;
                                 is_Complet = true;
                             }else if (this->status == 504 && !responses[client_fd].empty())
                                 is_Complet = true;
                             this->Cgi = true;
+                            if (this->status != 200){
+                                is_valid = false;
+                                is_Complet = true;
+                                std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                                if(itse != server_it->getErrorPages().end())
+                                {
+                                    size = getFileSize(itse->second);
+                                    contentType = getFileExtension(itse->second);
+                                    std::stringstream  header;
+                                    header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                                    << "Content-Type: " << contentType << "\r\n"
+                                    << "Content-Length: " << size << "\r\n"
+                                    << "Connection: close\r\n"
+                                    << "\r\n";
+                                    final_res += header.str();
+                                    file_error_path = itse->second;
+                                    errorFromConfig = true;
+                                    this->responses[client_fd] = final_res;
+                                    final_res.clear();
+                                    return ;
+                                }
+                                this->responses[client_fd] = statusMap[this->status];
+                                return;
+                            }
                     }
                     else if (!postHandler->isRequestComplete() && postHandler->getCGIState()){
-                        std::cout << "is a CGI and parsRequest not Complete\n";
+                            std::cout << "is a CGI and parsRequest not Complete\n";
+                            cgiHandler =  new CGI();
+                            
+                            dataCGI data;
+                            data.method = method;
+                            data.path = path;
+                            data.version = version;
+                            data.file = postHandler->getFilename();
+                            data.contentType = postHandler->getContentType();
+                            data.contentLen = postHandler->getCurrentLength();
+                            data.scriptPath = postHandler->getScriptPath();
+                            size_t pos = postHandler->getScriptPath().find_last_of(".");
+                            std::string ext ;
+                            data.queryString = this->query;
+                            if (postHandler->getAutoindexFromPost())
+                                data.autoIndex = "true";
+                            else
+                                data.autoIndex = "false";
+                            if(pos != std::string::npos)
+                            {
+                                ext = postHandler->getScriptPath().substr(pos + 1, postHandler->getScriptPath().length());
+                            }
+                            else 
+                                ext = "";
+                            
+                            std::map<std::string, std::string> passCGI = postHandler->getCgiPassFomPost();
+                            if (!ext.empty())
+                            {
+                                std::cout << ext << std::endl;
+                                std::cout << pos << std::endl;
+                                std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + ext);
+                                if (passCGIIT != passCGI.end()){
+                                    data.CorrectPassCGI = passCGIIT->second;
+                                }else{
+
+                                    is_valid = false;
+                                    std::cout << "filename " << postHandler->getScriptPath()<< std::endl;
+                                    std::cout << "Pass CGI not found " << postHandler->getExtension() << std::endl;
+                                    this->status = 404;
+                                    this->responses[client_fd] = statusMap[this->status];
+                                    return;
+                                }
+                                std::cout << "EXtension" << postHandler->getExtension() << std::endl;
+        
+    
+                            }
+                            cgiHandler->setVarsEnv(data);
                     }
                     else if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
                         std::cout << "is a not a CGI and parsRequest Complete\n";
@@ -688,7 +786,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 if (postHandler->getStatus() != 200 )
                 {
                     this->status = postHandler->getStatus();
-                    std::cout << "ERROR 2" << std::endl;
+                    std::cout << "ERROR 2 | " << this->status <<  std::endl;
                     is_valid = false;
                     is_Complet = true;
                     /// zidni hna
@@ -715,51 +813,145 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     return ;
                 }
                 if (postHandler->isRequestComplete() && postHandler->getCGIState()) {
-                        std::cout << "is a CGI and parsRequest Complete\n";
-                            cgiHandler =  new CGI();
-                            dataCGI data;
-                            data.method = method;
-                            data.path = path;
-                            data.version = version;
-                            data.file = postHandler->getFilename();
-                            data.contentType = postHandler->getContentType();
-                            data.contentLen = postHandler->getCurrentLength();
-                            data.scriptPath = postHandler->getScriptPath();
-                            data.queryString = this->query;
-                            if (postHandler->getAutoindexFromPost())
-                                data.autoIndex = "true";
-                            else
-                                data.autoIndex = "false";
-                            std::map<std::string, std::string> passCGI = postHandler->getCgiPassFomPost();
-                            std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + postHandler->getExtension());
-                            if (passCGIIT != passCGI.end()){
-                                data.CorrectPassCGI = passCGIIT->second;
-                            }else{
-                                is_valid = false;
-                                std::cout << "Pass CGI not found " << std::endl;
-                                return;
-                            }
-    
-    
-                            cgiHandler->setVarsEnv(data);
-                            
-                            responses[client_fd] = cgiHandler->executeScript();
-                            this->status = cgiHandler->getStatusCGI();
-                            this->flagCGI = cgiHandler->getCGIFlag();
-                            if (this->status != 200 && responses[client_fd].empty()){
-                                is_valid = false;
-                                is_Complet = true;
-                            }else if (this->status == 504 && !responses[client_fd].empty())
-                                is_Complet = true;
-                            this->Cgi = true;
+                    std::cout << "is a CGI and parsRequest Complete\n";
+                    cgiHandler =  new CGI();
+                    dataCGI data;
+                    data.method = method;
+                    data.path = path;
+                    data.version = version;
+                    data.file = postHandler->getFilename();
+                    data.contentType = postHandler->getContentType();
+                    data.contentLen = postHandler->getCurrentLength();
+                    data.scriptPath = postHandler->getScriptPath();
+                    size_t pos = postHandler->getScriptPath().find_last_of(".");
+                    std::string ext ;
+                    data.queryString = this->query;
+                    if (postHandler->getAutoindexFromPost())
+                        data.autoIndex = "true";
+                    else
+                        data.autoIndex = "false";
+                    if(pos != std::string::npos)
+                    {
+                        ext = postHandler->getScriptPath().substr(pos + 1, postHandler->getScriptPath().length());
+                    }
+                    else 
+                    {
+                        ext = "";
+                        std::cout << "NO EXTENTION\n";
+                    }
+                    
+                    std::map<std::string, std::string> passCGI = postHandler->getCgiPassFomPost();
+                    if (!ext.empty())
+                    {
+                        std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + ext);
+                        if (passCGIIT != passCGI.end()){
+                            data.CorrectPassCGI = passCGIIT->second;
+                        }else{
+
+                            is_valid = false;
+                            std::cout << "filename " << postHandler->getScriptPath()<< std::endl;
+                            std::cout << "Pass CGI not found " << postHandler->getExtension() << std::endl;
+                            this->status = 404;
+                            this->responses[client_fd] = statusMap[this->status];
+                            return;
+                        }
+                        std::cout << "EXtension" << postHandler->getExtension() << std::endl;
+
+                    }
+                    cgiHandler->setVarsEnv(data);
+                    
+                    responses[client_fd] = cgiHandler->executeScript();
+                    this->status = cgiHandler->getStatusCGI();
+                    this->flagCGI = cgiHandler->getCGIFlag();
+                    if (this->status != 200 && responses[client_fd].empty()){
+                        responses[client_fd] = statusMap[this->status];
+                        is_valid = false;
+                        is_Complet = true;
+                    }else if (this->status == 504 && !responses[client_fd].empty())
+                        is_Complet = true;
+                    this->Cgi = true;
+                    if (this->status != 200){
+                        is_valid = false;
+                        is_Complet = true;
+                        std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                        if(itse != server_it->getErrorPages().end())
+                        {
+                            size = getFileSize(itse->second);
+                            contentType = getFileExtension(itse->second);
+                            std::stringstream  header;
+                            header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                            << "Content-Type: " << contentType << "\r\n"
+                            << "Connection: close\r\n"
+                            << "\r\n";
+                            final_res += header.str();
+                            file_error_path = itse->second;
+                            errorFromConfig = true;
+                            this->responses[client_fd] = final_res;
+                            final_res.clear();
+                            return ;
+                        }
+                        this->responses[client_fd] = statusMap[this->status];
+                        return;
+                    }
                 }
                 else if (!postHandler->isRequestComplete() && postHandler->getCGIState()){
                     std::cout << "is a CGI and parsRequest not Complete\n";
+                    cgiHandler =  new CGI();
+                    
+                    dataCGI data;
+                    data.method = method;
+                    data.path = path;
+                    data.version = version;
+                    data.file = postHandler->getFilename();
+                    data.contentType = postHandler->getContentType();
+                    data.contentLen = postHandler->getCurrentLength();
+                    data.scriptPath = postHandler->getScriptPath();
+                    size_t pos = postHandler->getScriptPath().find_last_of(".");
+                    std::string ext ;
+                    data.queryString = this->query;
+                    if (postHandler->getAutoindexFromPost())
+                        data.autoIndex = "true";
+                    else
+                        data.autoIndex = "false";
+                    if(pos != std::string::npos)
+                    {
+                        ext = postHandler->getScriptPath().substr(pos + 1, postHandler->getScriptPath().length());
+                    }
+                    else 
+                        ext = "";
+                    
+                    std::map<std::string, std::string> passCGI = postHandler->getCgiPassFomPost();
+                    if (!ext.empty())
+                    {
+                        std::cout << ext << std::endl;
+                        std::cout << pos << std::endl;
+                        std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + ext);
+                        if (passCGIIT != passCGI.end()){
+                            data.CorrectPassCGI = passCGIIT->second;
+                        }else{
+
+                            is_valid = false;
+                            std::cout << "filename " << postHandler->getScriptPath()<< std::endl;
+                            std::cout << "Pass CGI not found " << postHandler->getExtension() << std::endl;
+                            this->status = 404;
+                            this->responses[client_fd] = statusMap[this->status];
+                            return;
+                        }
+                        std::cout << "EXtension" << postHandler->getExtension() << std::endl;
+
+
+                    }
+                    cgiHandler->setVarsEnv(data);
                 }
                 else if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
                     std::cout << "is a not a CGI and parsRequest Complete\n";
                     is_Complet = true;
                 }
+                if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
+                    std::cout << "is a not a CGI and parsRequest Complete\n";
+                    is_Complet = true;
+                }
+                
     
             }else if (method == "POST" && !is_chunked && is_boundary){
     
@@ -794,8 +986,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     std::cout << "ERROR 3 "  << status << std::endl;
                     is_valid = false;
                     is_Complet = true;
-                    /// zidni hna
-                    std::cout << "4444\n";
                     std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                     if(itse != server_it->getErrorPages().end())
                     {
@@ -849,20 +1039,57 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
 
     }else if (method == "POST" && postHandler) {
         if (is_chunked) {
-            if (postHandler->isRequestComplete())
+           
+            if (!postHandler->isRequestComplete())
             {
+                // std::cout << "chunked at the second time \n";
+                postHandler->processChunkedData(request);
+                // std::cout << "is complete processing " << postHandler->isRequestComplete() << std::endl;
+            }
+            if (postHandler->isRequestComplete()){
+                // std::cout << "HNAAAAAAAA1\n";
                 if (postHandler->getCGIState() && this->cgiHandler){
+                    this->Cgi = true;
+                    // std::cout << "HNAAAAAAAA0\n";
                     responses[client_fd] = cgiHandler->executeScript();
                     this->status = cgiHandler->getStatusCGI();
                     this->flagCGI = cgiHandler->getCGIFlag();
-                    
+                    std::cout << "flag " << this->flagCGI << std::endl;
                     if (this->flagCGI == 5){
+                        if(responses[client_fd].empty()){
+                            responses[client_fd] = statusMap[this->status];
+                        }
+                        if (this->status != 200){
+                        
+                            is_valid = false;
+                            is_Complet = true;
+                            std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                            if(itse != server_it->getErrorPages().end())
+                            {
+                                size = getFileSize(itse->second);
+                                contentType = getFileExtension(itse->second);
+                                std::stringstream  header;
+                                header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                                << "Content-Type: " << contentType << "\r\n"
+                                << "Content-Length: " << size << "\r\n"
+                                << "Connection: close\r\n"
+                                << "\r\n";
+                                final_res += header.str();
+                                file_error_path = itse->second;
+                                errorFromConfig = true;
+                                this->responses[client_fd] = final_res;
+                                final_res.clear();
+                                return ;
+                            }
+                            this->responses[client_fd] = statusMap[this->status];
+                            return;
+                        }
                         is_Complet = true;
                     }
+                    
                 }
+            }
 
-            }else
-                postHandler->processChunkedData(request);
         }
         else if (is_boundary)
         {
@@ -872,8 +1099,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 this->status = postHandler->getStatus();
                 is_valid = false;
                 is_Complet = true;
-                /// zidni hna
-                std::cout << "5555\n";
                 std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                 if(itse != server_it->getErrorPages().end())
                 {
@@ -897,26 +1122,62 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             }
         }
         else {
+            if (!postHandler->isRequestComplete()){
+                std::cout << "else processData\n";
+                postHandler->processData(request);
+                // std::cout << postHandler->isRequestComplete() << std::endl;
+            }
             if (postHandler->isRequestComplete())
             {
+                std::cout << "HNAAAAAAAA1\n";
                 if (postHandler->getCGIState() && this->cgiHandler){
+                    this->Cgi = true;
+                    std::cout << "HNAAAAAAAA0\n";
                     responses[client_fd] = cgiHandler->executeScript();
                     this->status = cgiHandler->getStatusCGI();
                     this->flagCGI = cgiHandler->getCGIFlag();
-                    
+                    std::cout << "flag " << this->flagCGI << std::endl;
                     if (this->flagCGI == 5){
+                        if(responses[client_fd].empty()){
+                            responses[client_fd] = statusMap[this->status];
+                        }
+                        if (this->status != 200){
+                        
+                            is_valid = false;
+                            is_Complet = true;
+                            std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                            if(itse != server_it->getErrorPages().end())
+                            {
+                                size = getFileSize(itse->second);
+                                contentType = getFileExtension(itse->second);
+                                std::stringstream  header;
+                                header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                                << "Content-Type: " << contentType << "\r\n"
+                                << "Content-Length: " << size << "\r\n"
+                                << "Connection: close\r\n"
+                                << "\r\n";
+                                final_res += header.str();
+                                file_error_path = itse->second;
+                                errorFromConfig = true;
+                                this->responses[client_fd] = final_res;
+                                final_res.clear();
+                                return ;
+                            }
+                            this->responses[client_fd] = statusMap[this->status];
+                        return;
+                    }
                         is_Complet = true;
                     }
+                    
                 }
 
-            }else{
-                postHandler->processData(request);
             }
+            
         }
-        
         if (postHandler->isRequestComplete() && !postHandler->getCGIState()) {
             is_Complet = true;
         }
+        
     }
     else if(method == "GET" && getHandler)
     {
@@ -929,8 +1190,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         else
             std::cout << "is_Complet : false" << std::endl;
     }
-        
-        
+            
 
 
 }
