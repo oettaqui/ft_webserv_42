@@ -339,7 +339,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
                 
                 std::string tmp = getTheValidIndex(indexV, location_path);
                 std::cout << "TMP ========= " << tmp << std::endl;
-                if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos || tmp.find(".perl") != std::string::npos))
+                if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos || tmp.find(".pl") != std::string::npos))
                 {
                     location_path = tmp;
                     this->scriptPath = location_path;
@@ -348,7 +348,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
                     l = location_path.substr(0, fp);
                     fileN = location_path.substr(fp + 1, location_path.length());
                 }
-                else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos && tmp.find(".perl") == std::string::npos)){
+                else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos && tmp.find(".pl") == std::string::npos)){
                     this->status = 403;
                     std::cout << "is a CGI but i don't have the extension that i should interprete it \n";
                     return;

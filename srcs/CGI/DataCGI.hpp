@@ -16,6 +16,7 @@ struct dataCGI {
     std::string autoIndex;
     std::string CorrectPassCGI;
     std::string queryString;
+    std::map<std::string, std::string> headers;
 };
 
 #endif

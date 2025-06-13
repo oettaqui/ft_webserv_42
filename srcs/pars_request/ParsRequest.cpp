@@ -616,6 +616,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             data.contentType = postHandler->getContentType();
                             data.contentLen = postHandler->getCurrentLength();
                             data.scriptPath = postHandler->getScriptPath();
+                            data.headers = this->headers;
                             size_t pos = postHandler->getScriptPath().find_last_of(".");
                             std::string ext ;
                             data.queryString = this->query;
@@ -701,6 +702,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             data.contentType = postHandler->getContentType();
                             data.contentLen = postHandler->getCurrentLength();
                             data.scriptPath = postHandler->getScriptPath();
+                            data.headers = this->headers;
                             size_t pos = postHandler->getScriptPath().find_last_of(".");
                             std::string ext ;
                             data.queryString = this->query;
@@ -823,6 +825,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     data.contentType = postHandler->getContentType();
                     data.contentLen = postHandler->getCurrentLength();
                     data.scriptPath = postHandler->getScriptPath();
+                    data.headers = this->headers;
                     size_t pos = postHandler->getScriptPath().find_last_of(".");
                     std::string ext ;
                     data.queryString = this->query;
@@ -906,6 +909,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     data.contentType = postHandler->getContentType();
                     data.contentLen = postHandler->getCurrentLength();
                     data.scriptPath = postHandler->getScriptPath();
+                    data.headers = this->headers;
                     size_t pos = postHandler->getScriptPath().find_last_of(".");
                     std::string ext ;
                     data.queryString = this->query;

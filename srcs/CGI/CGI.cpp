@@ -39,7 +39,9 @@ void CGI::setVarsEnv(dataCGI& data) {
     envVars["PASS_CGI"] = data.CorrectPassCGI;
     envVars["QUERY_STRING"] = data.queryString;
     envVars["REDIRECT_STATUS"] = "200";
-
+    if (data.headers.find("Cookie") != data.headers.end()) {
+        envVars["HTTP_COOKIE"] = data.headers["Cookie"];
+    }
     this->file = data.file;
     this->scriptPath = data.scriptPath;
     this->passCgi = data.CorrectPassCGI;

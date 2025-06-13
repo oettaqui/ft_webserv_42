@@ -461,8 +461,14 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                 std::cout << "*************Autooooooooooooooooo indexxxxxxxxxxxxxxx**********\n";
                 if(location_concerned.getIndex().size() != 0)
                 {
-                    index_file = location_concerned.getRoot() + '/' + *location_concerned.getIndex().begin();
-                    content = readFile(index_file,request_data);
+                    for(std::vector<std::string>::const_iterator it_index = location_concerned.getIndex().begin();it_index != location_concerned.getIndex().end();++it_index)
+                    {
+                        index_file = location_concerned.getRoot() + '/' + *it_index;
+                        content = readFile(index_file,request_data);
+                        if(!(content.empty() && check_if == 0))
+                            break;
+                            
+                    }
                     if(content.empty() && check_if == 0)
                     {
                         std::cout << "*************Autoo !content **********\n";
@@ -525,18 +531,19 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             if(location_concerned.getAutoindex() == true && request_data.getPath() == "/")
             {
                 std::cout << "*************Autooooooooooooooooo indexxxxxxxxxxxxxxx**********\n";
-                if(location_concerned.getIndex().size() != 0)
+                for(std::vector<std::string>::const_iterator it_index = location_concerned.getIndex().begin();it_index != location_concerned.getIndex().end();++it_index)
                 {
-                    index_file = location_concerned.getRoot() + '/' + *location_concerned.getIndex().begin();
+                    index_file = location_concerned.getRoot() + '/' + *it_index;
                     content = readFile(index_file,request_data);
-                    if(content.empty() && check_if == 0)
-                    {
-                        std::cout << "*************Autoo !content **********\n";
-                        content = readFile("./default/index.html",request_data);
-                    }
+                    if(!(content.empty() && check_if == 0))
+                        break;
+                        
                 }
-                else
-                   content = readFile("./default/index.html",request_data);
+                if(content.empty() && check_if == 0)
+                {
+                    std::cout << "*************Autoo !content **********\n";
+                    content = readFile("./default/index.html",request_data);
+                }
                 autoIndex = true;
             }
             else if(!isDirectory(index_file))
@@ -593,7 +600,7 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
     }
 
     /////////
-    if((extension == "php" || extension == "py" || extension == "perl") && (location_concerned.getCgi() && location_concerned.getCgiPass().size() > 0))
+    if((extension == "php" || extension == "py" || extension == "pl") && (location_concerned.getCgi() && location_concerned.getCgiPass().size() > 0))
     {
         std::string response_cgi;
         if(!cgiHandler)
@@ -609,6 +616,7 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
             data.contentLen = 0;
             data.scriptPath = filePath;
             data.queryString = request_data.getQuery();
+            data.headers = request_data.getHeaders();
             if(autoIndex == true)
                 data.autoIndex = "true";
             else
