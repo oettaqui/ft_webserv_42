@@ -110,6 +110,14 @@ bool ConfigParser::parseLine(const std::string& line, Server& server) {
     return true;
 }
 
+
+// bool ConfigParser::check_root(std::string &value_p) {
+//     if (value_p.length() >= 2 && value_p.substr(0, 2) == "./") {
+//         return true;
+//     }
+//     return false;
+// }
+
 bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locationLine, Server& server) {
     // Extract location path
     size_t pathStart = locationLine.find(" ") + 1;
@@ -131,7 +139,6 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
     std::string line;
     while (std::getline(file, line)) {
         trim(line);
-        
         if (line.empty() || line[0] == '#')
             continue;
 
@@ -152,14 +159,21 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
 
         // Parse location directives
         if (directive == "root")
+        {
+            // if(check_root(value))
             location.setRoot(value);
+            // else
+                // location.setRoot("./" + value);
+        }
         else if (directive == "allow_methods") {
             size_t start = 0, end;
             while ((end = value.find(" ", start)) != std::string::npos) {
-                location.addMethod(value.substr(start, end - start));
+                if(!value.substr(start, end - start).empty())
+                    location.addMethod(value.substr(start, end - start));
                 start = end + 1;
             }
-            location.addMethod(value.substr(start));
+            if(!value.substr(start, end - start).empty())
+                location.addMethod(value.substr(start));
         }
         else if (directive == "index") {
             size_t start = 0, end;
@@ -210,6 +224,43 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
                 location.addCgiPass(directive,value);
             }
         }
+        else if(directive == "return")
+        {
+            // std::cout << "in the server " << server.getHost() << " the location " <<  location.getPath() <<" is with redirection\n";
+            
+            // Check if location already has a redirect
+            if (location.hasRedirect()) {
+                std::cerr << "Warning: Multiple redirects in location " << location.getPath() 
+                        << " - ignoring: " << line << std::endl;
+                continue;  // Skip this redirect
+            }
+            
+            // Parse status code and redirect path
+            size_t spacePos = value.find(" ");
+            if (spacePos == std::string::npos) {
+                std::cerr << "Error: Invalid return directive syntax: " << line << std::endl;
+                continue;
+            }
+            
+            std::string statusStr = value.substr(0, spacePos);
+            std::string redirectPath = value.substr(spacePos + 1);
+            trim(redirectPath);
+            
+            // Convert status code to integer
+            int statusCode = atoi(statusStr.c_str());
+            
+            // Validate status code
+            if (statusCode < 300 || statusCode >= 400) {
+                std::cerr << "Warning: Invalid redirect status code " << statusCode 
+                        << " - using 301 instead" << std::endl;
+                statusCode = 301;
+            }
+            
+            // Set redirect in location
+            location.setRedirection(statusCode, redirectPath);
+            location.setRedirect();
+            // std::cout << "Redirect configured: " << statusCode << " -> " << redirectPath << std::endl;
+        }
     }
 
     server.addLocation(path, location);
@@ -223,7 +274,7 @@ bool ConfigParser::validateConfig() const {
     }
 
     for (size_t i = 0; i < servers.size(); ++i) {
-        if (!servers[i].isValid() || !servers[i].hasRequiredLocations())
+        if (!servers[i].isValid())
             return false;
     }
 
@@ -234,8 +285,20 @@ const std::vector<Server>& ConfigParser::getServers() const {
     return servers;
 }
 
+std::vector<Server>::iterator ConfigParser::getServer_parser(const std::string &host_p, const int& port_p) {
+    for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it) {
+        if(it->getHost() == host_p && it->getPort() == port_p)
+            return it;
+        else if(it->getHost() == "localhost"  && host_p == "127.0.0.1" && it->getPort() == port_p)
+            return it;
+        else if(it->getHost() == "dump-ubuntu-benguerir"  && host_p == "127.0.1.1" && it->getPort() == port_p)
+            return it;
+    }
+    return servers.end();
+}
+
 const Server& ConfigParser::getServer(const std::string &host_p, const int& port_p) const {
-    static Server nullServer;
+    static Server sv_default;
     for (std::vector<Server>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
         if(it->getHost() == host_p && it->getPort() == port_p)
             return *it;
@@ -244,7 +307,24 @@ const Server& ConfigParser::getServer(const std::string &host_p, const int& port
         else if(it->getHost() == "dump-ubuntu-benguerir"  && host_p == "127.0.1.1" && it->getPort() == port_p)
             return *it;
     }
-    return nullServer;
+    return sv_default;
+}
+
+void ConfigParser::prapare_servers()
+{
+    for (std::vector<Server>::iterator it = this->servers.begin(); it != this->servers.end(); ++it) {
+        if(it->getLocations().find("/") == it->getLocations().end())
+        {
+            Location location;
+            location.setPath("/");
+            location.setRoot("./default");
+            location.addMethod("GET");
+            location.addMethod("POST");
+            location.addIndex("index.html");
+            location.setAutoindex("on");
+            it->addLocation("/", location);
+        }
+    }
 }
 
 void ConfigParser::all_server_data() const {

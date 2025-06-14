@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: radial-gradient(ellipse at center, #1a0a0a 0%, #0a0000 70%, #000000 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated background elements */
+        .bg-elements {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .red-orb {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 50, 50, 0.3) 0%, rgba(200, 0, 0, 0.1) 50%, transparent 100%);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .red-line {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, rgba(255, 50, 50, 0.2), transparent);
+            height: 1px;
+            animation: slide 6s linear infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) scale(1); opacity: 0.3; }
+            50% { transform: translateY(-80px) scale(1.1); opacity: 0.6; }
+        }
+
+        @keyframes slide {
+            0% { transform: translateX(-100vw); }
+            100% { transform: translateX(100vw); }
+        }
+
+        .container {
+            text-align: center;
+            color: #ffffff;
+            z-index: 10;
+            position: relative;
+            max-width: 800px;
+            padding: 2rem;
+        }
+
+        .error-code {
+            font-size: clamp(10rem, 25vw, 20rem);
+            font-weight: 900;
+            background: linear-gradient(135deg, #ff1744, #d50000, #ff5722, #ff1744);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: redGlow 4s ease-in-out infinite;
+            line-height: 0.9;
+            margin-bottom: 2rem;
+            position: relative;
+            text-shadow: 0 0 100px rgba(255, 23, 68, 0.5);
+        }
+
+        .error-code::before {
+            content: '411';
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: linear-gradient(135deg, #ff1744, #d50000);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: glitchEffect 3s infinite;
+            z-index: -1;
+        }
+
+        @keyframes redGlow {
+            0%, 100% { 
+                background-position: 0% 50%; 
+                filter: drop-shadow(0 0 20px rgba(255, 23, 68, 0.3));
+            }
+            50% { 
+                background-position: 100% 50%; 
+                filter: drop-shadow(0 0 40px rgba(255, 23, 68, 0.6));
+            }
+        }
+
+        @keyframes glitchEffect {
+            0%, 90%, 100% { 
+                transform: translate(0); 
+                opacity: 0;
+            }
+            5% { 
+                transform: translate(2px, -2px); 
+                opacity: 0.8;
+            }
+            10% { 
+                transform: translate(-1px, 2px); 
+                opacity: 0;
+            }
+            15% { 
+                transform: translate(-3px, -1px); 
+                opacity: 0.6;
+            }
+            20% { 
+                transform: translate(0); 
+                opacity: 0;
+            }
+        }
+
+        .title {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(45deg, #ffffff, #ff5252, #ffffff);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: titleShine 3s ease-in-out infinite, fadeInUp 1s ease-out 0.5s both;
+        }
+
+        @keyframes titleShine {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .subtitle {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            margin-bottom: 3rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+            animation: fadeInUp 1s ease-out 0.7s both;
+            position: relative;
+        }
+
+        .subtitle::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #ff1744, transparent);
+            animation: lineGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes lineGlow {
+            0%, 100% { opacity: 0.3; transform: translateX(-50%) scaleX(1); }
+            50% { opacity: 1; transform: translateX(-50%) scaleX(1.5); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-message {
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            color: rgba(255, 82, 82, 0.8);
+            margin-top: 3rem;
+            animation: fadeInUp 1s ease-out 0.9s both;
+            font-style: italic;
+        }
+
+        /* Pulsing red accent */
+        .pulse-accent {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            border: 1px solid rgba(255, 23, 68, 0.2);
+            border-radius: 50%;
+            animation: pulse 4s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        .pulse-accent::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 1px solid rgba(255, 23, 68, 0.3);
+            border-radius: 50%;
+            animation: pulse 4s ease-in-out infinite 1s;
+        }
+
+        .pulse-accent::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            border: 1px solid rgba(255, 23, 68, 0.4);
+            border-radius: 50%;
+            animation: pulse 4s ease-in-out infinite 2s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                transform: translate(-50%, -50%) scale(1); 
+                opacity: 0.4; 
+            }
+            50% { 
+                transform: translate(-50%, -50%) scale(1.2); 
+                opacity: 0.1; 
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .error-code {
+                margin-bottom: 1rem;
+            }
+            
+            .title {
+                margin-bottom: 1rem;
+            }
+            
+            .subtitle {
+                margin-bottom: 2rem;
+            }
+        }
+
+        /* Cursor trail effect */
+        .cursor-trail {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #ff1744;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: cursorFade 1s ease-out forwards;
+            z-index: 5;
+        }
+
+        @keyframes cursorFade {
+            0% { 
+                opacity: 1; 
+                transform: scale(1); 
+            }
+            100% { 
+                opacity: 0; 
+                transform: scale(0); 
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-elements" id="bgElements"></div>
+    
+    <div class="container">
+        <div class="pulse-accent"></div>
+        <div class="error-code">411</div>
+        <h1 class="title">LENGTH REQUIRED</h1>
+        <!-- <p class="subtitle">The page you're looking for has disappeared into the digital darkness.</p> -->
+        <p class="error-message">Error: Error: Content-Length header is required</p>
+    </div>
+
+    <script>
+        // Create floating red orbs
+        function createRedOrbs() {
+            const container = document.getElementById('bgElements');
+            const orbCount = 15;
+
+            for (let i = 0; i < orbCount; i++) {
+                const orb = document.createElement('div');
+                orb.className = 'red-orb';
+                
+                const size = Math.random() * 100 + 50;
+                orb.style.width = size + 'px';
+                orb.style.height = size + 'px';
+                orb.style.left = Math.random() * 100 + '%';
+                orb.style.top = Math.random() * 100 + '%';
+                orb.style.animationDelay = Math.random() * 8 + 's';
+                orb.style.animationDuration = (Math.random() * 4 + 6) + 's';
+                
+                container.appendChild(orb);
+            }
+        }
+
+        // Create sliding red lines
+        function createRedLines() {
+            const container = document.getElementById('bgElements');
+            const lineCount = 8;
+
+            for (let i = 0; i < lineCount; i++) {
+                const line = document.createElement('div');
+                line.className = 'red-line';
+                
+                line.style.width = Math.random() * 200 + 100 + 'px';
+                line.style.top = Math.random() * 100 + '%';
+                line.style.animationDelay = Math.random() * 6 + 's';
+                line.style.animationDuration = (Math.random() * 3 + 4) + 's';
+                
+                container.appendChild(line);
+            }
+        }
+
+        // Cursor trail effect
+        let mouseTrails = [];
+        document.addEventListener('mousemove', (e) => {
+            const trail = document.createElement('div');
+            trail.className = 'cursor-trail';
+            trail.style.left = e.clientX + 'px';
+            trail.style.top = e.clientY + 'px';
+            
+            document.body.appendChild(trail);
+            mouseTrails.push(trail);
+            
+            // Clean up old trails
+            if (mouseTrails.length > 20) {
+                const oldTrail = mouseTrails.shift();
+                if (oldTrail && oldTrail.parentNode) {
+                    oldTrail.parentNode.removeChild(oldTrail);
+                }
+            }
+            
+            // Remove trail after animation
+            setTimeout(() => {
+                if (trail && trail.parentNode) {
+                    trail.parentNode.removeChild(trail);
+                    const index = mouseTrails.indexOf(trail);
+                    if (index > -1) {
+                        mouseTrails.splice(index, 1);
+                    }
+                }
+            }, 1000);
+        });
+
+        // Enhanced glitch effect on hover
+        const errorCode = document.querySelector('.error-code');
+        errorCode.addEventListener('mouseenter', () => {
+            errorCode.style.animation = 'redGlow 0.5s ease-in-out infinite, glitchEffect 0.1s infinite';
+        });
+
+        errorCode.addEventListener('mouseleave', () => {
+            errorCode.style.animation = 'redGlow 4s ease-in-out infinite';
+        });
+
+        // Parallax effect for container
+        document.addEventListener('mousemove', (e) => {
+            const container = document.querySelector('.container');
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            const deltaX = (e.clientX - centerX) / 100;
+            const deltaY = (e.clientY - centerY) / 100;
+            
+            container.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+        });
+
+        // Initialize background elements
+        createRedOrbs();
+        createRedLines();
+
+        // Add random red flashes
+        setInterval(() => {
+            if (Math.random() < 0.3) {
+                document.body.style.boxShadow = 'inset 0 0 100px rgba(255, 23, 68, 0.1)';
+                setTimeout(() => {
+                    document.body.style.boxShadow = 'none';
+                }, 100);
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

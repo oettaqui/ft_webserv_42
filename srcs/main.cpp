@@ -18,6 +18,7 @@ int main(int ac,char **av) {
             }
             else
             {
+                parser.prapare_servers();
                 WebServer server;
                 server.linking_servers(parser);
             }
