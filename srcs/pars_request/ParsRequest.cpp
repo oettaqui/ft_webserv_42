@@ -48,12 +48,13 @@ ParsRequest::ParsRequest() {
     statusMessages[505] = "HTTP Version Not Supported";
 
  statusMap[200] = "HTTP/1.1 200 OK\r\n"
-                 "Content-Type: text/html\r\n"
+                 "Content-Type: text/html; charset=utf-8\r\n"
                  "Connection: close\r\n"
                  "\r\n"
                  "<!DOCTYPE html>"
                  "<html>"
                  "<head>"
+                 "<meta charset=\"utf-8\">"
                  "<title>Success</title>"
                  "<style>"
                  "  body {"
@@ -100,7 +101,7 @@ ParsRequest::ParsRequest() {
                  "</head>"
                  "<body>"
                  "<div class=\"success-card\">"
-                 "  <div class=\"success-icon\">✓</div>"
+                 "  <div class=\"success-icon\">&#10003;</div>"
                  "  <h1>Request Successful</h1>"
                  "  <p>Your request was processed successfully by the server.</p>"
                  "  <div class=\"details\">Status: 200 OK</div>"
@@ -655,7 +656,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         postHandler = new PostHandler();
                     }
                     postHandler->initialize(*this, parser);
-    
                     if(FlagRedirect)
                     {
                         is_Complet = true;
@@ -1135,15 +1135,11 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
            
             if (!postHandler->isRequestComplete())
             {
-                // std::cout << "chunked at the second time \n";
                 postHandler->processChunkedData(request);
-                // std::cout << "is complete processing " << postHandler->isRequestComplete() << std::endl;
             }
             if (postHandler->isRequestComplete()){
-                // std::cout << "HNAAAAAAAA1\n";
                 if (postHandler->getCGIState() && this->cgiHandler){
                     this->Cgi = true;
-                    // std::cout << "HNAAAAAAAA0\n";
                     responses[client_fd] = cgiHandler->executeScript();
                     this->status = cgiHandler->getStatusCGI();
                     this->flagCGI = cgiHandler->getCGIFlag();
@@ -1216,16 +1212,12 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         }
         else {
             if (!postHandler->isRequestComplete()){
-                std::cout << "else processData\n";
                 postHandler->processData(request);
-                // std::cout << postHandler->isRequestComplete() << std::endl;
             }
             if (postHandler->isRequestComplete())
             {
-                std::cout << "HNAAAAAAAA1\n";
                 if (postHandler->getCGIState() && this->cgiHandler){
                     this->Cgi = true;
-                    std::cout << "HNAAAAAAAA0\n";
                     responses[client_fd] = cgiHandler->executeScript();
                     this->status = cgiHandler->getStatusCGI();
                     this->flagCGI = cgiHandler->getCGIFlag();

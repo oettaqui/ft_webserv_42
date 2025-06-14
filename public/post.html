@@ -211,7 +211,7 @@
             const xhr = new XMLHttpRequest();
             
             // Set up the request - this mimics Postman's binary upload
-            xhr.open('POST', '/submit', true);
+            xhr.open('POST', '/', true);
             
             // Set the Content-Type to match the file's MIME type
             xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');

@@ -113,7 +113,7 @@ bool PostHandler::directoryExists(const std::string& path) {
     if (stat(path.c_str(), &info) != 0) {
         return false;
     }
-    // return true;
+
     return S_ISDIR(info.st_mode);
 }
 
@@ -147,7 +147,6 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
         return "";
     }
     
-    // std::cout << "file name " << filename.str() << std::endl;
     if (!extension.empty()) {
         filename << "." << extension;
     }
@@ -249,7 +248,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     int c = 0;
     if (p.find(".php") != std::string::npos || p.find(".py") != std::string::npos || p.find(".pl") != std::string::npos)
     {
-        std::cout << "hnaaaa2222222222222222222222222222222222222222\n";
+        // std::cout << "hnaaaa2222222222222222222222222222222222222222\n";
         this->scriptPath = p;
         c = 1;
         fp = p.find_last_of("/", p.length());
@@ -278,13 +277,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     if (location.getCgi())
     {
         this->isCGI = true;
-        // if (isChunked)
-        // {
-        //     std::cout << "=============  IS CGI and CHUNKED ========\n";
-        //     this->status = 400;
-        //     std::cout << "is a CGI but the Chunked cannot support the CGI  \n";
-        //     return;
-        // }
+ 
         this->cgiPassMap = location.getCgiPass();
         
         this->cgi_pass = location.getCgiPass();
@@ -338,7 +331,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
                 indexV = location.getIndex();
                 
                 std::string tmp = getTheValidIndex(indexV, location_path);
-                std::cout << "TMP ========= " << tmp << std::endl;
+                // std::cout << "TMP ========= " << tmp << std::endl;
                 if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos || tmp.find(".pl") != std::string::npos))
                 {
                     location_path = tmp;
@@ -355,7 +348,7 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
                 }
             }
             else{
-                std::cout << "PPPPPPPPPPPP\n";
+                // std::cout << "PPPPPPPPPPPP\n";
                 this->isCGI = false;
                 this->status = 403;
                 return;
@@ -657,6 +650,7 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
 
 
 void PostHandler::processData(const std::string& data) {
+
     if (!file.is_open()) {
         std::cerr << "Error: File is not open when trying to process data" << std::endl;
         return;
@@ -677,89 +671,11 @@ void PostHandler::processData(const std::string& data) {
     }
 }
 
-// void PostHandler::processChunkedData(const std::string& data) {
-//     size_t pos = 0;
-//     while (pos < data.length())
-//     {
-//         switch (chunkState)
-//         {
-//             case READING_SIZE:{
-//                 size_t endPos = data.find("\r\n", pos);
-//                 if (endPos == std::string::npos) {
-//                     chunkSizeBuffer.append(data.substr(pos, data.length()));
-//                     pos = data.length();
-//                     // std::cout << "chunkSizeBuffer ===> " << chunkSizeBuffer << std::endl;
-//                 }
-//                 else{
-//                     chunkSizeBuffer.append(data.substr(pos, endPos - pos));
-//                     // std::cout << "chunkSizeBuffer +++++> " << chunkSizeBuffer << std::endl;
-//                     std::string sizeStr = chunkSizeBuffer;
-
-                    
-//                     std::istringstream ss(sizeStr);
-//                     int size;
-//                     ss >> std::hex >> size;
-//                     std::cout << "int =>" << size << std::endl;
-
-//                     if (size == 0){
-//                         chunkState = END_OF_CHUNKS;
-//                         isComplete = true;
-//                         file.flush();
-//                         file.close();
-//                         std::cout << "Chunked upload complete: " << filename << " (" << bodyLength << " bytes)" << std::endl;
-//                     }else{
-//                         currentChunkSize = size;
-//                         currentChunkBytesRead = 0;
-//                         chunkState = READING_DATA;
-//                     }
-//                     pos = endPos + 2;
-//                     chunkSizeBuffer.clear();
-//                 }
-//                 break;
-//             }
-//             case READING_DATA:{
-
-//                 int bytesRemaining = currentChunkSize - currentChunkBytesRead;
-//                 // std::cout << "data lenght " << data.length() << " bytesRemaining " << bytesRemaining << std:: endl;
-//                 int bytesToRead = std::min((int)(data.length() - pos), bytesRemaining);
-
-//                 if (bytesToRead > 0)
-//                 {
-//                     file.write(data.c_str() + pos, bytesToRead);
-//                     bodyLength += bytesToRead;
-//                     currentChunkBytesRead += bytesToRead;
-//                     pos += bytesToRead;
-//                 }
-//                 if (currentChunkBytesRead >= currentChunkSize)
-//                 {
-//                     chunkState = READING_TRAILING_CRLF;
-//                 }
-//                 break;
-
-//             }
-//             case READING_TRAILING_CRLF: {
-//                 if (data.length() - pos >= 2) {
-//                     pos += 2; 
-//                     chunkState = READING_SIZE;
-//                 } else {
-//                     pos = data.length();
-//                 }
-//                 break;
-//             }
-//             case END_OF_CHUNKS:
-//                 pos = data.length();
-//                 break;
-//         }
-
-//     }
-// }
-
 
 void PostHandler::processChunkedData(const std::string& data) {
-    // Append new data to the buffer
+
     buffer.append(data);
-    
-    // Process the buffered data
+  
     processBufferedData();
 }
 
@@ -772,12 +688,12 @@ void PostHandler::processBufferedData() {
             case READING_SIZE: {
                 size_t endPos = buffer.find("\r\n", pos);
                 if (endPos == std::string::npos) {
-                    chunkSizeBuffer = buffer.substr(pos); // Replace instead of append
+                    chunkSizeBuffer = buffer.substr(pos); 
                     bufferOffset = pos;
                     return;
                 }
                 
-                chunkSizeBuffer = buffer.substr(pos, endPos - pos); // Replace instead of append
+                chunkSizeBuffer = buffer.substr(pos, endPos - pos);
                 pos = endPos + 2;
                 
                 std::istringstream ss(chunkSizeBuffer);
@@ -836,9 +752,9 @@ void PostHandler::processBufferedData() {
                     return;
                 }
                 
-                // Verify it's actually CRLF
+                
                 if (buffer[pos] != '\r' || buffer[pos+1] != '\n') {
-                    // Handle protocol error
+                    
                     chunkState = END_OF_CHUNKS;
                     isComplete = true;
                     file.close();
@@ -859,15 +775,15 @@ void PostHandler::processBufferedData() {
                 return;
         }
         
-        // Clean processed data from buffer periodically
-        if (pos > 1024) {  // Arbitrary threshold
+        
+        if (pos > 1024) {  
             buffer.erase(0, pos);
             pos = 0;
             bufferOffset = 0;
         }
     }
     
-    // Clear buffer if we processed everything
+  
     buffer.clear();
     bufferOffset = 0;
 }
@@ -990,14 +906,14 @@ std::string PostHandler::url_decode(std::string url) {
 }
 
 
-////////////// new block
+
 
 std::string PostHandler::createRedirectResponse(int statusCode, const std::string& location) {
     std::stringstream response;
     
     response << "HTTP/1.1 " << statusCode << " ";
     
-    // Add status text
+
     switch(statusCode) {
         case 301: response << "Moved Permanently"; break;
         case 302: response << "Found"; break;

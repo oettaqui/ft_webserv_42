@@ -177,6 +177,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             p->parse("",fd, parser);
         else
         {
+            // std::cout << "================3\n";
             write_buffers[fd] = p->getResponses().find(fd)->second;
             if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
                 std::string& res = write_buffers[fd];
@@ -288,13 +289,20 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
             return ;
         }
-        else
+        else if (p->getMethod() == "POST" && p->getCGIState() && !p->isComplet())
         {
             struct epoll_event event;
             event.events = EPOLLOUT;
             event.data.fd = fd;
             epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
-        }        
+        }
+        else if(p->getMethod() == "GET" || p->getCGIState())
+        {
+            struct epoll_event event;
+            event.events = EPOLLOUT;
+            event.data.fd = fd;
+            epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+        }     
     }
 }
 
