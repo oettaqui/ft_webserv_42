@@ -32,6 +32,7 @@ bool WebServer::addToEpoll(int sockfd) {
     return true;
 }
 
+
 void WebServer::handleNewConnection(int server_fd) {
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
