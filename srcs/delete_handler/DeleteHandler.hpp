@@ -24,6 +24,8 @@
 #include <sys/stat.h>
 #include <algorithm>
 
+#define BUFFER_SIZE_D 1024
+
 class DeleteHandler {
     
     private:
@@ -50,6 +52,13 @@ class DeleteHandler {
         int statusCode;
         std::string status_message;
         size_t ingore_element;
+        size_t size;
+        size_t totalBytesSent;
+        std::ifstream file;
+        std::string file_error_path;
+        std::string final_res;
+        ssize_t contentLength;
+        bool is_true_parse;
     public:
         DeleteHandler();
         ~DeleteHandler();
@@ -68,39 +77,11 @@ class DeleteHandler {
         bool deleteFile(const std::string& path);
         bool deleteDirectory(const std::string& path);
         std::string url_decode(std::string url);
+
+        std::string readSmallFile(std::ifstream& file);
+        std::string readFile_v2(const std::string& filePath);
+        void storeContentTypes(ParsRequest &request_data);
+        bool get_is_true_parse() const;
 };
 
-#endif // DELETE_HANDLER_HPP
-
-
-
-
-
-// Return appropriate response:
-
-// 200 OK: If the resource was successfully deleted
-// 202 Accepted: If the delete request was accepted but not yet processed
-// 204 No Content: If the resource was deleted but no content is returned
-// 404 Not Found: If the resource doesn't exist
-// 403 Forbidden: If the client doesn't have permission to delete
-// 500 Internal Server Error: If something went wrong
-
-
-// DELETE Method Response Codes
-// (As you've listed)
-
-// 200 OK: Resource successfully deleted, response includes a representation of the deleted resource
-// 202 Accepted: Delete request accepted but not yet completed (for async operations)
-// 204 No Content: Resource successfully deleted, no content returned
-// 403 Forbidden: Client doesn't have permission to delete the resource
-// 404 Not Found: Resource doesn't exist
-// 500 Internal Server Error: Server encountered an error
-
-// GET Method Response Codes
-
-// 200 OK: Resource found and returned in the response body
-// 204 No Content: Resource exists but has no content to return
-// 304 Not Modified: Resource hasn't changed since the last request (when using conditional GET)
-// 403 Forbidden: Client doesn't have permission to access the resource
-// 404 Not Found: Resource doesn't exist
-// 500 Internal Server Error: Server encountered an error
+#endif

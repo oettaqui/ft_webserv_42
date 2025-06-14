@@ -15,22 +15,117 @@ DeleteHandler::DeleteHandler() {
     statusCode = 200;
     status_message = "OK";
     permitions_folder = 0;
+    totalBytesSent = 0;
+    size = 0;
+    is_true_parse = false;
+    contentLength = 0;
+    final_res = "";
 }
 
 DeleteHandler::~DeleteHandler() {
     // Destructor
 }
 
+bool DeleteHandler::get_is_true_parse() const
+{
+    return is_true_parse;
+}
+
+
 void DeleteHandler::generate_header()
 {
+    if(check_put_header == 1)
+        return ;
     std::cout << "=======================>\n";
     std::stringstream header;
     header  << "HTTP/1.1 "<< statusCode << " " <<  status_message << "\r\n"
             << "Content-Type: " << contentType << "\r\n"
+            << "Content-Length: " << contentLength << "\r\n"
             << "Connection: close\r\n"
             << "\r\n";
-    send(client_fd, header.str().c_str(), header.str().length(), 0);
+    final_res += header.str();
+    check_put_header = 1;
+    // send(client_fd, header.str().c_str(), header.str().length(), 0);
 } 
+
+void DeleteHandler::storeContentTypes(ParsRequest &request_data) {
+    this->client_fd = request_data.getClientFd();
+    // Text formats
+    contentTypes["html"] = "text/html";
+    contentTypes["css"] = "text/css";
+    contentTypes["xml"] = "text/xml";
+    contentTypes["txt"] = "text/plain";
+    contentTypes["md"] = "text/markdown";
+    contentTypes["js"] = "text/javascript";
+    contentTypes["json"] = "application/json";
+    contentTypes["csv"] = "text/csv";
+    
+    // Image formats
+    contentTypes["gif"] = "image/gif";
+    contentTypes["jpeg"] = "image/jpeg";
+    contentTypes["jpg"] = "image/jpg";
+    contentTypes["png"] = "image/png";
+    contentTypes["webp"] = "image/webp";
+    contentTypes["svg"] = "image/svg+xml";
+    contentTypes["ico"] = "image/x-icon";
+    contentTypes["bmp"] = "image/bmp";
+    contentTypes["tiff"] = "image/tiff";
+    
+    // Audio formats
+    contentTypes["mp3"] = "audio/mpeg";
+    contentTypes["wav"] = "audio/wav";
+    contentTypes["ogg"] = "audio/ogg";
+    contentTypes["m4a"] = "audio/mp4";
+    contentTypes["aac"] = "audio/aac";
+    contentTypes["flac"] = "audio/flac";
+    contentTypes["mid"] = "audio/midi";
+    
+    // Video formats
+    contentTypes["mp4"] = "video/mp4";
+    contentTypes["webm"] = "video/webm";
+    contentTypes["avi"] = "video/x-msvideo";
+    contentTypes["mpg"] = "video/mpeg";
+    contentTypes["mov"] = "video/quicktime";
+    contentTypes["wmv"] = "video/x-ms-wmv";
+    contentTypes["flv"] = "video/x-flv";
+    
+    // Application formats
+    contentTypes["pdf"] = "application/pdf";
+    contentTypes["doc"] = "application/msword";
+    contentTypes["docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    contentTypes["xls"] = "application/vnd.ms-excel";
+    contentTypes["xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    contentTypes["ppt"] = "application/vnd.ms-powerpoint";
+    contentTypes["pptx"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    contentTypes["zip"] = "application/zip";
+    contentTypes["gz"] = "application/gzip";
+    contentTypes["tar"] = "application/x-tar";
+    contentTypes["rar"] = "application/x-rar-compressed";
+    contentTypes["7z"] = "application/x-7z-compressed";
+    contentTypes["exe"] = "application/x-msdownload";
+    contentTypes["swf"] = "application/x-shockwave-flash";
+    
+    // Web fonts
+    contentTypes["woff"] = "font/woff";
+    contentTypes["woff2"] = "font/woff2";
+    contentTypes["ttf"] = "font/ttf";
+    contentTypes["otf"] = "font/otf";
+    contentTypes["eot"] = "application/vnd.ms-fontobject";
+    
+    // Programming and configuration
+    contentTypes["php"] = "text";
+    contentTypes["py"] = "text/x-python";
+    contentTypes["java"] = "text/x-java-source";
+    contentTypes["c"] = "text/x-c";
+    contentTypes["cpp"] = "text/x-c++";
+    contentTypes["rb"] = "text/x-ruby";
+    contentTypes["sh"] = "application/x-sh";
+    contentTypes["pl"] = "text/x-perl";
+    contentTypes["sql"] = "application/sql";
+    contentTypes["xml"] = "application/xml";
+    contentTypes["yaml"] = "text/yaml";
+    contentTypes[""] = "application/octet-stream";
+}
 
 size_t DeleteHandler::getFileSize(const std::string& filename) {
     struct stat stat_buf;
@@ -172,11 +267,12 @@ std::vector<std::string> DeleteHandler::get_location_server() const
 
 
 std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigParser &parser) {
-    this->client_fd = request_data.getClientFd();
+    final_res.clear();
+    storeContentTypes(request_data);
     path_location = this->split(url_decode(request_data.getPath()),'/');
     contentType = "text/html";
     server_socket = parser.getServer(request_data.hostMethod(),request_data.portMethod());
-    std::cout << "\n\nhandleGetRequest\n";
+    std::cout << "\n\nhandleDeleteRequest\n";
     std::cout << "this is the path : ***|" <<  request_data.getPath() << "|***" << std::endl;
     std::vector<std::string> find_vec = get_location_server();
     if(find_vec.size() != 0)
@@ -200,10 +296,11 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
         {
             statusCode = 403;
             status_message = "Forbidden";
+            contentLength = 57;
             std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
             if(itse != server_socket.getErrorPages().end())
             {
-                std::string return_value = readFile(itse->second);
+                std::string return_value = readFile_v2(itse->second);
                 if(check_if == 1)
                     return generateResponse(return_value, request_data);
             }
@@ -257,10 +354,11 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
         {
             status_message = "Forbidden";
             statusCode = 403;
+            contentLength = 57; 
             std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
             if(itse != server_socket.getErrorPages().end())
             {
-                std::string return_value = readFile(itse->second);
+                std::string return_value = readFile_v2(itse->second);
                 if(check_if == 1)
                     return generateResponse(return_value, request_data);
             }
@@ -304,22 +402,86 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
         }
     }
     if (content.empty() && check_if == 0) {
-        check_put_header = 1;
         statusCode = 404;
         status_message = "Not Found";
         std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
         if(itse != server_socket.getErrorPages().end())
         {
-            std::string return_value = readFile(itse->second);
-            if(check_if == 1)
-                return generateResponse(return_value, request_data);
+            std::string ex_error = getFileExtension(itse->second);
+            if(ex_error != "php" && ex_error != "py" && ex_error != "pl")
+            {
+                std::string return_value = readFile_v2(itse->second);
+                if(check_if == 1)
+                    return generateResponse(return_value, request_data);
+            }
         }
         std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
+        contentLength = 22;
         generate_header();
         return generateResponse("<h1>404 Not Found</h1>", request_data);
     }
     return generateResponse(content, request_data);
 }
+
+
+std::string DeleteHandler::readSmallFile(std::ifstream& file) {
+    std::string content;
+    char buffer[BUFFER_SIZE_G];
+    memset(buffer, 0, BUFFER_SIZE_G);
+    file.read(buffer, BUFFER_SIZE_G);
+    content.append(buffer, file.gcount());
+    final_res += content;
+    // std::cout << "-**********************************-\n"; 
+    // std::cout << file.gcount() << std::endl;
+    // std::cout << "**********************************\n";
+    ssize_t bytesSent = send(client_fd, final_res.c_str(), final_res.length(), 0);
+    if (bytesSent <= 0) {
+        std::cout << "Send error12: " << strerror(errno) << std::endl;
+        close(client_fd);
+        file.close();
+        return "";
+    }
+    totalBytesSent = totalBytesSent + file.gcount();
+    check_if = 1;
+    if(totalBytesSent >= size)
+    {
+        // std::cout << "++++++++++++++++++++++++++++++333333333\n";
+        file.close();
+        is_true_parse = true;
+    }
+    return "";
+}
+
+std::string DeleteHandler::readFile_v2(const std::string& filePath) {
+    std::string extension;
+    if(!filePath.empty()) {
+        extension = getFileExtension(filePath);
+        std::map<std::string, std::string>::const_iterator it = contentTypes.find(extension);
+        if(it != contentTypes.end() && !extension.empty()) {
+            contentType = it->second;
+        }
+    }
+
+    if(!file.is_open())
+    {
+        std::cout << "dkhal-------------\n";
+        file.open(filePath.c_str(), std::ios::binary);
+        if (!file) {
+            std::cout << "failed Read ///////\n";
+            return "";
+        }
+    }
+    
+    if(size == 0)
+    {
+        size = getFileSize(filePath);
+        contentLength = size;
+    }
+    std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
+    generate_header();
+    return readSmallFile(file);
+}
+
 std::string DeleteHandler::readFile(const std::string& filePath) {
     std::string content;
     std::cout << "====== >> file path <<  ======> " << index_file << std::endl;
@@ -346,12 +508,16 @@ std::string DeleteHandler::readFile(const std::string& filePath) {
 }
 
 std::string DeleteHandler::generateResponse(const std::string& content,ParsRequest &request_data) {
-    std::stringstream response;
     (void)request_data;
-    // if((check_put_header == 1 && check_if != 1) || existent_folder == 1)
-    //     generate_header();
-    response << content;
-    return response.str();
+    std::cout << "check_put_header : " << check_put_header << std::endl;
+    std::cout << "check_if : " << check_if << std::endl;
+    std::cout << "existent_folder : " << existent_folder << std::endl;
+    if (!content.empty())
+    {
+        is_true_parse = true;
+        final_res += content;
+    }
+    return final_res;
 }
 
 bool DeleteHandler::resourceExists(const std::string& path) {

@@ -23,6 +23,7 @@ ParsRequest::ParsRequest() {
     is_boundary = false;
     postHandler = NULL;
     getHandler = NULL;
+    deleteHandler = NULL;
     FlagRedirect = false;
     flagTimeOUT = false;
     this->status = 200;
@@ -46,12 +47,66 @@ ParsRequest::ParsRequest() {
     statusMessages[504] = "Gateway Timeout";
     statusMessages[505] = "HTTP Version Not Supported";
 
-    statusMap[200] = "HTTP/1.1 200 OK\r\n"
-                     "Content-Type: text/html\r\n"
-                     "Connection: close\r\n"
-                     "\r\n"
-                     "<html><head><title>Success</title></head>"
-                     "<body><h1>Page loaded successfully</h1></body></html>";
+ statusMap[200] = "HTTP/1.1 200 OK\r\n"
+                 "Content-Type: text/html\r\n"
+                 "Connection: close\r\n"
+                 "\r\n"
+                 "<!DOCTYPE html>"
+                 "<html>"
+                 "<head>"
+                 "<title>Success</title>"
+                 "<style>"
+                 "  body {"
+                 "    font-family: 'Segoe UI', system-ui, sans-serif;"
+                 "    background: #f8f9fa;"
+                 "    display: flex;"
+                 "    justify-content: center;"
+                 "    align-items: center;"
+                 "    height: 100vh;"
+                 "    margin: 0;"
+                 "    color: #333;"
+                 "  }"
+                 "  .success-card {"
+                 "    background: white;"
+                 "    border-radius: 12px;"
+                 "    box-shadow: 0 4px 20px rgba(0,0,0,0.08);"
+                 "    padding: 2rem;"
+                 "    text-align: center;"
+                 "    max-width: 400px;"
+                 "    width: 90%;"
+                 "    border-top: 4px solid #4BB543;"
+                 "  }"
+                 "  .success-icon {"
+                 "    font-size: 3rem;"
+                 "    color: #4BB543;"
+                 "    margin-bottom: 1rem;"
+                 "  }"
+                 "  h1 {"
+                 "    margin: 0 0 0.5rem;"
+                 "    font-weight: 600;"
+                 "    font-size: 1.5rem;"
+                 "  }"
+                 "  p {"
+                 "    margin: 0;"
+                 "    color: #666;"
+                 "    line-height: 1.5;"
+                 "  }"
+                 "  .details {"
+                 "    margin-top: 1.5rem;"
+                 "    font-size: 0.8rem;"
+                 "    color: #999;"
+                 "  }"
+                 "</style>"
+                 "</head>"
+                 "<body>"
+                 "<div class=\"success-card\">"
+                 "  <div class=\"success-icon\">✓</div>"
+                 "  <h1>Request Successful</h1>"
+                 "  <p>Your request was processed successfully by the server.</p>"
+                 "  <div class=\"details\">Status: 200 OK</div>"
+                 "</div>"
+                 "</body>"
+                 "</html>";
     
     statusMap[400] = "HTTP/1.1 400 Bad Request\r\n"
                      "Content-Type: text/html\r\n"
@@ -219,6 +274,8 @@ ParsRequest::~ParsRequest() {
         delete postHandler;
     if(getHandler)
         delete getHandler;
+    if(deleteHandler)
+        delete deleteHandler;
 }
 
 
@@ -251,7 +308,7 @@ void ParsRequest::parseRequestLine( std::string& line) {
     }
 
     method = parts[0];
-    path = parts[1];
+    path = normalizePath(parts[1]);
     version = parts[2];
     trim_crlf(version);
     if (path.length() > MAX_URL_LENGTH) {
@@ -462,6 +519,32 @@ std::string ParsRequest::readSmallFile(std::string filePath) {
     return final_res;
 }
 
+std::string ParsRequest::normalizePath(const std::string& path) {
+    std::vector<std::string> segments;
+    std::istringstream iss(path);
+    std::string segment;
+    
+
+    while (std::getline(iss, segment, '/')) {
+        if (segment == "." || segment.empty()) {
+            continue; 
+        } else if (segment == "..") {
+            if (!segments.empty()) {
+                segments.pop_back();
+            }
+        } else {
+            segments.push_back(segment);
+        }
+    }
+    
+    std::string result = "/";
+    for (size_t i = 0; i < segments.size(); ++i) {
+        if (i > 0) result += "/";
+        result += segments[i];
+    }
+    return result;
+}
+
 void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &parser) {
     // std::cout << "|" << request << "|\n"; 
     this->client_fd = client_fd;
@@ -474,6 +557,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
     {
         std::string content = readSmallFile(file_error_path);
         this->responses[client_fd] = content;
+        final_res.clear();
         return ;
     }
     if (!header_parsed) {
@@ -581,7 +665,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     if (postHandler->getStatus() != 200 )
                     {
                         this->status = postHandler->getStatus();
-                       std::cout << "ERROR 1 | " << this->status <<  std::endl;
+                        std::cout << "ERROR 1 | " << this->status <<  std::endl;
                         is_valid = false;
                         is_Complet = true;
                         std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
@@ -743,6 +827,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     else if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
                         std::cout << "is a not a CGI and parsRequest Complete\n";
                         is_Complet = true;
+                        this->responses[client_fd] = statusMap[this->status];
                     }
                 }
                 else{
@@ -947,13 +1032,15 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     }
                     cgiHandler->setVarsEnv(data);
                 }
-                else if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
-                    std::cout << "is a not a CGI and parsRequest Complete\n";
-                    is_Complet = true;
-                }
+                // else if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
+                //     std::cout << "is a not a CGI and parsRequest Complete\n";
+                //     is_Complet = true;
+                //     this->responses[client_fd] = statusMap[this->status];
+                // }
                 if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
                     std::cout << "is a not a CGI and parsRequest Complete\n";
                     is_Complet = true;
+                    this->responses[client_fd] = statusMap[this->status];
                 }
                 
     
@@ -1015,6 +1102,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 {
                     std::cout << "boundary is complete" << std::endl;
                     is_Complet = true;
+                    this->responses[client_fd] = statusMap[this->status];
                 }
             }
             else if(method == "GET") 
@@ -1032,12 +1120,13 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             }
             else if (method == "DELETE") 
             {
+                if(!deleteHandler)
+                    deleteHandler = new DeleteHandler();
                 std::cout << "*****DELETE requests " <<std::endl;
-                DeleteHandler* deleteHandler = new DeleteHandler();
                 std::string response = deleteHandler->handleDeleteRequest(*this, parser);
                 responses[client_fd] = response;
-                is_Complet = true;
-                delete deleteHandler;
+                if(deleteHandler->get_is_true_parse() == true)
+                    is_Complet = true;
             }
         }
 
@@ -1180,6 +1269,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         }
         if (postHandler->isRequestComplete() && !postHandler->getCGIState()) {
             is_Complet = true;
+            this->responses[client_fd] = statusMap[this->status];
         }
         
     }
@@ -1193,6 +1283,14 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             std::cout << "is_Complet : true" << std::endl;
         else
             std::cout << "is_Complet : false" << std::endl;
+    }
+    else if(method == "DELETE" && deleteHandler)
+    {
+        std::cout << "*****DELETE requests " <<std::endl;
+        std::string response = deleteHandler->handleDeleteRequest(*this, parser);
+        responses[client_fd] = response;
+        if(deleteHandler->get_is_true_parse() == true)
+            is_Complet = true;
     }
             
 

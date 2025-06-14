@@ -80,7 +80,7 @@
         }
 
         .error-code::before {
-            content: '404';
+            content: '504';
             position: absolute;
             top: 0;
             left: 0;
@@ -287,10 +287,10 @@
     
     <div class="container">
         <div class="pulse-accent"></div>
-        <div class="error-code">404</div>
-        <h1 class="title">PAGE NOT FOUND</h1>
+        <div class="error-code">504</div>
+        <h1 class="title">GATEWAY TIMEOUT</h1>
         <!-- <p class="subtitle">The page you're looking for has disappeared into the digital darkness.</p> -->
-        <p class="error-message">Error: Resource could not be located</p>
+        <p class="error-message">Error: Upstream server failed to respond in time</p>
     </div>
 
     <script>

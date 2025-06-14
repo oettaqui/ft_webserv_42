@@ -572,7 +572,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         if(itse != server_socket.getErrorPages().end())
         {
             std::string ex_error = getFileExtension(itse->second);
-            if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+            if(ex_error != "php" && ex_error != "py" && ex_error != "pl")
             {
                 std::string return_value = readFile(itse->second,request_data);
                 if(check_if == 1)

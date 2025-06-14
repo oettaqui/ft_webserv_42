@@ -20,12 +20,14 @@
 #include "../delete_handler/DeleteHandler.hpp"
 #include "../CGI/CGI.hpp"
 #include "../CGI/DataCGI.hpp"
+class DeleteHandler;
 class GetHandler;
 class PostHandler;
 class ParsRequest{
     private:
         // new member
         GetHandler* getHandler;
+        DeleteHandler* deleteHandler;
         std::string method;
         std::string path;
         std::string version;
@@ -115,6 +117,8 @@ class ParsRequest{
         std::string readSmallFile(std::string filePath);
         std::string getFileExtension(const std::string& filename);
         size_t getFileSize(const std::string& filename);
+        ////
+        std::string normalizePath(const std::string& path);
     };
 
 #endif
