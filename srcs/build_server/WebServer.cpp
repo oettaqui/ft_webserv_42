@@ -180,9 +180,6 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
         else
         {
             std::cout << "------------------------------(3)\n";
-            std::cout << p->getFlagParsingHeader() << std::endl;
-            std::cout << p->getErrorFromConfig() << std::endl;
-            std::cout << p->isComplet() << std::endl;
             // std::cout << "================3\n";
             write_buffers[fd] = p->getResponses().find(fd)->second;
             if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
