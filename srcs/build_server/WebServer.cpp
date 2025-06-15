@@ -89,6 +89,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
         }
         else if(p->getMethod() == "GET" && p->isComplet() == false && p->getFlagParsingHeader() && !p->getErrorFromConfig())
         {
+            std::cout << "------------------------------(1)\n";
             if(p->getCGIState())
             {
                 write_buffers[fd] = p->getResponses().find(fd)->second;
@@ -109,6 +110,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             p->parse("",fd, parser);
         }
         else if (p->getMethod() == "GET" && p->getCGIState() && p->isComplet() == true && !p->getErrorFromConfig()){
+            std::cout << "------------------------------(2)\n";
             write_buffers[fd] = p->getResponses().find(fd)->second;
             if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
                 std::string& res = write_buffers[fd];
@@ -177,6 +179,10 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             p->parse("",fd, parser);
         else
         {
+            std::cout << "------------------------------(3)\n";
+            std::cout << p->getFlagParsingHeader() << std::endl;
+            std::cout << p->getErrorFromConfig() << std::endl;
+            std::cout << p->isComplet() << std::endl;
             // std::cout << "================3\n";
             write_buffers[fd] = p->getResponses().find(fd)->second;
             if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
@@ -202,6 +208,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
     }
     else
     {
+        std::cout << "------------------------------(4)\n";
         struct epoll_event event;
         event.events = EPOLLIN;
         event.data.fd = fd;

@@ -16,6 +16,7 @@ GetHandler::GetHandler()
     autoIndex = false;
     cgi_check = false;
     cgiHandler = NULL;
+    cgi_error = false;
     cgi_flag = 0;
 }
 
@@ -436,7 +437,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             if(itse != server_socket.getErrorPages().end())
             {
                 std::string ex_error = getFileExtension(itse->second);
-                if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+                if(ex_error != "php" && ex_error != "py" && ex_error != "pl")
                 {
                     std::string return_value = readFile(itse->second,request_data);
                     if(check_if == 1)
@@ -450,23 +451,33 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         }
         else
         {
+            std::string check_string = trim(index_file,'.');
+            std::cout << "check_string : " << check_string << std::endl;
+            std::cout << "location_concerned.getPath() : " << location_concerned.getPath() << std::endl;
             if(location_concerned.hasRedirect() == true)
             {
                 const std::map<int, std::string>::const_iterator redirection = location_concerned.getRedirection().begin();
                 content = createRedirectResponse(redirection->first,redirection->second);
                 generateResponse(content, request_data);
             }
-            if(location_concerned.getAutoindex() == true)
+            if(location_concerned.getAutoindex() == true && location_concerned.getPath() == check_string)
             {
-                std::cout << "*************Autooooooooooooooooo indexxxxxxxxxxxxxxx**********\n";
-                if(location_concerned.getIndex().size() != 0)
+                std::cout << "*************Autooooooooooooooooo(1)indexxxxxxxxxxxxxxx**********\n";
+                if(location_concerned.getIndex().size() != 0 )
                 {
                     for(std::vector<std::string>::const_iterator it_index = location_concerned.getIndex().begin();it_index != location_concerned.getIndex().end();++it_index)
                     {
                         index_file = location_concerned.getRoot() + '/' + *it_index;
-                        content = readFile(index_file,request_data);
-                        if(!(content.empty() && check_if == 0))
+                        std::cout << "index_file : " << index_file << std::endl;
+                        if (access(index_file.c_str(), R_OK) != 0) {
+                            std::cerr << "ERROR: Cannot read original config for backup!" << std::endl;
+                        }
+                        else
+                        {
+                            std::cout << "exit file =======-1-1============\n";
+                            content = readFile(index_file,request_data);
                             break;
+                        }
                             
                     }
                     if(content.empty() && check_if == 0)
@@ -476,7 +487,10 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                     }
                 }
                 else
+                {
+                    std::cout << "*************Autoo default **********\n";
                    content = readFile("./default/index.html",request_data);
+                }
                 autoIndex = true;
             }
             else if(!isDirectory(index_file))
@@ -508,7 +522,7 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             if(itse != server_socket.getErrorPages().end())
             {
                 std::string ex_error = getFileExtension(itse->second);
-                if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+                if(ex_error != "php" && ex_error != "py" && ex_error != "pl")
                 {
                     std::string return_value = readFile(itse->second,request_data);
                     if(check_if == 1)
@@ -534,9 +548,14 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
                 for(std::vector<std::string>::const_iterator it_index = location_concerned.getIndex().begin();it_index != location_concerned.getIndex().end();++it_index)
                 {
                     index_file = location_concerned.getRoot() + '/' + *it_index;
-                    content = readFile(index_file,request_data);
-                    if(!(content.empty() && check_if == 0))
+                    if (access(index_file.c_str(), R_OK) != 0) {
+                        std::cerr << "ERROR: Cannot read original config for backup!" << std::endl;
+                    }
+                    else
+                    {
+                        content = readFile(index_file,request_data);
                         break;
+                    }
                         
                 }
                 if(content.empty() && check_if == 0)
@@ -605,6 +624,11 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
         std::string response_cgi;
         if(!cgiHandler)
         {
+            // if (access(filePath.c_str(), R_OK) != 0) {
+            //     std::cerr << "ERROR: Cannot read original config for backup!" << std::endl;
+            //     return "";
+            // }
+            // check_if = 1;
             cgiHandler =  new CGI();
             std::string response;
             dataCGI data;
@@ -633,11 +657,15 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
                 if(itse != server_socket.getErrorPages().end())
                 {
                     std::string ex_error = getFileExtension(itse->second);
-                    if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+                    if(ex_error != "php" && ex_error != "py" && ex_error != "pl")
                     {
                         std::string return_value = readFile(itse->second,request_data);
                         if(check_if == 1)
+                        {
+                            cgi_error = true;
+                            std::cout << "hereeee1\n";
                             return generateResponse(return_value, request_data);
+                        }
                     }
                 }
                 status_message = "Internal Server Error";
@@ -649,16 +677,23 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
             response_cgi = cgiHandler->executeScript();
             if (cgiHandler->getStatusCGI() != 200 && response_cgi.empty()){
                 contentType = "text/html";
-                statusCode = 500;
+                statusCode = cgiHandler->getStatusCGI();
                 std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
                 if(itse != server_socket.getErrorPages().end())
                 {
                     std::string ex_error = getFileExtension(itse->second);
-                    if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+                    if(ex_error != "php" && ex_error != "py" && ex_error != "pl")
                     {
                         std::string return_value = readFile(itse->second,request_data);
+                        std::cout << "check_if : " << check_if << std::endl;
+                        std::cout << "is_true : " << is_true_parse << std::endl;
+                        std::cout << "return_value : " << "|" << return_value << "|" << std::endl;
                         if(check_if == 1)
+                        {
+                            cgi_error = true;
+                            std::cout << "hereeee2\n";
                             return generateResponse(return_value, request_data);
+                        }
                     }
                 }
                 status_message = "Internal Server Error";
@@ -676,16 +711,20 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
             response_cgi = cgiHandler->executeScript();
             if (cgiHandler->getStatusCGI() != 200 && response_cgi.empty()){
                 contentType = "text/html";
-                statusCode = 500;
+                statusCode = cgiHandler->getStatusCGI();
                 std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
                 if(itse != server_socket.getErrorPages().end())
                 {
                     std::string ex_error = getFileExtension(itse->second);
-                    if(ex_error != "php" && ex_error != "py" && ex_error != "perl")
+                    if(ex_error != "php" && ex_error != "py" && ex_error != "pl")
                     {
                         std::string return_value = readFile(itse->second,request_data);
                         if(check_if == 1)
+                        {
+                            cgi_error = true;
+                            std::cout << "hereeee3\n";
                             return generateResponse(return_value, request_data);
+                        }
                     }
                 }
                 status_message = "Internal Server Error";
@@ -694,6 +733,8 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
                 return ("<h1>500 Internal Server Error</h1>");
             }
             cgi_flag = cgiHandler->getCGIFlag();
+            std::cout << "last line b\n";
+            std::cout << " cgi_flag = " <<cgi_flag << "\n";
             return (response_cgi);
         }
     }
@@ -728,6 +769,7 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
 }
 
 std::string GetHandler::readSmallFile(std::ifstream& file) {
+    std::cout << "readSmallFile\n";
     std::string content;
     char buffer[BUFFER_SIZE_G];
     memset(buffer, 0, BUFFER_SIZE_G);
@@ -849,17 +891,25 @@ bool GetHandler::getCgiCheck() const
 
 std::string GetHandler::generateResponse(const std::string& content,ParsRequest &request_data) {
     (void)request_data;
+    std::cout << "generateResponsecall\n";
     std::cout << "check_put_header : " << check_put_header << std::endl;
     std::cout << "check_if : " << check_if << std::endl;
     std::cout << "existent_folder : " << existent_folder << std::endl;
+    if(cgi_error == true)
+    {
+        final_res.clear();
+        cgi_error = false;
+    }
     if(!content.empty() && cgi_check)
     {
+        std::cout << "condition1\n";
         final_res += content;
         if(cgi_flag == 5)
             is_true_parse = true;
     }
     else if (!content.empty())
     {
+        std::cout << "condition2\n";
         is_true_parse = true;
         final_res += content;
     }

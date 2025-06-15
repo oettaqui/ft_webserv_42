@@ -1,380 +1,367 @@
 #!/usr/bin/env python3
-
 import cgi
 import cgitb
 import os
 import html
 
+# Enable CGI error reporting
 cgitb.enable()
 
-print("\r\n")
+# Get request method
+request_method = os.environ.get('REQUEST_METHOD', 'GET')
 
-form = cgi.FieldStorage()
+# Initialize variables
+show_get_error = False
+show_results = False
+all_params_exist = False
+username = ""
+email = ""
+age = ""
 
-if os.environ.get('REQUEST_METHOD') == 'POST' and form:
-    username = html.escape(form.getvalue('username', ''))
-    email = html.escape(form.getvalue('email', ''))
+# Check request method
+if request_method == 'GET':
+    show_get_error = True
+    show_results = False
+    all_params_exist = False
+else:
+    # Handle POST method
+    show_get_error = False
+    form_submitted = request_method == 'POST'
     
-    try:
-        age = int(form.getvalue('age', 0))
-    except (ValueError, TypeError):
-        age = 0
-    
-    is_adult = age >= 18
-    
-    if is_adult:
-        html_content = f'''<!DOCTYPE html>
+    if form_submitted:
+        # Parse form data
+        form = cgi.FieldStorage()
+        
+        # Get parameters from POST
+        username = form.getvalue('username', '').strip()
+        email = form.getvalue('email', '').strip()
+        age = form.getvalue('age', '').strip()
+        
+        # Check if all parameters exist and are not empty
+        all_params_exist = username and email and age
+        show_results = True
+
+# Print HTTP header
+print("Content-Type: text/html\n")
+
+# HTML content
+html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome Adult User</title>
+    <title>User Information - POST Method</title>
     <style>
         * {{
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }}
-        
+
         body {{
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Arial', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
+            align-items: center;
             justify-content: center;
-            align-items: center;
-            color: white;
+            padding: 20px;
         }}
-        
-        .container {{
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            max-width: 500px;
-            width: 90%;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }}
-        
-        .icon {{
-            font-size: 60px;
-            margin-bottom: 20px;
-            animation: pulse 2s infinite;
-        }}
-        
-        @keyframes pulse {{
-            0% {{ transform: scale(1); }}
-            50% {{ transform: scale(1.1); }}
-            100% {{ transform: scale(1); }}
-        }}
-        
-        h1 {{
-            font-size: 2.5em;
-            margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }}
-        
-        .user-info {{
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 25px;
-            margin: 20px 0;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }}
-        
-        .info-item {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 15px 0;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-        }}
-        
-        .label {{
-            font-weight: bold;
-            color: #e0e6ff;
-        }}
-        
-        .value {{
-            color: #ffffff;
-            font-size: 1.1em;
-        }}
-        
-        .status-badge {{
-            background: linear-gradient(45deg, #28a745, #20c997);
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 20px;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
-        }}
-        
-        .welcome-message {{
-            font-size: 1.2em;
-            margin-top: 20px;
-            line-height: 1.6;
-            color: #e0e6ff;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="icon">👔</div>
-        <h1>Professional Registration</h1>
-        
-        <div class="user-info">
-            <div class="info-item">
-                <span class="label">👤 Username:</span>
-                <span class="value">{username}</span>
-            </div>
-            <div class="info-item">
-                <span class="label">📧 Email:</span>
-                <span class="value">{email}</span>
-            </div>
-            <div class="info-item">
-                <span class="label">🎂 Age:</span>
-                <span class="value">{age} years old</span>
-            </div>
-        </div>
-        
-        <div class="status-badge">✅ Adult Account Verified</div>
-        
-    </div>
-</body>
-</html>'''
-        print(html_content)
-    
-    else:
-        html_content = f'''<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome Young User</title>
-    <style>
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }}
-        
-        body {{
-            font-family: "Comic Sans MS", cursive, sans-serif;
-            background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 25%, #a8edea 50%, #fed6e3 75%, #d299c2 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 4s ease infinite;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #333;
-        }}
-        
-        @keyframes gradientShift {{
-            0% {{ background-position: 0% 50%; }}
-            50% {{ background-position: 100% 50%; }}
-            100% {{ background-position: 0% 50%; }}
-        }}
-        
-        .container {{
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 25px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            max-width: 500px;
-            width: 90%;
-            border: 3px solid #ff6b6b;
-            position: relative;
-            overflow: hidden;
-        }}
-        
-        .container::before {{
-            content: "";
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 10px,
-                rgba(255, 107, 107, 0.1) 10px,
-                rgba(255, 107, 107, 0.1) 20px
-            );
-            animation: movePattern 10s linear infinite;
-            z-index: -1;
-        }}
-        
-        @keyframes movePattern {{
-            0% {{ transform: translate(-50%, -50%) rotate(0deg); }}
-            100% {{ transform: translate(-50%, -50%) rotate(360deg); }}
-        }}
-        
-        .icon {{
-            font-size: 60px;
-            margin-bottom: 20px;
-            animation: bounce 1.5s ease-in-out infinite;
-        }}
-        
-        @keyframes bounce {{
-            0%, 20%, 50%, 80%, 100% {{ transform: translateY(0); }}
-            40% {{ transform: translateY(-20px); }}
-            60% {{ transform: translateY(-10px); }}
-        }}
-        
-        h1 {{
-            font-size: 2.5em;
-            margin-bottom: 30px;
-            color: #ff6b6b;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-            animation: colorChange 3s ease-in-out infinite;
-        }}
-        
-        @keyframes colorChange {{
-            0% {{ color: #ff6b6b; }}
-            33% {{ color: #4ecdc4; }}
-            66% {{ color: #45b7d1; }}
-            100% {{ color: #ff6b6b; }}
-        }}
-        
-        .user-info {{
-            background: linear-gradient(45deg, #ffeaa7, #fab1a0);
-            border-radius: 20px;
-            padding: 25px;
-            margin: 20px 0;
-            border: 2px solid #e17055;
-        }}
-        
-        .info-item {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 15px 0;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 15px;
-            border: 2px dashed #ff7675;
-        }}
-        
-        .label {{
-            font-weight: bold;
-            color: #2d3436;
-            font-size: 1.1em;
-        }}
-        
-        .value {{
-            color: #e84393;
-            font-size: 1.2em;
-            font-weight: bold;
-        }}
-        
-        .status-badge {{
-            background: linear-gradient(45deg, #fd79a8, #fdcb6e);
-            padding: 15px 25px;
-            border-radius: 30px;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 20px;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-            box-shadow: 0 6px 20px rgba(253, 121, 168, 0.4);
-            animation: wiggle 2s ease-in-out infinite;
-        }}
-        
-        @keyframes wiggle {{
-            0%, 100% {{ transform: rotate(0deg); }}
-            25% {{ transform: rotate(1deg); }}
-            75% {{ transform: rotate(-1deg); }}
-        }}
-        
-        .welcome-message {{
-            font-size: 1.3em;
-            margin-top: 25px;
-            line-height: 1.6;
-            color: #2d3436;
-            background: linear-gradient(45deg, #a29bfe, #6c5ce7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: bold;
-        }}
-        
-        .stars {{
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 20px;
-            animation: twinkle 1.5s ease-in-out infinite;
-        }}
-        
-        @keyframes twinkle {{
-            0%, 100% {{ opacity: 1; transform: scale(1); }}
-            50% {{ opacity: 0.5; transform: scale(1.2); }}
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="stars">✨⭐✨</div>
-        <div class="icon">🎉</div>
-        <h1>Young Explorer Registration</h1>
-        
-        <div class="user-info">
-            <div class="info-item">
-                <span class="label">👦 Username:</span>
-                <span class="value">{username}</span>
-            </div>
-            <div class="info-item">
-                <span class="label">📮 Email:</span>
-                <span class="value">{email}</span>
-            </div>
-            <div class="info-item">
-                <span class="label">🎂 Age:</span>
-                <span class="value">{age} years young!</span>
-            </div>
-        </div>
-        
-        <div class="status-badge">🌟 Youth Account Created!</div>
-    </div>
-</body>
-</html>'''
-        print(html_content)
 
-else:
-    print('''<!DOCTYPE html>
-<html>
-<head>
-    <title>Error</title>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            background: #f0f0f0; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0;
-        }
-        .error { 
-            background: white; 
-            padding: 30px; 
-            border-radius: 10px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        .container {{
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
             text-align: center;
-        }
+        }}
+
+        .success-container {{
+            border-left: 5px solid #28a745;
+        }}
+
+        .error-container {{
+            border-left: 5px solid #dc3545;
+        }}
+
+        .form-container {{
+            border-left: 5px solid #667eea;
+        }}
+
+        h1 {{
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+        }}
+
+        .success-title {{
+            color: #28a745;
+        }}
+
+        .error-title {{
+            color: #dc3545;
+        }}
+
+        .form-title {{
+            color: #667eea;
+        }}
+
+        .form-group {{
+            margin-bottom: 20px;
+            text-align: left;
+        }}
+
+        .form-label {{
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }}
+
+        .form-input {{
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }}
+
+        .form-input:focus {{
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }}
+
+        .submit-btn {{
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            width: 100%;
+        }}
+
+        .submit-btn:hover {{
+            background: #5a6fd8;
+        }}
+
+        .user-info {{
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }}
+
+        .info-item {{
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }}
+
+        .info-item:last-child {{
+            margin-bottom: 0;
+        }}
+
+        .info-label {{
+            font-weight: bold;
+            color: #495057;
+            min-width: 80px;
+            margin-right: 15px;
+        }}
+
+        .info-value {{
+            color: #333;
+            font-size: 1.1em;
+        }}
+
+        .icon {{
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            fill: #667eea;
+        }}
+
+        .error-message {{
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }}
+
+        .back-btn {{
+            background: #6c757d;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 25px;
+            display: inline-block;
+            margin-top: 20px;
+            transition: background 0.3s ease;
+        }}
+
+        .back-btn:hover {{
+            background: #5a6268;
+        }}
+
+        .form-description {{
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            color: #0c5460;
+            border-left: 4px solid #667eea;
+        }}
     </style>
 </head>
 <body>
-    <div class="error">
-        <h2>❌ No Data Received</h2>
-        <p>Please submit the form using POST method.</p>
+    <div class="container {'error-container' if show_get_error else 'form-container' if not show_results else 'success-container' if all_params_exist else 'error-container'}">
+"""
+
+if show_get_error:
+    html_content += """
+        <h1 class="error-title">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
+            </svg>
+            Method Not Supported
+        </h1>
+        
+        <div class="error-message">
+            <strong>GET method is not supported!</strong><br>
+            This page only accepts POST requests. Please use a form or send a POST request to access this functionality.
+        </div>
+    """
+elif not show_results:
+    script_name = os.environ.get('SCRIPT_NAME', '')
+    html_content += f"""
+        <h1 class="form-title">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2m8 0V2a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m8 0V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v0"/>
+            </svg>
+            User Information Form
+        </h1>
+        
+        <div class="form-description">
+            Please fill in all the required fields below to submit your information.
+        </div>
+        
+        <form method="POST" action="{script_name}">
+            <div class="form-group">
+                <label class="form-label" for="username">
+                    <svg class="icon" style="display: inline;" viewBox="0 0 24 24">
+                        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    Username *
+                </label>
+                <input type="text" id="username" name="username" class="form-input" placeholder="Enter your username" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="email">
+                    <svg class="icon" style="display: inline;" viewBox="0 0 24 24">
+                        <path d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    Email Address *
+                </label>
+                <input type="email" id="email" name="email" class="form-input" placeholder="Enter your email address" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="age">
+                    <svg class="icon" style="display: inline;" viewBox="0 0 24 24">
+                        <path d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 9a6 6 0 1012 0v-3"/>
+                    </svg>
+                    Age *
+                </label>
+                <input type="number" id="age" name="age" class="form-input" placeholder="Enter your age" min="1" max="120" required>
+            </div>
+            
+            <button type="submit" class="submit-btn">
+                Submit Information
+            </button>
+        </form>
+    """
+elif all_params_exist:
+    html_content += f"""
+        <h1 class="success-title">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Information Submitted Successfully
+        </h1>
+        
+        <div class="user-info">
+            <div class="info-item">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span class="info-label">Username:</span>
+                <span class="info-value">{html.escape(username)}</span>
+            </div>
+            
+            <div class="info-item">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                <span class="info-label">Email:</span>
+                <span class="info-value">{html.escape(email)}</span>
+            </div>
+            
+            <div class="info-item">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 9a6 6 0 1012 0v-3"/>
+                </svg>
+                <span class="info-label">Age:</span>
+                <span class="info-value">{html.escape(age)} years old</span>
+            </div>
+        </div>
+    """
+else:
+    script_name = os.environ.get('SCRIPT_NAME', '')
+    username_status = '✅ Provided' if username else '❌ Missing or empty'
+    email_status = '✅ Provided' if email else '❌ Missing or empty'
+    age_status = '✅ Provided' if age else '❌ Missing or empty'
+    
+    html_content += f"""
+        <h1 class="error-title">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+            </svg>
+            Incomplete Information
+        </h1>
+        
+        <div class="error-message">
+            <strong>Some required fields are missing or empty!</strong><br>
+            Please check the following fields:
+            <ul style="text-align: left; margin-top: 10px;">
+                <li><strong>Username</strong> {username_status}</li>
+                <li><strong>Email</strong> {email_status}</li>
+                <li><strong>Age</strong> {age_status}</li>
+            </ul>
+        </div>
+        
+        <a href="{script_name}" class="back-btn">
+            Try Again
+        </a>
+    """
+
+html_content += """
     </div>
 </body>
-</html>''')
+</html>
+"""
+
+print(html_content)

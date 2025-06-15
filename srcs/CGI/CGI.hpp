@@ -14,6 +14,7 @@
 #include <errno.h>
 #include "../pars_request/ParsRequest.hpp"
 #include "./DataCGI.hpp"
+#include <sys/ioctl.h>
 
 class CGI{
 
@@ -33,6 +34,8 @@ private:
 
     long startTime;
     int timeoutSeconds;
+    ssize_t size;
+    ssize_t totat_bytes_read;
 
 
 public:
@@ -48,6 +51,7 @@ public:
     long getCurrentTimeMs();
     bool isTimeout();
     void setTimeout(int seconds);
+    ssize_t getFileSize(int fd);
 
 };
 

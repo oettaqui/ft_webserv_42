@@ -300,9 +300,13 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
             std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
             if(itse != server_socket.getErrorPages().end())
             {
-                std::string return_value = readFile_v2(itse->second);
-                if(check_if == 1)
-                    return generateResponse(return_value, request_data);
+                std::string ex_error = getFileExtension(itse->second);
+                if(ex_error != "php" && ex_error != "py" && ex_error != "pl")
+                {
+                    std::string return_value = readFile_v2(itse->second);
+                    if(check_if == 1)
+                        return generateResponse(return_value, request_data);
+                }
             }
             generate_header();
             return generateResponse("<h1>403 the client doesn't have permission to DELETE</h1>", request_data);
@@ -358,9 +362,13 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
             std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
             if(itse != server_socket.getErrorPages().end())
             {
-                std::string return_value = readFile_v2(itse->second);
-                if(check_if == 1)
-                    return generateResponse(return_value, request_data);
+                std::string ex_error = getFileExtension(itse->second);
+                if(ex_error != "php" && ex_error != "py" && ex_error != "pl")
+                {
+                    std::string return_value = readFile_v2(itse->second);
+                    if(check_if == 1)
+                        return generateResponse(return_value, request_data);
+                }
             }
             generate_header();
             return generateResponse("<h1>403 the client doesn't have permission to DELETE</h1>", request_data);

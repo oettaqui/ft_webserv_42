@@ -7,6 +7,8 @@ CGI::CGI(){
     this->status = 200;
     this->timeoutSeconds = 10;
     this->startTime = getCurrentTimeMs();
+    size = 0;
+    totat_bytes_read = 0;
     
     
 
@@ -23,6 +25,14 @@ CGI::~CGI(){
         close(pipeFd[1]);
     }
    
+}
+
+ssize_t CGI::getFileSize(int fd) {
+    int bytes_available;
+    if (ioctl(fd, FIONREAD, &bytes_available) == 0) {
+        return static_cast<ssize_t>(bytes_available);
+    }
+    return -1;  // Error
 }
 
 void CGI::setVarsEnv(dataCGI& data) {
@@ -80,7 +90,7 @@ std::string CGI::executeScript(){
             std::cout << "CGI timeout exceeded, terminating process\n";
             if (pid > 0) {
                 kill(pid, SIGTERM);  
-                usleep(100000);
+                // usleep(100000);
                 kill(pid, SIGKILL);
                 waitpid(pid, NULL, 0);
             }
@@ -106,7 +116,7 @@ std::string CGI::executeScript(){
         std::cout << "0\n";
         if (envVars["REQUEST_METHOD"] == "POST") {
             if (access(this->file.c_str(), R_OK) == -1) {
-                std::cout << "try to remove tmp file\n";
+                std::cout << "try to remove tmp file1\n";
             if (envVars["REQUEST_METHOD"] == "POST") {
                 if (unlink(this->file.c_str()) == 0) {
                     std::cout << "File deleted successfully.\n";
@@ -120,7 +130,7 @@ std::string CGI::executeScript(){
             }
         }
         if (access(this->passCgi.c_str(), X_OK) == -1) {
-            std::cout << "try to remove tmp file\n";
+            std::cout << "try to remove tmp file2\n";
             if (envVars["REQUEST_METHOD"] == "POST") {
                 if (unlink(this->file.c_str()) == 0) {
                     std::cout << "File deleted successfully.\n";
@@ -133,7 +143,7 @@ std::string CGI::executeScript(){
             return "";
         }
         if (pipe(pipeFd) == -1){
-            std::cout << "try to remove tmp file\n";
+            std::cout << "try to remove tmp file3\n";
             if (envVars["REQUEST_METHOD"] == "POST") {
                 if (unlink(this->file.c_str()) == 0) {
                     std::cout << "File deleted successfully.\n";
@@ -198,7 +208,7 @@ std::string CGI::executeScript(){
             if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
                 std::cout << "CGI script exited with error code: " << WEXITSTATUS(status) << std::endl;
                 this->status = 500;
-                std::cout << "try to remove tmp file\n";
+                std::cout << "try to remove tmp file4\n";
                 if (envVars["REQUEST_METHOD"] == "POST") {
                     if (unlink(this->file.c_str()) == 0) {
                         std::cout << "File deleted successfully.\n";
@@ -213,7 +223,7 @@ std::string CGI::executeScript(){
         } else if (result == -1) {
             perror("waitpid failed");
             this->status = 500;
-            std::cout << "try to remove tmp file\n";
+            std::cout << "try to remove tmp file5\n";
             if (envVars["REQUEST_METHOD"] == "POST") {
                 if (unlink(this->file.c_str()) == 0) {
                     std::cout << "File deleted successfully.\n";
@@ -227,7 +237,7 @@ std::string CGI::executeScript(){
         
         if (flag == 3)
         {
-            std::cout << "try to remove tmp file\n";
+            std::cout << "try to remove tmp file6\n";
             if (envVars["REQUEST_METHOD"] == "POST") {
                 if (unlink(this->file.c_str()) == 0) {
                     std::cout << "File deleted successfully.\n";
@@ -238,6 +248,8 @@ std::string CGI::executeScript(){
         }
     }
     else if (flag == 3){
+        size = getFileSize(pipeFd[0]);
+        std::cout << "size = " << size << std::endl;
         std::cout << "3\n";
         char buffer[1024];
         ssize_t bytesRead;
@@ -270,32 +282,32 @@ std::string CGI::executeScript(){
             response = "HTTP/1.1 200 OK\r\n" + cgiHeaders + "\r\n\r\n" + cgiBody;
         }
         
-        
+        totat_bytes_read = totat_bytes_read + bytesRead;
         flag = 4;
-        if (bytesRead < 1024)
+        if (bytesRead < 1024 || totat_bytes_read >= size)
             flag = 5;
             // std::cout << "{" << response << "}" << std::endl;
         return response; 
             
     }else if (flag == 4){
-        std::cout << "4\n";
         char buffer[1024];
         ssize_t bytesRead;
         std::string output = "";
-        
+        std::cout << "HNA#\n";
         bytesRead = read(pipeFd[0], buffer, sizeof(buffer));
-        std::cout << bytesRead << std::endl;
+        std::cout << "4\n";
+        // std::cout << bytesRead << std::endl;
         if (bytesRead > 0) 
             output.append(buffer, bytesRead);
         if (bytesRead <= 0 || output.empty())
         {
-            // std::cout << "end of file 1\n";
+            std::cout << "end of file 1\n";
             flag = 5;
             return "";
         }
-        
+        totat_bytes_read = totat_bytes_read + bytesRead;
         // std::cout << "*{" << output << "}*" << std::endl;
-        if (bytesRead < 1024)
+        if (bytesRead < 1024 || totat_bytes_read >= size)
             flag = 5;
         return output;
     }

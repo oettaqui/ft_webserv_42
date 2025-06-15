@@ -68,6 +68,7 @@ class GetHandler {
         std::string final_res;
         bool cgi_check;
         int cgi_flag;
+        bool cgi_error;
     public:
         GetHandler();
         ~GetHandler();
