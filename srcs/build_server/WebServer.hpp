@@ -33,7 +33,7 @@ class WebServer {
         std::map<int, time_t> client_last_activity;
 
         bool setNonBlocking(int sockfd);
-        bool addToEpoll(int sockfd);
+        bool addToEpoll(int sockfd,int flag);
         void handleNewConnection(int server_fd);
         void handleClientData(int fd, ConfigParser &parser);
         void getResponse(int fd,ConfigParser &parser);
@@ -46,4 +46,5 @@ class WebServer {
         void linking_servers(ConfigParser &parser) ;
         void run(ConfigParser &parser);
         void checkInactiveClients();
+        bool isSocketAlive(int sockfd);
     };

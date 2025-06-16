@@ -17,6 +17,7 @@ GetHandler::GetHandler()
     cgi_check = false;
     cgiHandler = NULL;
     cgi_error = false;
+    use_final_res = false;
     cgi_flag = 0;
 }
 
@@ -400,7 +401,7 @@ std::vector<std::string> GetHandler::get_location_server() const
 }
 
 std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser &parser) {
-    final_res.clear();
+    final_res = "";
     storeContentTypes(request_data);
     std::cout << "*/////////////////////////////////////////*\n";
     std::cout << request_data.getPath() << std::endl;
@@ -884,6 +885,11 @@ bool GetHandler::get_is_true_parse() const
     return is_true_parse;
 }
 
+bool GetHandler::get_use_final_res() const
+{
+    return use_final_res;
+}
+
 bool GetHandler::getCgiCheck() const
 {
     return cgi_check;
@@ -906,12 +912,14 @@ std::string GetHandler::generateResponse(const std::string& content,ParsRequest 
         final_res += content;
         if(cgi_flag == 5)
             is_true_parse = true;
+        use_final_res = true;
     }
     else if (!content.empty())
     {
         std::cout << "condition2\n";
         is_true_parse = true;
         final_res += content;
+        use_final_res = true;
     }
     return final_res;
 }

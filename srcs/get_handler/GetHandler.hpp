@@ -69,6 +69,7 @@ class GetHandler {
         bool cgi_check;
         int cgi_flag;
         bool cgi_error;
+        bool use_final_res;
     public:
         GetHandler();
         ~GetHandler();
@@ -96,6 +97,7 @@ class GetHandler {
         std::string createRedirectResponse(int statusCode, const std::string& location);
         /////
         bool getCgiCheck() const;
+        bool get_use_final_res() const;
 
 };
 

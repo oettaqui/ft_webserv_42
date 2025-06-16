@@ -59,6 +59,7 @@ class DeleteHandler {
         std::string final_res;
         ssize_t contentLength;
         bool is_true_parse;
+        bool use_final_res;
     public:
         DeleteHandler();
         ~DeleteHandler();
@@ -82,6 +83,7 @@ class DeleteHandler {
         std::string readFile_v2(const std::string& filePath);
         void storeContentTypes(ParsRequest &request_data);
         bool get_is_true_parse() const;
+        bool get_use_final_res() const;
 };
 
 #endif

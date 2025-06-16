@@ -32,6 +32,7 @@ ParsRequest::ParsRequest() {
     contentType = "text/html";
     size = 0;
     totalBytesSent = 0;
+    use_final_res = false;
 
     statusMessages[200] = "OK";
     statusMessages[400] = "Bad Request";
@@ -1116,6 +1117,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     is_Complet = true;
                 if(getHandler->getCgiCheck() == true)
                     this->Cgi = true;
+                use_final_res = getHandler->get_use_final_res();
                
             }
             else if (method == "DELETE") 
@@ -1127,6 +1129,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 responses[client_fd] = response;
                 if(deleteHandler->get_is_true_parse() == true)
                     is_Complet = true;
+                use_final_res = deleteHandler->get_use_final_res();
             }
         }
 
@@ -1275,6 +1278,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             std::cout << "is_Complet : true" << std::endl;
         else
             std::cout << "is_Complet : false" << std::endl;
+        use_final_res = getHandler->get_use_final_res();
     }
     else if(method == "DELETE" && deleteHandler)
     {
@@ -1325,3 +1329,7 @@ void ParsRequest::setErrorReadComplete(){ errorReadComplete = false; }
 bool ParsRequest::getFlagParsingHeader() const { return header_parsed; }
 
 int ParsRequest::getStatus() const { return status; }
+bool ParsRequest::get_use_final_res() const
+{
+    return use_final_res;
+}

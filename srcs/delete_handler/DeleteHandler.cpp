@@ -20,6 +20,7 @@ DeleteHandler::DeleteHandler() {
     is_true_parse = false;
     contentLength = 0;
     final_res = "";
+    use_final_res = false;
 }
 
 DeleteHandler::~DeleteHandler() {
@@ -524,6 +525,7 @@ std::string DeleteHandler::generateResponse(const std::string& content,ParsReque
     {
         is_true_parse = true;
         final_res += content;
+        use_final_res = true;
     }
     return final_res;
 }
@@ -607,7 +609,10 @@ std::string DeleteHandler::url_decode(std::string url) {
 }
 
 
-
+bool DeleteHandler::get_use_final_res() const
+{
+    return use_final_res;
+}
 
 
 
