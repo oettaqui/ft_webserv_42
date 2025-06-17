@@ -65,7 +65,7 @@ std::string GetHandler::getFileExtension(const std::string& filename) {
     if (dotPos != std::string::npos) {
         return filename.substr(dotPos + 1);
     }
-    return ""; // No extension found
+    return ""; 
 }
 
 

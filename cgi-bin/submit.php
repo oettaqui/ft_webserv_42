@@ -334,9 +334,7 @@ if ($requestMethod === 'GET') {
                 </ul>
             </div>
             
-            <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="back-btn">
-                Try Again
-            </a>
+           
         <?php endif; ?>
     </div>
 </body>

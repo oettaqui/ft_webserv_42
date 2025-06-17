@@ -120,6 +120,7 @@ public:
     //////////
     std::string createRedirectResponse(int statusCode, const std::string& location);
 
+    bool fileExists(const std::string& path);
 };
 
 #endif

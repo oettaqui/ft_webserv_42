@@ -675,6 +675,13 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                         if(itse != server_it->getErrorPages().end())
                         {
+                            if (access(itse->second.c_str(), R_OK) == -1)
+                            {
+                                
+                                this->responses[client_fd] = statusMap[this->status];
+                                use_final_res = true;
+                                return ;
+                            }
                             size = getFileSize(itse->second);
                             contentType = getFileExtension(itse->second);
                             std::stringstream  header;
@@ -761,6 +768,12 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                                 std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                                 if(itse != server_it->getErrorPages().end())
                                 {
+                                    if (access(itse->second.c_str(), R_OK) == -1)
+                                    {
+                                        this->responses[client_fd] = statusMap[this->status];
+                                        use_final_res = true;
+                                        return ;
+                                    }
                                     size = getFileSize(itse->second);
                                     contentType = getFileExtension(itse->second);
                                     std::stringstream  header;
@@ -811,8 +824,8 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             std::map<std::string, std::string> passCGI = postHandler->getCgiPassFomPost();
                             if (!ext.empty())
                             {
-                                std::cout << ext << std::endl;
-                                std::cout << pos << std::endl;
+                                // std::cout << ext << std::endl;
+                                // std::cout << pos << std::endl;
                                 std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + ext);
                                 if (passCGIIT != passCGI.end()){
                                     data.CorrectPassCGI = passCGIIT->second;
@@ -845,10 +858,16 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     header_parsed = false;
                     this->status = 400;
                     /// zidni hna
-                    std::cout << "2222\n";
+                    // std::cout << "2222\n";
                     std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                     if(itse != server_it->getErrorPages().end())
                     {
+                        if (access(itse->second.c_str(), R_OK) == -1)
+                        {
+                            this->responses[client_fd] = statusMap[this->status];
+                            use_final_res = true;
+                            return ;
+                        }
                         size = getFileSize(itse->second);
                         contentType = getFileExtension(itse->second);
                         std::stringstream  header;
@@ -886,11 +905,16 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     std::cout << "ERROR 2 | " << this->status <<  std::endl;
                     is_valid = false;
                     is_Complet = true;
-                    /// zidni hna
                     std::cout << "3333\n";
                     std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                     if(itse != server_it->getErrorPages().end())
                     {
+                        if (access(itse->second.c_str(), R_OK) == -1)
+                        {
+                            this->responses[client_fd] = statusMap[this->status];
+                            use_final_res = true;
+                            return ;
+                        }
                         size = getFileSize(itse->second);
                         contentType = getFileExtension(itse->second);
                         std::stringstream  header;
@@ -976,6 +1000,12 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                         if(itse != server_it->getErrorPages().end())
                         {
+                            if (access(itse->second.c_str(), R_OK) == -1)
+                            {
+                                this->responses[client_fd] = statusMap[this->status];
+                                use_final_res = true;
+                                return ;
+                            }
                             size = getFileSize(itse->second);
                             contentType = getFileExtension(itse->second);
                             std::stringstream  header;
@@ -1046,12 +1076,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     }
                     cgiHandler->setVarsEnv(data);
                 }
-                // else if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
-                //     std::cout << "is a not a CGI and parsRequest Complete\n";
-                //     is_Complet = true;
-                //     this->responses[client_fd] = statusMap[this->status];
                 use_final_res = true;
-                // }
                 if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
                     std::cout << "is a not a CGI and parsRequest Complete\n";
                     is_Complet = true;
@@ -1096,6 +1121,12 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                     if(itse != server_it->getErrorPages().end())
                     {
+                        if (access(itse->second.c_str(), R_OK) == -1)
+                        {
+                            this->responses[client_fd] = statusMap[this->status];
+                            use_final_res = true;
+                            return ;
+                        }
                         size = getFileSize(itse->second);
                         contentType = getFileExtension(itse->second);
                         std::stringstream  header;
@@ -1175,6 +1206,12 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                             if(itse != server_it->getErrorPages().end())
                             {
+                                if (access(itse->second.c_str(), R_OK) == -1)
+                                {
+                                    this->responses[client_fd] = statusMap[this->status];
+                                    use_final_res = true;
+                                    return ;
+                                }
                                 size = getFileSize(itse->second);
                                 contentType = getFileExtension(itse->second);
                                 std::stringstream  header;
@@ -1212,6 +1249,36 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                 if(itse != server_it->getErrorPages().end())
                 {
+                    if (access(itse->second.c_str(), R_OK) == -1)
+                    {
+                        this->status = 403;
+                        std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
+                        if(itse != server_it->getErrorPages().end()){
+                            if (access(itse->second.c_str(), R_OK) == -1)
+                            {
+                                this->responses[client_fd] = statusMap[this->status];
+                                use_final_res = true;
+                                return ;
+                            }
+                            size = getFileSize(itse->second);
+                            contentType = getFileExtension(itse->second);
+                            std::stringstream  header;
+                            header  << "HTTP/1.1 "<< status << " " <<  statusMessages[status] << "\r\n"
+                            << "Content-Type: " << contentType << "\r\n"
+                            << "Content-Length: " << size << "\r\n"
+                            << "Connection: close\r\n"
+                            << "\r\n";
+                            final_res += header.str();
+                            file_error_path = itse->second;
+                            errorFromConfig = true;
+                            this->responses[client_fd] = final_res;
+                            final_res.clear();
+                            return ;
+                        }
+                        this->responses[client_fd] = statusMap[this->status];
+                        use_final_res = true;
+                        return ;
+                    }
                     size = getFileSize(itse->second);
                     contentType = getFileExtension(itse->second);
                     std::stringstream  header;
@@ -1235,11 +1302,9 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         else {
             if (!postHandler->isRequestComplete()){
                 postHandler->processData(request);
-                std::cout << "HHHHHHHHHHHHHHHHH1\n";
             }
             if (postHandler->isRequestComplete())
             {
-                std::cout << "HHHHHHHHHHHHHHHHH2\n";
                 if (postHandler->getCGIState() && this->cgiHandler){
                     this->Cgi = true;
                     responses[client_fd] = cgiHandler->executeScript();
@@ -1257,6 +1322,12 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             std::map<int, std::string>::const_iterator itse = server_it->getErrorPages().find(status);
                             if(itse != server_it->getErrorPages().end())
                             {
+                                if (access(itse->second.c_str(), R_OK) == -1)
+                                {
+                                    this->responses[client_fd] = statusMap[this->status];
+                                    use_final_res = true;
+                                    return ;
+                                }
                                 size = getFileSize(itse->second);
                                 contentType = getFileExtension(itse->second);
                                 std::stringstream  header;
@@ -1285,7 +1356,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             
         }
         if (postHandler->isRequestComplete() && !postHandler->getCGIState()) {
-            std::cout << "HHHHHHHHHHHHHHHHH\n";
             is_Complet = true;
             this->responses[client_fd] = statusMap[this->status];
             use_final_res = true;

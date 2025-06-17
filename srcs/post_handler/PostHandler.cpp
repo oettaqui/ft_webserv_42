@@ -107,6 +107,11 @@ void PostHandler::storeContentTypes() {
     contentTypes["application/octet-stream"] = "";
 }
 
+bool PostHandler::fileExists(const std::string& path) {
+    std::ifstream file(path.c_str());
+    return file.good();
+}
+
 bool PostHandler::directoryExists(const std::string& path) {
     struct stat info;
     
@@ -141,11 +146,41 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
         }
         
     }
-    else{
-        status = 403;
-        std::cout << "\n";
+     else{
+        std::cout << "LOCATION ===>  " << location_path << std::endl;
+                   
+            if (!fileExists(location_path)) {
+                std::cout << "404 Not Found" << std::endl;
+                status = 404;
+                return "";
+            } else {
+                std::cout << "File exists." << std::endl;
+                status = 403;
+                return "";
+            }
+        
+        status = 404;
+        std::cout << "dddddddddddddddddd\n";
         return "";
     }
+    // else{
+    //     std::cout << "LOCATION ===>  " << location_path << std::endl;
+    //     if (!location_path.empty()){
+    //         size_t pos = location_path.find_last_of('/');
+    //         if (pos != std::string::npos){
+    //             std::string file = location_path.substr(pos + 1, location_path.length());
+    //             if (!fileExists(file)) {
+    //                 std::cout << "404 Not Found" << std::endl;
+    //             } else {
+    //                 std::cout << "File exists." << std::endl;
+    //             }
+    //         }
+    //     }
+
+    //     status = 404;
+    //     std::cout << "\n";
+    //     return "";
+    // }
     
     if (!extension.empty()) {
         filename << "." << extension;
@@ -406,9 +441,9 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         return;
     }else{
         this->filename = createUniqueFile(extension, location_path);
-        if (status == 403)
+        if (status != 200)
         {
-            std::cout << "403!!!!\n";
+            std::cout << status << "!!!!\n";
             return;
         }
         if (filename.empty()) {
@@ -668,6 +703,7 @@ void PostHandler::processData(const std::string& data) {
         file.close();
         isComplete = true;
         std::cout << "File upload complete: " << filename << " (" << bodyLength << " bytes)" << std::endl;
+        status = 200;
     }
 }
 

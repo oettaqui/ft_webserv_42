@@ -353,9 +353,7 @@ else:
             </ul>
         </div>
         
-        <a href="{script_name}" class="back-btn">
-            Try Again
-        </a>
+       
     """
 
 html_content += """
