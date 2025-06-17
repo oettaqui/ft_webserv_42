@@ -17,7 +17,7 @@
 #define BUFFER_SIZE 1024
 
 #define REQUEST_TIMEOUT 7000000
-#define CLIENT_TIMEOUT_MS 10000000
+#define CLIENT_TIMEOUT_MS 1000000
 
 
 class WebServer {
@@ -31,7 +31,7 @@ class WebServer {
         // time out 
         std::map<int, time_t> client_request_start;
         std::map<int, time_t> client_last_activity;
-        bool use_getresponse_fn;
+        std::map<int,bool> clients_mode;
 
         bool setNonBlocking(int sockfd);
         bool addToEpoll(int sockfd,int flag);
