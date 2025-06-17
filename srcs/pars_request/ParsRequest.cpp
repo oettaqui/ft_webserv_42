@@ -589,6 +589,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 // std::cout << "A BAD REQUEST 1 " << this->status << std::endl;
                 /// zidni hna
                 this->responses[client_fd] = statusMap[this->status];
+                use_final_res = true;
                 // return;
             }
             else
@@ -598,6 +599,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     // std::cout << "A BAD REQUEST 2 " << this->status << std::endl;
                     /// zidni hna
                     this->responses[client_fd] = statusMap[this->status];
+                    use_final_res = true;
                     // return;
                 }
             }
@@ -608,6 +610,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 if(status != 414)
                     status = 400;
                 this->responses[client_fd] = statusMap[this->status];
+                use_final_res = true;
                 is_valid = false;
                 header_parsed = false;
                 return;
@@ -688,6 +691,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             return ;
                         }
                         this->responses[client_fd] = statusMap[this->status];
+                        use_final_res = true;
                         return ;
                     }
                     if (postHandler->isRequestComplete() && postHandler->getCGIState()) {
@@ -732,6 +736,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                                     std::cout << "Pass CGI not found " << postHandler->getExtension() << std::endl;
                                     this->status = 404;
                                     this->responses[client_fd] = statusMap[this->status];
+                                    use_final_res = true;
                                     return;
                                 }
                                 std::cout << "EXtension" << postHandler->getExtension() << std::endl;
@@ -772,6 +777,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                                     return ;
                                 }
                                 this->responses[client_fd] = statusMap[this->status];
+                                use_final_res = true;
                                 return;
                             }
                     }
@@ -817,6 +823,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                                     std::cout << "Pass CGI not found " << postHandler->getExtension() << std::endl;
                                     this->status = 404;
                                     this->responses[client_fd] = statusMap[this->status];
+                                    use_final_res = true;
                                     return;
                                 }
                                 std::cout << "EXtension" << postHandler->getExtension() << std::endl;
@@ -829,6 +836,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         std::cout << "is a not a CGI and parsRequest Complete\n";
                         is_Complet = true;
                         this->responses[client_fd] = statusMap[this->status];
+                        use_final_res = true;
                     }
                 }
                 else{
@@ -857,6 +865,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         return ;
                     }
                     this->responses[client_fd] = statusMap[this->status];
+                    use_final_res = true;
                     return;
                 }
             } 
@@ -898,6 +907,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         return ;
                     }
                     this->responses[client_fd] = statusMap[this->status];
+                    use_final_res = true;
                     return ;
                 }
                 if (postHandler->isRequestComplete() && postHandler->getCGIState()) {
@@ -942,6 +952,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             std::cout << "Pass CGI not found " << postHandler->getExtension() << std::endl;
                             this->status = 404;
                             this->responses[client_fd] = statusMap[this->status];
+                            use_final_res = true;
                             return;
                         }
                         std::cout << "EXtension" << postHandler->getExtension() << std::endl;
@@ -980,6 +991,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             return ;
                         }
                         this->responses[client_fd] = statusMap[this->status];
+                        use_final_res = true;
                         return;
                     }
                 }
@@ -1025,6 +1037,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             std::cout << "Pass CGI not found " << postHandler->getExtension() << std::endl;
                             this->status = 404;
                             this->responses[client_fd] = statusMap[this->status];
+                            use_final_res = true;
                             return;
                         }
                         std::cout << "EXtension" << postHandler->getExtension() << std::endl;
@@ -1037,11 +1050,13 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 //     std::cout << "is a not a CGI and parsRequest Complete\n";
                 //     is_Complet = true;
                 //     this->responses[client_fd] = statusMap[this->status];
+                use_final_res = true;
                 // }
                 if (postHandler->isRequestComplete() && !postHandler->getCGIState()){
                     std::cout << "is a not a CGI and parsRequest Complete\n";
                     is_Complet = true;
                     this->responses[client_fd] = statusMap[this->status];
+                    use_final_res = true;
                 }
                 
     
@@ -1097,6 +1112,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         return ;
                     }
                     this->responses[client_fd] = statusMap[this->status];
+                    use_final_res = true;
                     return;
                 }
                 if (postHandler->isRequestComplete())
@@ -1104,6 +1120,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     std::cout << "boundary is complete" << std::endl;
                     is_Complet = true;
                     this->responses[client_fd] = statusMap[this->status];
+                    use_final_res = true;
                 }
             }
             else if(method == "GET") 
@@ -1174,6 +1191,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                                 return ;
                             }
                             this->responses[client_fd] = statusMap[this->status];
+                            use_final_res = true;
                             return;
                         }
                         is_Complet = true;
@@ -1210,15 +1228,18 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     return ;
                 }
                 this->responses[client_fd] = statusMap[this->status];
+                use_final_res = true;
                 return;
             }
         }
         else {
             if (!postHandler->isRequestComplete()){
                 postHandler->processData(request);
+                std::cout << "HHHHHHHHHHHHHHHHH1\n";
             }
             if (postHandler->isRequestComplete())
             {
+                std::cout << "HHHHHHHHHHHHHHHHH2\n";
                 if (postHandler->getCGIState() && this->cgiHandler){
                     this->Cgi = true;
                     responses[client_fd] = cgiHandler->executeScript();
@@ -1252,6 +1273,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                                 return ;
                             }
                             this->responses[client_fd] = statusMap[this->status];
+                            use_final_res = true;
                         return;
                     }
                         is_Complet = true;
@@ -1263,8 +1285,10 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             
         }
         if (postHandler->isRequestComplete() && !postHandler->getCGIState()) {
+            std::cout << "HHHHHHHHHHHHHHHHH\n";
             is_Complet = true;
             this->responses[client_fd] = statusMap[this->status];
+            use_final_res = true;
         }
         
     }

@@ -94,6 +94,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
                             return;
                         }
                         std::cerr << "send failed: " << strerror(errno) << std::endl;
+                        use_getresponse_fn = false;
                         closeConnection(fd);
                         return;
                     }
@@ -115,6 +116,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
                             return;
                         }
                         std::cerr << "send failed: " << strerror(errno) << std::endl;
+                        use_getresponse_fn = false;
                         closeConnection(fd);
                         return;
                     }
@@ -134,6 +136,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
                         return;
                     }
                     std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    use_getresponse_fn = false;
                     closeConnection(fd);
                     return;
                 }
@@ -145,6 +148,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             // event.events = EPOLLIN;
             // event.data.fd = fd;
             // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            use_getresponse_fn = false;
             closeConnection(fd);
         }
         else if ((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == false && p->getFlagParsingHeader()) && !p->getErrorFromConfig())
@@ -158,6 +162,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
                         return;
                     }
                     std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    use_getresponse_fn = false;
                     closeConnection(fd);
                     return;
                 }
@@ -176,6 +181,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
                         return;
                     }
                     std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    use_getresponse_fn = false;
                     closeConnection(fd);
                     return;
                 }
@@ -187,6 +193,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             // event.events = EPOLLIN;
             // event.data.fd = fd;
             // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            use_getresponse_fn = false;
             closeConnection(fd);
         }
         else if(p->getMethod() == "DELETE" && p->isComplet() == false && p->getFlagParsingHeader() && !p->getErrorFromConfig())
@@ -194,9 +201,10 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
         else
         {
             std::cout << "------------------------------(3)\n";
-            // std::cout << "|" << p->getResponses().find(fd)->second << "|" << std::endl;
+            // std::cout << "|" << p->get_use_final_res()  << "|" << std::endl;
             if(p->get_use_final_res() == true)
             {
+                // std::cout << "|" << p->getResponses().find(fd)->second << "|" << std::endl;
                 std::cout << "================3\n";
                 write_buffers[fd] = p->getResponses().find(fd)->second;
                 if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
@@ -208,6 +216,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
                         }
                         std::cerr << "send failed: " << strerror(errno) << std::endl;
                         closeConnection(fd);
+                        use_getresponse_fn = false;
                         return;
                     }
                     write_buffers.erase(fd);
@@ -218,6 +227,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
             // event.events = EPOLLIN;
             // event.data.fd = fd;
             // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            use_getresponse_fn = false;
             closeConnection(fd);
         }
     }
@@ -228,6 +238,7 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
         // event.events = EPOLLIN;
         // event.data.fd = fd;
         // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+        use_getresponse_fn = false;
         closeConnection(fd);
     }
 }
@@ -253,12 +264,14 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
         p->parse(req, fd, parser);
         client_last_activity[fd] = getCurrentTimeMs();
         if(!p->isValid()){
+            std::cout << "!p->isValid()\n";
             if(p->getErrorFromConfig())
             {
                 // struct epoll_event event;
                 // event.events = EPOLLOUT;
                 // event.data.fd = fd;
                 // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+                use_getresponse_fn =  true;
                 return ;
             }
             if (p->getFlagTimeOUT() && getCurrentTimeMs() - client_request_start[fd] > REQUEST_TIMEOUT) {
@@ -275,6 +288,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
                 // event.events = EPOLLOUT;
                 // event.data.fd = fd;
                 // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+                use_getresponse_fn =  true;
                 return;
             }else if (p->getFlagTimeOUT())
             {
@@ -282,6 +296,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
                 // event.events = EPOLLIN;
                 // event.data.fd = fd;
                 // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+                use_getresponse_fn =  true;
                 return;
             }
             if(p->getMethod() == "GET" && p->getFlagParsingHeader())
@@ -293,44 +308,50 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             else if(p->getMethod() == "DELETE"  && p->getFlagParsingHeader())
                 write_buffers[fd] = p->getResponses().find(fd)->second;
             else
-            {
                 write_buffers[fd] = p->getResponses().find(fd)->second;
-            }
             // struct epoll_event event;
             // event.events = EPOLLOUT;
             // event.data.fd = fd;
             // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            use_getresponse_fn =  true;
             return;
         }
         else if (p->isComplet()) 
         {
+            std::cout << "p->isComplet()\n";
             write_buffers[fd] = p->getResponses().find(fd)->second;
             // struct epoll_event event;
             // event.events = EPOLLOUT;
             // event.data.fd = fd;
             // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            use_getresponse_fn =  true;
             return ;
         }
         else if (p->getMethod() == "POST" && p->getCGIState() && !p->isComplet())
         {
+            std::cout << "(2)\n";
             // struct epoll_event event;
             // event.events = EPOLLOUT;
             // event.data.fd = fd;
             // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            use_getresponse_fn =  true;
             return ;
         }
         else if(p->getMethod() == "GET" || p->getCGIState())
         {
+            std::cout << "(3)\n";
             // struct epoll_event event;
             // event.events = EPOLLOUT;
             // event.data.fd = fd;
             // epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
+            use_getresponse_fn =  true;
             return ;
         }     
     }
+    std::cout << "hanaaaaaaaaaaaa\n";
 }
 
-WebServer::WebServer() : epoll_fd(-1)  {}
+WebServer::WebServer() : epoll_fd(-1) , use_getresponse_fn(false)  {}
         
 WebServer::~WebServer() {
     for (std::vector<int>::const_iterator it = server_fds.begin(); it != server_fds.end(); it++)
@@ -413,8 +434,8 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
 void WebServer::closeConnection(int fd) {
     std::cout << "Closing connection fd: " << fd << std::endl;
     
-
-    // epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+    usleep(10000);
+    // epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 
     shutdown(fd,SHUT_RDWR);
     
@@ -450,14 +471,14 @@ void WebServer::run(ConfigParser &parser) {
                 }
             }
             if(check == 0) {
-                if (events[i].events & EPOLLIN) {
+                if ((events[i].events & EPOLLIN) && use_getresponse_fn == false) {
                     std::cout << "handleClientData1" << std::endl;
                     handleClientData(events[i].data.fd, parser);
                 }
-                if(events[i].events & EPOLLOUT)
+                if((events[i].events & EPOLLOUT ) && use_getresponse_fn == true)
                 {
                     std::cout << "getResponse1" << std::endl;
-                    getResponse(events[i].data.fd,parser);;
+                    getResponse(events[i].data.fd,parser);
                 }
                 if ((events[i].events & EPOLLERR) || 
                     (events[i].events & EPOLLHUP) ) {
@@ -468,7 +489,6 @@ void WebServer::run(ConfigParser &parser) {
             check = 0;
         }
         checkInactiveClients();
-
     }
 }
 
