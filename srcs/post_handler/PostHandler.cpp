@@ -30,7 +30,7 @@ PostHandler::~PostHandler() {
 }
 
 void PostHandler::storeContentTypes() {
-    // Text formats
+
     contentTypes["text/html"] = "html";
     contentTypes["text/css"] = "css";
     contentTypes["text/xml"] = "xml";
@@ -40,7 +40,7 @@ void PostHandler::storeContentTypes() {
     contentTypes["application/json"] = "json";
     contentTypes["text/csv"] = "csv";
     
-    // Image formats
+
     contentTypes["image/gif"] = "gif";
     contentTypes["image/jpeg"] = "jpeg";
     contentTypes["image/jpg"] = "jpg";
@@ -51,7 +51,7 @@ void PostHandler::storeContentTypes() {
     contentTypes["image/bmp"] = "bmp";
     contentTypes["image/tiff"] = "tiff";
     
-    // Audio formats
+
     contentTypes["audio/mpeg"] = "mp3";
     contentTypes["audio/wav"] = "wav";
     contentTypes["audio/ogg"] = "ogg";
@@ -60,7 +60,6 @@ void PostHandler::storeContentTypes() {
     contentTypes["audio/flac"] = "flac";
     contentTypes["audio/midi"] = "mid";
     
-    // Video formats
     contentTypes["video/mp4"] = "mp4";
     contentTypes["video/webm"] = "webm";
     contentTypes["video/x-msvideo"] = "avi";
@@ -68,8 +67,7 @@ void PostHandler::storeContentTypes() {
     contentTypes["video/quicktime"] = "mov";
     contentTypes["video/x-ms-wmv"] = "wmv";
     contentTypes["video/x-flv"] = "flv";
-    
-    // Application formats
+
     contentTypes["application/pdf"] = "pdf";
     contentTypes["application/msword"] = "doc";
     contentTypes["application/vnd.openxmlformats-officedocument.wordprocessingml.document"] = "docx";
@@ -85,14 +83,14 @@ void PostHandler::storeContentTypes() {
     contentTypes["application/x-msdownload"] = "exe";
     contentTypes["application/x-shockwave-flash"] = "swf";
     
-    // Web fonts
+
     contentTypes["font/woff"] = "woff";
     contentTypes["font/woff2"] = "woff2";
     contentTypes["font/ttf"] = "ttf";
     contentTypes["font/otf"] = "otf";
     contentTypes["application/vnd.ms-fontobject"] = "eot";
     
-    // Programming and configuration
+
     contentTypes["application/x-httpd-php"] = "php";
     contentTypes["text/x-python"] = "py";
     contentTypes["text/x-java-source"] = "java";
@@ -128,7 +126,6 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
     gettimeofday(&tv, NULL);
     std::ostringstream filename;
 
-    std::cout << "Debug - location_path: '" << location_path << "'" << std::endl;
     
     if (directoryExists(location_path))
     {
@@ -147,40 +144,19 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
         
     }
      else{
-        std::cout << "LOCATION ===>  " << location_path << std::endl;
                    
             if (!fileExists(location_path)) {
-                std::cout << "404 Not Found" << std::endl;
                 status = 404;
                 return "";
             } else {
-                std::cout << "File exists." << std::endl;
                 status = 403;
                 return "";
             }
         
         status = 404;
-        std::cout << "dddddddddddddddddd\n";
         return "";
     }
-    // else{
-    //     std::cout << "LOCATION ===>  " << location_path << std::endl;
-    //     if (!location_path.empty()){
-    //         size_t pos = location_path.find_last_of('/');
-    //         if (pos != std::string::npos){
-    //             std::string file = location_path.substr(pos + 1, location_path.length());
-    //             if (!fileExists(file)) {
-    //                 std::cout << "404 Not Found" << std::endl;
-    //             } else {
-    //                 std::cout << "File exists." << std::endl;
-    //             }
-    //         }
-    //     }
-
-    //     status = 404;
-    //     std::cout << "\n";
-    //     return "";
-    // }
+    
     
     if (!extension.empty()) {
         filename << "." << extension;
@@ -190,6 +166,7 @@ std::string PostHandler::createUniqueFile(const std::string& extension, std::str
     std::ofstream outfile(filename.str().c_str(), std::ios::binary);
     if (!outfile) {
         std::cerr << "Failed to create file: " << filename.str() << std::endl;
+        status = 500;
         return "";
     }
     outfile.close();
@@ -203,9 +180,6 @@ bool PostHandler::fileExistsAndNotEmpty(const std::string& filename) {
 }
 
 std::string PostHandler::getTheValidIndex(std::vector<std::string> index, std::string path) {
-    std::cout << "*****======== PATH ======*****" << std::endl;
-    std::cout << path<< std::endl;
-    std::cout << "*****======== PATH ======*****" << std::endl;
 
 
     if (path.empty() || path[path.length() - 1] != '/') {
@@ -216,7 +190,6 @@ std::string PostHandler::getTheValidIndex(std::vector<std::string> index, std::s
     std::vector<std::string>::iterator it = index.begin();
     while (it != index.end()) {
         tmp = path + *it;
-        std::cout << "index ===> " << *it << std::endl;
         if (fileExistsAndNotEmpty(tmp)) {
             return tmp; 
         }
@@ -243,7 +216,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         std::map<std::string, std::string>::iterator contentLengthIt = headers.find("Content-Length");
         if (contentLengthIt != headers.end()) {
             contentLength = std::strtoul(contentLengthIt->second.c_str(), NULL, 10);
-            std::cout << "contentlenght " << contentLength << std::endl;
         }
     }
     this->expectedLength = contentLength;
@@ -259,15 +231,12 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
 
     LocationAndPath = getCorrectPath(locations, data_req.getPath());
     correctPath = LocationAndPath.first;
-    std::cout << "************* CORRECT PATH ( " << correctPath << " )*****************" << std::endl;
     size_t Ppos = correctPath.find(".");
     if ( Ppos != std::string::npos && Ppos + 1 < correctPath.length() && correctPath[Ppos + 1] != '/' && Ppos == 0)
     {
-        correctPath = correctPath.substr(0, Ppos + 1) + "/" + correctPath.substr(Ppos + 1, correctPath.length());  
-        std::cout << "************* CORRECT PATH UPDATE ( " << correctPath << " )*****************111" << std::endl;
+        correctPath = correctPath.substr(0, Ppos + 1) + "/" + correctPath.substr(Ppos + 1, correctPath.length());
     }
     if (correctPath.empty()){
-        std::cout << "Location Not found 404 \n";
         this->status = 404;
         return;
     }
@@ -283,7 +252,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     int c = 0;
     if (p.find(".php") != std::string::npos || p.find(".py") != std::string::npos || p.find(".pl") != std::string::npos)
     {
-        // std::cout << "hnaaaa2222222222222222222222222222222222222222\n";
         this->scriptPath = p;
         c = 1;
         fp = p.find_last_of("/", p.length());
@@ -292,12 +260,13 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     }
     else if (p.find_last_of(".", p.length()) != std::string::npos)
         c = 2;
-    std::cout << "P " << p << std::endl;
     location = LocationAndPath.second;
+    std::string upload_store_path = location.getUploadStore();
+    if (!upload_store_path.empty() && !location.getCgi())
+        correctPath = upload_store_path;
     std::vector<std::string> allow_methods = location.getMethods();
     if(std::find(allow_methods.begin(), allow_methods.end(), "POST") == allow_methods.end())
     {
-        std::cout << "POST is not allowed." << std::endl;
         status = 405;
         return;
     }
@@ -317,56 +286,19 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
         
         this->cgi_pass = location.getCgiPass();
         this->autoIndex = location.getAutoindex();
-        std::cout << "=============  IS CGI ========" << isChunked << std::endl;
         if (c != 1)
-        {
             location_path = correctPath;
-            std::cout << "if111 " <<location_path << std::endl;
-        }
-        else{
+        else
             location_path = l;
-            std::cout << "else " <<location_path << std::endl;
-        }
-        // if (c == 1)
-        // {
-        //     // if (this->autoIndex)
-        //     // {
-        //         std::cout << "iffffff " <<location_path << std::endl;
-        //         sleep(3);
-        //         // // indexV = location.getIndex();
-                
-        //         // // std::string tmp = getTheValidIndex(indexV, location_path);
-        //         // std::string tmp = location_path.substr(location_path.find_last_of('/') + 1, location_path.length());
-        //         // std::cout << "TMP ========= " << tmp << std::endl;
-        //         // if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos || tmp.find(".perl") != std::string::npos))
-        //         // {
-        //         //     location_path = tmp;
-        //         //     this->scriptPath = location_path;
-        //         //     c = 1;
-        //         //     fp = location_path.find_last_of("/", p.length());
-        //         //     l = location_path.substr(0, fp);
-        //         //     fileN = location_path.substr(fp + 1, location_path.length());
-        //         // }
-        //         // else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos && tmp.find(".perl") == std::string::npos)){
-        //         //     this->status = 404;
-        //         //     std::cout << "is a CGI but i don't have the extension that i should interprete it \n";
-        //         //     return;
-        //         // }
-        //     // }
-        //     // else{}
+ 
 
 
-
-        // }
         if (c != 1){
-            std::cout << "elseeee " <<location_path << std::endl;
-            // sleep(10);
             if (this->autoIndex)
             {
                 indexV = location.getIndex();
                 
                 std::string tmp = getTheValidIndex(indexV, location_path);
-                // std::cout << "TMP ========= " << tmp << std::endl;
                 if (!tmp.empty() && (tmp.find(".php") != std::string::npos || tmp.find(".py") != std::string::npos || tmp.find(".pl") != std::string::npos))
                 {
                     location_path = tmp;
@@ -378,12 +310,10 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
                 }
                 else if (tmp.empty() || (tmp.find(".php") == std::string::npos && tmp.find(".py") == std::string::npos && tmp.find(".pl") == std::string::npos)){
                     this->status = 403;
-                    std::cout << "is a CGI but i don't have the extension that i should interprete it \n";
                     return;
                 }
             }
             else{
-                // std::cout << "PPPPPPPPPPPP\n";
                 this->isCGI = false;
                 this->status = 403;
                 return;
@@ -391,21 +321,17 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
 
         }
     }else{
-        // std::cout << "=============  IS NOT CGI ========\n";
         this->isCGI = false;
         c = 2;
     }
     if (c != 1)
     {
         location_path = correctPath;
-        std::cout << "if " << location_path << std::endl;
     }
     else{
         location_path = l;
-        std::cout << "else " <<location_path << std::endl;
     }
 
-    std::cout << "Location Path" << location_path << std::endl;
     this->maxBodySize = server.getClientMaxBodySize();
     
     std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
@@ -420,34 +346,22 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
             else{
                 size_t pointP = fileN.find(".");
                 if (pointP != std::string::npos)
-                {
                     this->extension = fileN.substr(pointP + 1, fileN.length());
-                    std::cout << "extension " << extension << std::endl;
-                }
-                else{
-                    std::cout << "==============> " << fileN << std::endl;
-                }
             }
         }
         else
-            std::cout << "Content Type Unsupported" << std::endl;
-            // shoudl check this !
+            status = 415;
+           
     }
     if (expectedLength > maxBodySize && maxBodySize > 0 && expectedLength > 0){
-        std::cout << "This file has a content lenght greater then max body size : " << std::endl;
-        std::cout << "Payload Too Large (413)" << std::endl;
         isComplete = true;
         this->status = 413;
         return;
     }else{
         this->filename = createUniqueFile(extension, location_path);
         if (status != 200)
-        {
-            std::cout << status << "!!!!\n";
             return;
-        }
         if (filename.empty()) {
-            std::cerr << "Failed to Create File (500)" << std::endl;
             status = 500;
             return;
         }
@@ -469,17 +383,12 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     
     if (!data_req.getBody().empty()) {
         if (isChunked) {
-            std::cout << "here processChunkedData " << std::endl;
             processChunkedData(data_req.getBody());
         } else {
             processData(data_req.getBody());
-            std::cout << "here processData " << std::endl;
         }
     }
     status = 200;
-    
-
-
 }
 
 
@@ -504,8 +413,6 @@ std::string PostHandler::extractContentType(const std::string& headers) {
 
 
 void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_req, std::string& location_path){
-    (void)data_req;
-    (void)location_path;
     
     initBody = this->leftoverData + initBody;
     std::string body = initBody;
@@ -550,11 +457,7 @@ void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_r
                     std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
                     if (itT != contentTypes.end()) {
                         extension = itT->second;
-                    } else {
-                        std::cout << "Extension not found for content type: " << contentType << std::endl;
-                        // extension = "txt";
-                    }
-                    std::cout << "extension " << this->extension << std::endl;
+                    } 
                     if (this->file.is_open())
                     {
                         this->file.flush();
@@ -564,7 +467,7 @@ void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_r
                     if (this->status == 404)
                         return;
                     if (!filename.empty()) {
-                        std::cout << "Created file: " << filename << std::endl;
+                        this->status = 200;
                     }
                     else{
                         this->status = 500;
@@ -573,6 +476,8 @@ void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_r
                     file.open(filename.c_str(), std::ios::binary);
                     if (!file) {
                         std::cerr << "Failed to open file for writing: " << filename << std::endl;
+                        this->status = 500;
+                        return;
                     }
                     body = body.substr(hPos + 4, body.length());
                 }
@@ -583,24 +488,18 @@ void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_r
             if (check == 0){
                 if (body.length() > sep.length())
                 {
-                    // std::cout << "this scope 2\n";
                     this->leftoverData = body.substr(body.length() - sep.length(), body.length());
                     this->file << body.substr(0, body.length() - sep.length());
                     
                 }else{
-                    // std::cout << "this scope 3\n";
                     this->leftoverData = body;
                 }
             }else{
-                
-                // std::cout << "this scope 1\n";
                 this->file << body;
             }
         }
         if (this->check == 1)
         {
-            // std::cout << " this check ==>  "  << std::endl;
-
             this->file.flush();
             this->file.close();
             isComplete = true;
@@ -621,80 +520,61 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
     Server server = parser.getServer(data_req.hostMethod(), data_req.portMethod());
     locations = server.getLocations();
     
-    // std::string location_path = "";
-    // Location location;
+    std::string correctPath = "";
+    std::pair<std::string, Location> LocationAndPath;
 
-    // std::map<std::string, Location>::iterator locationIt = locations.find(data_req.getPath());
-    // if (locationIt != locations.end()) {
-    //     location = locationIt->second;
-        std::string correctPath = "";
-        std::pair<std::string, Location> LocationAndPath;
-
-        LocationAndPath = getCorrectPath(locations, data_req.getPath());
-        correctPath = LocationAndPath.first;
-        std::cout << "************* " << correctPath << " *****************" << std::endl;
-        if (correctPath.empty()){
-            std::cout << "Location Not found 404 \n";
-            this->status = 404;
-            return;
-        }
-        std::string location_path = "";
-        Location location ;
-        // std::string p = correctPath;
-        location = LocationAndPath.second;
-        if (location.getCgi())
-        {
-            if (data_req.isBoundary())
-            {
-                std::cout << "=============  IS CGI and Boundary ========\n";
-                this->status = 400;
-                std::cout << "is a CGI but the boundaty cannot support the CGI  \n";
-                return;
-            }
-            std::cout << "=============  IS CGI FROM BOUNDARY ========\n";
-            this->isCGI = true;
-            this->cgi_pass = location.getCgiPass();
-            this->autoIndex = location.getAutoindex();
-            status = 400;
-            return;
-
-        }else{
-            // std::cout << "=============  IS NOT CGI FROM BOUNDARY ========\n";
-            this->isCGI = false;
-        }
-        location_path = correctPath;
-    
-    //  else {
-    //     std::cout << "Location not found: " << data_req.getPath() << std::endl;
-    //     status = 404;
-    //     return;
-    // }
-
+    LocationAndPath = getCorrectPath(locations, data_req.getPath());
+    correctPath = LocationAndPath.first;
+    if (correctPath.empty()){
+        this->status = 404;
+        return;
+    }
+    std::string location_path = "";
+    Location location ;
+    location = LocationAndPath.second;
     std::vector<std::string> allow_methods = location.getMethods();
     if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
     
         std::string body = initBody; 
         processBoundaryData(body, data_req, location_path);
     } else {
-        std::cout << "Method POST not allowed\n";
         status = 405;
         return;
     }
-}
+    std::string upload_store_path = location.getUploadStore();
+    if (!upload_store_path.empty())
+        correctPath = upload_store_path;
+    if (location.getCgi())
+    {
+        if (data_req.isBoundary())
+        {
+            this->status = 400;
+            return;
+        }
+        this->isCGI = true;
+        this->cgi_pass = location.getCgiPass();
+        this->autoIndex = location.getAutoindex();
+        status = 400;
+        return;
 
+    }else{
+        this->isCGI = false;
+    }
+    location_path = correctPath;
+
+}
 
 
 void PostHandler::processData(const std::string& data) {
 
     if (!file.is_open()) {
+        status = 500;
         std::cerr << "Error: File is not open when trying to process data" << std::endl;
         return;
     }
     
     file << data;
     
-
-    // body += data;
 
     bodyLength += data.length();
 
@@ -711,7 +591,6 @@ void PostHandler::processData(const std::string& data) {
 void PostHandler::processChunkedData(const std::string& data) {
 
     buffer.append(data);
-  
     processBufferedData();
 }
 
@@ -756,7 +635,6 @@ void PostHandler::processBufferedData() {
                 size_t bytesRemaining = currentChunkSize - currentChunkBytesRead;
                 size_t bytesAvailable = buffer.length() - pos;
                 
-                // Add protection against zero-length reads
                 if (bytesRemaining == 0) {
                     chunkState = READING_TRAILING_CRLF;
                     break;
@@ -795,6 +673,7 @@ void PostHandler::processBufferedData() {
                     isComplete = true;
                     file.close();
                     std::cerr << "Invalid chunk trailing CRLF" << std::endl;
+                    status = 400;
                     buffer.clear();
                     bufferOffset = 0;
                     return;
@@ -818,8 +697,7 @@ void PostHandler::processBufferedData() {
             bufferOffset = 0;
         }
     }
-    
-  
+
     buffer.clear();
     bufferOffset = 0;
 }
@@ -891,9 +769,6 @@ std::pair<std::string, Location> PostHandler::getCorrectPath(const std::map<std:
             }
             std::string result = root + rest;
             
-            
-            std::cout << "============ ROOT " << root << std::endl; 
-            std::cout << "============ RESULT " << result << std::endl; 
             return std::make_pair(result, it->second);
         }
 
@@ -912,7 +787,7 @@ std::pair<std::string, Location> PostHandler::getCorrectPath(const std::map<std:
         }
     }
 
-    std::cout << "No matching location found.\n";
+    status = 404;
     return std::make_pair("", Location());
 }
 

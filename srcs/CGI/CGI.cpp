@@ -15,7 +15,6 @@ CGI::CGI(){
 }
 
 CGI::~CGI(){
-    // std::cout << "destractor " << std::endl;
     if (flag >= 1 && flag <= 3 && pid > 0) {
         kill(pid, SIGKILL);
         waitpid(pid, NULL, 0);
@@ -32,7 +31,7 @@ ssize_t CGI::getFileSize(int fd) {
     if (ioctl(fd, FIONREAD, &bytes_available) == 0) {
         return static_cast<ssize_t>(bytes_available);
     }
-    return -1;  // Error
+    return -1;
 }
 
 void CGI::setVarsEnv(dataCGI& data) {
@@ -84,7 +83,6 @@ char** CGI::buildEnvp(std::map<std::string, std::string>& env) {
 std::string CGI::executeScript(){
 
     if (flag >= 0 && flag <= 4) {
-        std::cout << "++++++++++++++++++++++\n";
         if (isTimeout()) {
             
             std::cout << "CGI timeout exceeded, terminating process\n";
@@ -99,10 +97,9 @@ std::string CGI::executeScript(){
             
             
             if (envVars["REQUEST_METHOD"] == "POST") {
-                if (unlink(this->file.c_str()) == 0) {
-                    std::cout << "File deleted successfully.\n";
-                } else {
+                if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
+                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
             
@@ -113,15 +110,12 @@ std::string CGI::executeScript(){
     }
 
     if (flag == 0){
-        std::cout << "0\n";
         if (envVars["REQUEST_METHOD"] == "POST") {
             if (access(this->file.c_str(), R_OK) == -1) {
-                std::cout << "try to remove tmp file1\n";
             if (envVars["REQUEST_METHOD"] == "POST") {
-                if (unlink(this->file.c_str()) == 0) {
-                    std::cout << "File deleted successfully.\n";
-                } else {
+               if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
+                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
                 this->status = 500;
@@ -130,12 +124,10 @@ std::string CGI::executeScript(){
             }
         }
         if (access(this->passCgi.c_str(), X_OK) == -1) {
-            std::cout << "try to remove tmp file2\n";
             if (envVars["REQUEST_METHOD"] == "POST") {
-                if (unlink(this->file.c_str()) == 0) {
-                    std::cout << "File deleted successfully.\n";
-                } else {
+                if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
+                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
             this->status = 500;
@@ -143,12 +135,10 @@ std::string CGI::executeScript(){
             return "";
         }
         if (pipe(pipeFd) == -1){
-            std::cout << "try to remove tmp file3\n";
             if (envVars["REQUEST_METHOD"] == "POST") {
-                if (unlink(this->file.c_str()) == 0) {
-                    std::cout << "File deleted successfully.\n";
-                } else {
+                if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
+                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
             flag = 5;
@@ -158,7 +148,6 @@ std::string CGI::executeScript(){
         flag = 1;
     }else if (flag == 1)
     {
-        std::cout << "1\n";
         char **envp = buildEnvp(this->envVars);
         char* argv[3];
         argv[0] = (char*)this->passCgi.c_str();
@@ -166,7 +155,7 @@ std::string CGI::executeScript(){
         argv[2] = NULL;
         this->pid = fork();
         if (this->pid == -1) {
-            perror("fork failed");
+            std::cerr << "Error fork failed" << std::endl;
             this->status = 500;
             for (size_t i = 0; envp[i]; ++i)
             free(envp[i]);
@@ -179,12 +168,12 @@ std::string CGI::executeScript(){
             
             if (envVars["REQUEST_METHOD"] == "POST") {
                 if (freopen(this->file.c_str(), "r", stdin) == NULL) {
-                    perror("Failed to redirect stdin with freopen");
+                    std::cerr << "Failed to redirect stdin with freopen" << std::endl;
                     exit(1);
                 }
             } else {
                 if (freopen("/dev/null", "r", stdin) == NULL) {
-                    perror("Failed to redirect stdin to /dev/null");
+                    std::cerr << "Failed to redirect stdin to /dev/null" << std::endl;
                     exit(1);
                 }
             }
@@ -193,27 +182,23 @@ std::string CGI::executeScript(){
             close(pipeFd[1]);
             execve(argv[0], argv, &envp[0]);
             perror("execve failed");
+            std::cerr << "Error execve failed" << std::endl;
             exit(1);
             
         }
-        // this->startTime = getCurrentTimeMs();
         flag = 2;
     }else if (flag == 2){
-        std::cout << "2\n";
         
         int status;
         pid_t result = waitpid(this->pid, &status, WNOHANG);
         
         if (result > 0) {
             if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-                std::cout << "CGI script exited with error code: " << WEXITSTATUS(status) << std::endl;
                 this->status = 500;
-                std::cout << "try to remove tmp file4\n";
                 if (envVars["REQUEST_METHOD"] == "POST") {
-                    if (unlink(this->file.c_str()) == 0) {
-                        std::cout << "File deleted successfully.\n";
-                    } else {
+                   if (unlink(this->file.c_str()) != 0) {
                         perror("Error deleting the file");
+                        std::cerr << "Error deleting the file" << std::endl;
                     }
                 }
                 flag = 5;
@@ -221,14 +206,12 @@ std::string CGI::executeScript(){
             }
             flag = 3; 
         } else if (result == -1) {
-            perror("waitpid failed");
+            std::cerr << "Error waitpid failed" << std::endl;
             this->status = 500;
-            std::cout << "try to remove tmp file5\n";
             if (envVars["REQUEST_METHOD"] == "POST") {
-                if (unlink(this->file.c_str()) == 0) {
-                    std::cout << "File deleted successfully.\n";
-                } else {
+                if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
+                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
             flag = 5;
@@ -237,20 +220,16 @@ std::string CGI::executeScript(){
         
         if (flag == 3)
         {
-            std::cout << "try to remove tmp file6\n";
             if (envVars["REQUEST_METHOD"] == "POST") {
-                if (unlink(this->file.c_str()) == 0) {
-                    std::cout << "File deleted successfully.\n";
-                } else {
+                if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
+                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
         }
     }
     else if (flag == 3){
         size = getFileSize(pipeFd[0]);
-        std::cout << "size = " << size << std::endl;
-        std::cout << "3\n";
         char buffer[1024];
         ssize_t bytesRead;
         std::string output = "";
@@ -262,7 +241,6 @@ std::string CGI::executeScript(){
         if (bytesRead <= 0 || output.empty())
         {
             flag = 5;
-            std::cout << "end of file\n";
             return "";
         }
         std::string response;
@@ -286,17 +264,13 @@ std::string CGI::executeScript(){
         flag = 4;
         if (bytesRead < 1024 || totat_bytes_read >= size)
             flag = 5;
-            // std::cout << "{" << response << "}" << std::endl;
         return response; 
             
     }else if (flag == 4){
         char buffer[1024];
         ssize_t bytesRead;
         std::string output = "";
-        std::cout << "HNA#\n";
         bytesRead = read(pipeFd[0], buffer, sizeof(buffer));
-        std::cout << "4\n";
-        // std::cout << bytesRead << std::endl;
         if (bytesRead > 0) 
             output.append(buffer, bytesRead);
         if (bytesRead <= 0 || output.empty())
@@ -306,7 +280,6 @@ std::string CGI::executeScript(){
             return "";
         }
         totat_bytes_read = totat_bytes_read + bytesRead;
-        // std::cout << "*{" << output << "}*" << std::endl;
         if (bytesRead < 1024 || totat_bytes_read >= size)
             flag = 5;
         return output;

@@ -734,8 +734,8 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
                 return ("<h1>500 Internal Server Error</h1>");
             }
             cgi_flag = cgiHandler->getCGIFlag();
-            std::cout << "last line b\n";
-            std::cout << " cgi_flag = " <<cgi_flag << "\n";
+            // std::cout << "last line b\n";
+            // std::cout << " cgi_flag = " <<cgi_flag << "\n";
             return (response_cgi);
         }
     }

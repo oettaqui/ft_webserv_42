@@ -25,7 +25,6 @@ class GetHandler;
 class PostHandler;
 class ParsRequest{
     private:
-        // new member
         GetHandler* getHandler;
         DeleteHandler* deleteHandler;
         std::string method;
@@ -41,7 +40,6 @@ class ParsRequest{
         bool is_chunked;
         bool is_boundary;
         bool is_Complet;
-        // add now
         int client_fd;
         std::map<int,std::string>  responses;
         std::vector<std::string> split(const std::string& str, char delim);
@@ -94,7 +92,6 @@ class ParsRequest{
         const int& portMethod() const;
         const std::string& hostMethod() const;
         bool isComplet() const;
-        // add now 
         const int& getClientFd() const;
         const std::map<int,std::string>& getResponses() const;
         void setResponses(std::string resp);
@@ -105,20 +102,16 @@ class ParsRequest{
         
         int getFlagCGI() const;
         bool getFlagTimeOUT() const;
-        ///
         bool getErrorFromConfig() const;
         void setErrorFromConfig();
         bool getErrorReadComplete() const;
         void setErrorReadComplete();
-        ///
         bool getFlagParsingHeader() const;
         int getStatus() const;
         void trim_crlf(std::string &str);
-        //
         std::string readSmallFile(std::string filePath);
         std::string getFileExtension(const std::string& filename);
         size_t getFileSize(const std::string& filename);
-        ////
         std::string normalizePath(const std::string& path);
         bool get_use_final_res() const;
     };
