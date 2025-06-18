@@ -7,7 +7,12 @@ long WebServer::getCurrentTimeMs() {
 }
 
 bool WebServer::setNonBlocking(int sockfd) {
-    if (fcntl(sockfd, F_SETFL,O_NONBLOCK) == -1) {
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    if (flags == -1) {
+        std::cerr << "fcntl F_GETFL failed" << std::endl;
+        return false;
+    }
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
         std::cerr << "fcntl F_SETFL failed" << std::endl;
         return false;
     }
@@ -346,7 +351,6 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
 
 void WebServer::closeConnection(int fd) {
     std::cout << "Closing connection fd: " << fd << std::endl;
-    
     usleep(10000);
     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 

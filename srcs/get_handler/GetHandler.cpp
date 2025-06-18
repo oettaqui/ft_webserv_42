@@ -483,8 +483,18 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         }
     }
     if (content.empty() && check_if == 0) {
-        statusCode = 404;
-        status_message = "Not Found";
+        int not_found = 0;
+        if(access(index_file.c_str(), F_OK) == 0)
+        {
+            statusCode = 403;
+            status_message = "Forbidden";
+            not_found = 1;
+        }
+        else
+        {
+            statusCode = 404;
+            status_message = "Not Found";
+        }
         std::map<int, std::string>::const_iterator itse = server_socket.getErrorPages().find(statusCode);
         if(itse != server_socket.getErrorPages().end())
         {
@@ -499,7 +509,11 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         contentType = "text/html";
         contentLength = 22;
         generate_header(0);
-        return generateResponse("<h1>404 Not Found</h1>", request_data);
+        if(not_found == 0)
+            return generateResponse("<h1>404 Not Found</h1>", request_data);
+        else
+            return generateResponse("<h1>403 Forbidden</h1>", request_data);
+
     }
     return generateResponse(content, request_data);
 }
