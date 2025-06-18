@@ -84,6 +84,7 @@ class DeleteHandler {
         void storeContentTypes(ParsRequest &request_data);
         bool get_is_true_parse() const;
         bool get_use_final_res() const;
+        std::string createRedirectResponse(int statusCode, const std::string& location);
 };
 
 #endif

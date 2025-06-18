@@ -110,16 +110,7 @@ bool ConfigParser::parseLine(const std::string& line, Server& server) {
     return true;
 }
 
-
-// bool ConfigParser::check_root(std::string &value_p) {
-//     if (value_p.length() >= 2 && value_p.substr(0, 2) == "./") {
-//         return true;
-//     }
-//     return false;
-// }
-
 bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locationLine, Server& server) {
-    // Extract location path
     size_t pathStart = locationLine.find(" ") + 1;
     size_t pathEnd = locationLine.find(" {");
     if (pathEnd == std::string::npos)
@@ -156,15 +147,8 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
             value = value.substr(0, value.length() - 1);
         
         trim(value);
-
-        // Parse location directives
         if (directive == "root")
-        {
-            // if(check_root(value))
             location.setRoot(value);
-            // else
-                // location.setRoot("./" + value);
-        }
         else if (directive == "allow_methods") {
             size_t start = 0, end;
             while ((end = value.find(" ", start)) != std::string::npos) {
@@ -226,16 +210,11 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
         }
         else if(directive == "return")
         {
-            // std::cout << "in the server " << server.getHost() << " the location " <<  location.getPath() <<" is with redirection\n";
-            
-            // Check if location already has a redirect
             if (location.hasRedirect()) {
                 std::cerr << "Warning: Multiple redirects in location " << location.getPath() 
                         << " - ignoring: " << line << std::endl;
-                continue;  // Skip this redirect
+                continue;
             }
-            
-            // Parse status code and redirect path
             size_t spacePos = value.find(" ");
             if (spacePos == std::string::npos) {
                 std::cerr << "Error: Invalid return directive syntax: " << line << std::endl;
@@ -245,24 +224,16 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
             std::string statusStr = value.substr(0, spacePos);
             std::string redirectPath = value.substr(spacePos + 1);
             trim(redirectPath);
-            
-            // Convert status code to integer
             int statusCode = atoi(statusStr.c_str());
-            
-            // Validate status code
             if (statusCode < 300 || statusCode >= 400) {
                 std::cerr << "Warning: Invalid redirect status code " << statusCode 
                         << " - using 301 instead" << std::endl;
                 statusCode = 301;
             }
-            
-            // Set redirect in location
             location.setRedirection(statusCode, redirectPath);
             location.setRedirect();
-            // std::cout << "Redirect configured: " << statusCode << " -> " << redirectPath << std::endl;
         }
     }
-
     server.addLocation(path, location);
     return true;
 }
@@ -341,6 +312,6 @@ void ConfigParser::all_server_data() const {
         for (std::map<std::string, Location>::const_iterator iterl = it->getLocations().begin(); iterl != it->getLocations().end(); ++iterl) {
             std::cout << iterl->first << std::endl;
         }
-        std::cout << std::endl; // Print a newline for better readability
+        std::cout << std::endl;
     }
 }

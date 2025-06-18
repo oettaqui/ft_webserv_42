@@ -7,12 +7,7 @@ long WebServer::getCurrentTimeMs() {
 }
 
 bool WebServer::setNonBlocking(int sockfd) {
-    int flags = fcntl(sockfd, F_GETFL, 0);
-    if (flags == -1) {
-        std::cerr << "fcntl F_GETFL failed" << std::endl;
-        return false;
-    }
-    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+    if (fcntl(sockfd, F_SETFL,O_NONBLOCK) == -1) {
         std::cerr << "fcntl F_SETFL failed" << std::endl;
         return false;
     }

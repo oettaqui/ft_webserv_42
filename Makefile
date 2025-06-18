@@ -24,8 +24,6 @@
 
 # .PHONY : all clean fclean re
 
-
-
 NAME		= Webserv
 CXX			= c++
 CPPFLAGS	= -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g3

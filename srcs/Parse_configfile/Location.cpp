@@ -30,7 +30,7 @@ void Location::setAutoindex(bool value)
 { 
     autoindex = value; 
 }
-/////////////
+
 void Location::setRedirect() 
 { 
     redirect = true; 
@@ -51,7 +51,6 @@ const std::map<int, std::string>&  Location::getRedirection() const
     return redirection;
 }
 
-/////////
 
 void Location::setCgi(bool value) 
 { 
@@ -117,9 +116,7 @@ const std::map<std::string, std::string>& Location::getCgiPass() const
     return cgi_pass;
 }
 
-// Validation
 bool Location::isValid() const {
-    // Check required fields
     if (root.empty()) {
         std::cerr << "Error: Root not specified for location " << path << std::endl;
         return false;
@@ -128,19 +125,16 @@ bool Location::isValid() const {
         std::cerr << "Error: No HTTP methods specified for location " << path << std::endl;
         return false;
     }
-    // Validate methods
     for (size_t i = 0; i < methods.size(); ++i) {
         if (methods[i] != "GET" && methods[i] != "POST" && methods[i] != "DELETE") {
             std::cerr << "Error: Invalid HTTP method '" << methods[i] << "'" << std::endl;
             return false;
         }
     }
-    // Special checks for CGI location
     if (cgi && cgi_pass.empty()) {
         std::cerr << "Error: CGI enabled but no handlers specified" << std::endl;
         return false;
     }
-    // Special checks for upload location
     if (!upload_store.empty() && std::find(methods.begin(), methods.end(), "POST") == methods.end()) {
         std::cerr << "Error: Upload location must allow POST method" << std::endl;
         return false;

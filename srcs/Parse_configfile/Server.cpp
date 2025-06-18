@@ -117,9 +117,7 @@ bool Server::parse_host(const std::string &host_p) const
     
 }
 
-// Validation
 bool Server::isValid() const {
-    // Check mandatory fields
     if (host.empty()) {
         std::cerr << "Error: Host not specified" << std::endl;
         return false;
@@ -139,8 +137,6 @@ bool Server::isValid() const {
         std::cerr << "Error: Client max body size not specified" << std::endl;
         return false;
     }
-
-    // Validate all locations
     for (std::map<std::string, Location>::const_iterator it = locations.begin();
          it != locations.end(); ++it) {
         if (!it->second.isValid())
@@ -149,12 +145,3 @@ bool Server::isValid() const {
 
     return true;
 }
-
-// bool Server::hasRequiredLocations() const {
-//     // Check if root location exists
-//     // if (locations.find("/") == locations.end()) {
-//     //     std::cerr << "Error: Root location '/' is required" << std::endl;
-//     //     return false;
-//     // }
-//     return true;
-// }

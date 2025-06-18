@@ -30,11 +30,9 @@ void GetHandler::generate_header(int flag)
 {
     if(check_put_header == 1)
         return ;
-    std::cout << "=======================>\n";
     std::stringstream header;
     if(flag == 0)
     {
-        std::cout << "header for small\n";
         header  << "HTTP/1.1 "<< statusCode << " " <<  status_message << "\r\n"
                 << "Content-Type: " << contentType << "\r\n"
                 << "Content-Length: " << contentLength << "\r\n"
@@ -43,7 +41,6 @@ void GetHandler::generate_header(int flag)
     }
     else
     {
-        std::cout << "header for large\n";
         header  << "HTTP/1.1 "<< statusCode << " " <<  status_message << "\r\n"
         << "Content-Type: " << contentType << "\r\n"
         << "Transfer-Encoding: chunked\r\n"
@@ -71,7 +68,6 @@ std::string GetHandler::getFileExtension(const std::string& filename) {
 
 void GetHandler::storeContentTypes(ParsRequest &request_data) {
     this->client_fd = request_data.getClientFd();
-    // Text formats
     contentTypes["html"] = "text/html";
     contentTypes["css"] = "text/css";
     contentTypes["xml"] = "text/xml";
@@ -80,8 +76,6 @@ void GetHandler::storeContentTypes(ParsRequest &request_data) {
     contentTypes["js"] = "text/javascript";
     contentTypes["json"] = "application/json";
     contentTypes["csv"] = "text/csv";
-    
-    // Image formats
     contentTypes["gif"] = "image/gif";
     contentTypes["jpeg"] = "image/jpeg";
     contentTypes["jpg"] = "image/jpg";
@@ -91,8 +85,6 @@ void GetHandler::storeContentTypes(ParsRequest &request_data) {
     contentTypes["ico"] = "image/x-icon";
     contentTypes["bmp"] = "image/bmp";
     contentTypes["tiff"] = "image/tiff";
-    
-    // Audio formats
     contentTypes["mp3"] = "audio/mpeg";
     contentTypes["wav"] = "audio/wav";
     contentTypes["ogg"] = "audio/ogg";
@@ -100,8 +92,6 @@ void GetHandler::storeContentTypes(ParsRequest &request_data) {
     contentTypes["aac"] = "audio/aac";
     contentTypes["flac"] = "audio/flac";
     contentTypes["mid"] = "audio/midi";
-    
-    // Video formats
     contentTypes["mp4"] = "video/mp4";
     contentTypes["webm"] = "video/webm";
     contentTypes["avi"] = "video/x-msvideo";
@@ -109,8 +99,6 @@ void GetHandler::storeContentTypes(ParsRequest &request_data) {
     contentTypes["mov"] = "video/quicktime";
     contentTypes["wmv"] = "video/x-ms-wmv";
     contentTypes["flv"] = "video/x-flv";
-    
-    // Application formats
     contentTypes["pdf"] = "application/pdf";
     contentTypes["doc"] = "application/msword";
     contentTypes["docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -125,15 +113,11 @@ void GetHandler::storeContentTypes(ParsRequest &request_data) {
     contentTypes["7z"] = "application/x-7z-compressed";
     contentTypes["exe"] = "application/x-msdownload";
     contentTypes["swf"] = "application/x-shockwave-flash";
-    
-    // Web fonts
     contentTypes["woff"] = "font/woff";
     contentTypes["woff2"] = "font/woff2";
     contentTypes["ttf"] = "font/ttf";
     contentTypes["otf"] = "font/otf";
     contentTypes["eot"] = "application/vnd.ms-fontobject";
-    
-    // Programming and configuration
     contentTypes["php"] = "text";
     contentTypes["py"] = "text/x-python";
     contentTypes["java"] = "text/x-java-source";
@@ -167,39 +151,19 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
     }
     if(base_path != ".")
         path = trim(base_path,'.');
-    std::cout << "======================| location_base |============ :: " << location_base << "|" << std::endl;
-    std::cout << "======================| base_path |============ :: " << base_path << "|" << std::endl;
-    std::cout << "======================| path |============ :: " << path << "|" << std::endl;
-    std::cout << "generateAttractivePage\n";
     if(check_root(location_concerned.getRoot()))
-    {
-        std::cout << "hnaa1\n";
         send_href = location_base + path.substr(location_concerned.getRoot().length() - 1,path.length());
-    }
     else if(path.empty() && location_concerned.getPath() == "/")
-    {
         send_href = base_path;
-    }
     else if(path.empty() && location_concerned.getPath() != "/")
-    {
-        std::cout << "hnaa2\n";
         send_href = location_base;
-    }
     else
     {
-        // std::cout << "hnaa2\n";
-        // std::cout << "======================| location_base |============ :: " << location_base << std::endl;
-        // std::cout << "======================| base_path |============ :: " << base_path << std::endl;
-        // std::cout << "======================| path |============ :: " << path << std::endl;
         if(location_concerned.getPath() != "/")
             send_href = location_base + "/" + path.substr(location_concerned.getRoot().length(),path.length());
         else
             send_href = location_base + path.substr(location_concerned.getRoot().length(),path.length());
     }
-    // std::cout << "======================| (2)location_base |============ :: " << location_base << std::endl;
-    // std::cout << "======================| (2)path |============ :: " << path << std::endl;
-    // std::cout << "======================| (2)first send_href |============ :: " << send_href << std::endl;
-    // std::cout << "======================| dak line |============ :: " << location_base << std::endl;
     std::string html = "<!DOCTYPE html>\n"
                        "<html lang=\"en\">\n"
                        "<head>\n"
@@ -267,10 +231,7 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
                        "        <ul class=\"links-list\">\n";
 
     if(location_base == "/" && location_concerned.getRoot() != ".")
-    {
         send_href = send_href.substr(1, send_href.length());
-        // std::cout << "======================| (3)first send_href |============ :: " << send_href << std::endl;
-    }
     for (size_t i = 0; i < items.size(); ++i) {
         std::string url = send_href + "/" + items[i];
         if(isDirectory(base_path + "/" + items[i]))
@@ -289,12 +250,11 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
 
     html += "        </ul>\n"
             "        <div class=\"footer\">\n"
-            "            bchokri 42\n"
+            "            bchokri | oettqui 42\n"
             "        </div>\n"
             "    </div>\n"
             "</body>\n"
             "</html>";
-    // is_true_parse = true;
     contentLength = html.length();
     generate_header(0);
     return html;
@@ -336,7 +296,6 @@ std::vector<std::string> GetHandler::listFiles(const std::string& dirPath) {
 bool GetHandler::isDirectory(const std::string& path) {
     struct stat statbuf;
     if (stat(path.c_str(), &statbuf) != 0) {
-        std::cerr << "Error getting file information: " << path << std::endl;
         return false;
     }
     return S_ISDIR(statbuf.st_mode);
@@ -347,20 +306,10 @@ std::vector<std::string> GetHandler::check_root_location(std::string directoryPa
     std::vector<std::string> fileList = listFiles(directoryPath);
 
     if (!fileList.empty()) {
-        std::cout << "Files in directory '" << directoryPath << "':" << std::endl;
         for (std::vector<std::string>::const_iterator it = fileList.begin(); it != fileList.end(); ++it) {
-            // std::cout << *it << std::endl;
             std::string fullPath = directoryPath + "/" + *it;
-            // if (isDirectory(fullPath)) {
-            //     std::cout << "  (Directory)" << std::endl;
-            // } else {
-            //     std::cout << "  (File)" << std::endl;
-            // }
         }
     } 
-    else {
-        std::cout << "No files found in directory '" << directoryPath << "'" << std::endl;
-    }
     return (fileList);
 }
 
@@ -403,32 +352,17 @@ std::vector<std::string> GetHandler::get_location_server() const
 std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser &parser) {
     final_res = "";
     storeContentTypes(request_data);
-    std::cout << "*/////////////////////////////////////////*\n";
-    std::cout << request_data.getPath() << std::endl;
-    std::cout << "*/////////////////////////////////////////*\n";
     path_location = this->split(url_decode(request_data.getPath()),'/');
     contentType = "text/html";
-    server_socket = parser.getServer(request_data.hostMethod(),request_data.portMethod());
-    std::cout << "\n\nhandleGetRequest\n";
-    std::cout << "this is the path : ***|" <<  request_data.getPath() << "|***" << std::endl;
-    std::cout << "this is the path decoded : ***|" <<  url_decode(request_data.getPath()) << "|***" << std::endl;
+    server_socket = parser.getServer(request_data.hostMethod(),request_data.portMethod());;
     std::vector<std::string> find_vec = get_location_server();
-    if(find_vec.size() != 0)
-    {
-        std::cout << "loaction is  : ==>> " << find_vec.back() <<  std::endl;
-    }
-    else
-        std::cout << " <<== noo loaction  ==>> " <<  std::endl;
-
     if(find_vec.size() != 0 )
     {
-        std::cout << "/////////////////////////////////////////////\n";
         location_base = find_vec.back();
         it_find_location_server = server_socket.getLocations().find(location_base);
         location_concerned =  it_find_location_server->second;
         ingore_element = split(find_vec.back(),'/').size();
         index_file = get_path_to_get();
-        std::cout << "index_file : " << index_file << std::endl;
         if(!(std::find(location_concerned.getMethods().begin(),location_concerned.getMethods().end(),"GET") 
         != location_concerned.getMethods().end()))
         {
@@ -453,8 +387,6 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
         else
         {
             std::string check_string = trim(index_file,'.');
-            std::cout << "check_string : " << check_string << std::endl;
-            std::cout << "location_concerned.getPath() : " << location_concerned.getPath() << std::endl;
             if(location_concerned.hasRedirect() == true)
             {
                 const std::map<int, std::string>::const_iterator redirection = location_concerned.getRedirection().begin();
@@ -463,41 +395,27 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             }
             if(location_concerned.getAutoindex() == true && location_concerned.getPath() == check_string)
             {
-                std::cout << "*************Autooooooooooooooooo(1)indexxxxxxxxxxxxxxx**********\n";
                 if(location_concerned.getIndex().size() != 0 )
                 {
                     for(std::vector<std::string>::const_iterator it_index = location_concerned.getIndex().begin();it_index != location_concerned.getIndex().end();++it_index)
                     {
                         index_file = location_concerned.getRoot() + '/' + *it_index;
-                        std::cout << "index_file : " << index_file << std::endl;
-                        if (access(index_file.c_str(), R_OK) != 0) {
-                            std::cerr << "ERROR: Cannot read original config for backup!" << std::endl;
-                        }
-                        else
+                        if (access(index_file.c_str(), R_OK) == 0) 
                         {
-                            std::cout << "exit file =======-1-1============\n";
                             content = readFile(index_file,request_data);
                             break;
                         }
                             
                     }
                     if(content.empty() && check_if == 0)
-                    {
-                        std::cout << "*************Autoo !content **********\n";
                         content = readFile("./default/index.html",request_data);
-                    }
                 }
                 else
-                {
-                    std::cout << "*************Autoo default **********\n";
                    content = readFile("./default/index.html",request_data);
-                }
                 autoIndex = true;
             }
             else if(!isDirectory(index_file))
-            {
                 content = readFile(index_file,request_data);
-            }
             else if(isDirectory(index_file))
             {
                 fileList = check_root_location(index_file);
@@ -507,13 +425,10 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
     }
     else if(find_vec.size() == 0)
     {
-        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
         location_base = "/";
-        // location_base = request_data.getPath();
         it_find_location_server = server_socket.getLocations().find("/");
         location_concerned =  it_find_location_server->second;
         index_file = get_path_to_get();
-        std::cout << " find_vec.size() == 0 ==> index_file : " << index_file << std::endl;
         if(!(std::find(location_concerned.getMethods().begin(),location_concerned.getMethods().end(),"GET") 
         != location_concerned.getMethods().end()))
         {
@@ -545,43 +460,25 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             }
             if(location_concerned.getAutoindex() == true && request_data.getPath() == "/")
             {
-                std::cout << "*************Autooooooooooooooooo indexxxxxxxxxxxxxxx**********\n";
                 for(std::vector<std::string>::const_iterator it_index = location_concerned.getIndex().begin();it_index != location_concerned.getIndex().end();++it_index)
                 {
                     index_file = location_concerned.getRoot() + '/' + *it_index;
-                    if (access(index_file.c_str(), R_OK) != 0) {
-                        std::cerr << "ERROR: Cannot read original config for backup!" << std::endl;
-                    }
-                    else
-                    {
+                    if (access(index_file.c_str(), R_OK) == 0) {
                         content = readFile(index_file,request_data);
                         break;
                     }
                         
                 }
                 if(content.empty() && check_if == 0)
-                {
-                    std::cout << "*************Autoo !content **********\n";
                     content = readFile("./default/index.html",request_data);
-                }
                 autoIndex = true;
             }
             else if(!isDirectory(index_file))
-            {
-                std::cout << "haaaaaaaaaaaaaaaaa1\n";
                 content = readFile(index_file,request_data);
-            }
             else if(isDirectory(index_file))
             {
-                std::cout << "haaaaaaaaaaaaaaaaa2\n";
                 fileList = check_root_location(index_file);
                 content = generateAttractivePage(fileList,index_file);
-            }
-            else
-            {
-                std::cout << "haaaaaaaaaaaaaaaaa3\n";
-                content = "<h1>test 1</h1>";
-                generate_header(0);
             }
         }
     }
@@ -600,7 +497,6 @@ std::string GetHandler::handleGetRequest(ParsRequest &request_data,ConfigParser 
             }
         }
         contentType = "text/html";
-        std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
         contentLength = 22;
         generate_header(0);
         return generateResponse("<h1>404 Not Found</h1>", request_data);
@@ -618,18 +514,11 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
             contentType = it->second;
         }
     }
-
-    /////////
     if((extension == "php" || extension == "py" || extension == "pl") && (location_concerned.getCgi() && location_concerned.getCgiPass().size() > 0))
     {
         std::string response_cgi;
         if(!cgiHandler)
         {
-            // if (access(filePath.c_str(), R_OK) != 0) {
-            //     std::cerr << "ERROR: Cannot read original config for backup!" << std::endl;
-            //     return "";
-            // }
-            // check_if = 1;
             cgiHandler =  new CGI();
             std::string response;
             dataCGI data;
@@ -664,7 +553,6 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
                         if(check_if == 1)
                         {
                             cgi_error = true;
-                            std::cout << "hereeee1\n";
                             return generateResponse(return_value, request_data);
                         }
                     }
@@ -686,13 +574,9 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
                     if(ex_error != "php" && ex_error != "py" && ex_error != "pl")
                     {
                         std::string return_value = readFile(itse->second,request_data);
-                        std::cout << "check_if : " << check_if << std::endl;
-                        std::cout << "is_true : " << is_true_parse << std::endl;
-                        std::cout << "return_value : " << "|" << return_value << "|" << std::endl;
                         if(check_if == 1)
                         {
                             cgi_error = true;
-                            std::cout << "hereeee2\n";
                             return generateResponse(return_value, request_data);
                         }
                     }
@@ -723,7 +607,6 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
                         if(check_if == 1)
                         {
                             cgi_error = true;
-                            std::cout << "hereeee3\n";
                             return generateResponse(return_value, request_data);
                         }
                     }
@@ -734,17 +617,13 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
                 return ("<h1>500 Internal Server Error</h1>");
             }
             cgi_flag = cgiHandler->getCGIFlag();
-            // std::cout << "last line b\n";
-            // std::cout << " cgi_flag = " <<cgi_flag << "\n";
             return (response_cgi);
         }
     }
     if(!file.is_open())
     {
-        std::cout << "dkhal-------------\n";
         file.open(filePath.c_str(), std::ios::binary);
         if (!file) {
-            std::cout << "failed Read ///////\n";
             return "";
         }
     }
@@ -754,35 +633,27 @@ std::string GetHandler::readFile(const std::string& filePath,ParsRequest &reques
         size = getFileSize(filePath);
         contentLength = size;
     }
-    std::cout << "@@@@@@@@@@@@@ |" << size << "| @@@@@@@@@@@@\n";
-    // char buffer[bufferSize];
-    const ssize_t threshold = 1024*1024; // 1MB threshold
+    const ssize_t threshold = 1024*1024;
     bool useChunked = (size > threshold);
     generate_header(useChunked ? 1 : 0);
     
     if (!useChunked) {
-        // Small file - send with Content-Length
         return readSmallFile(file);
     } else {
-        // Large file - send chunked
         return readLargeFileChunked(file);
     }
 }
 
 std::string GetHandler::readSmallFile(std::ifstream& file) {
-    std::cout << "readSmallFile\n";
     std::string content;
     char buffer[BUFFER_SIZE_G];
     memset(buffer, 0, BUFFER_SIZE_G);
     file.read(buffer, BUFFER_SIZE_G);
     content.append(buffer, file.gcount());
     final_res += content;
-    // std::cout << "-**********************************-\n"; 
-    // std::cout << file.gcount() << std::endl;
-    // std::cout << "**********************************\n"; 
     ssize_t bytesSent = send(client_fd, final_res.c_str(), final_res.length(), 0);
     if (bytesSent <= 0) {
-        std::cout << "Send error: " << strerror(errno) << std::endl;
+        std::cerr << "Send error: " << strerror(errno) << std::endl;
         close(client_fd);
         file.close();
         return "";
@@ -791,7 +662,6 @@ std::string GetHandler::readSmallFile(std::ifstream& file) {
     check_if = 1;
     if(totalBytesSent >= size)
     {
-        // std::cout << "++++++++++++++++++++++++++++++333333333\n";
         file.close();
         is_true_parse = true;
     }
@@ -804,7 +674,7 @@ std::string GetHandler::readLargeFileChunked(std::ifstream& file) {
     size_t increment_value = 0;
     
     if (!isSocketAlive(client_fd)) {
-        std::cout << "Socket is dead, aborting transfer\n";
+        std::cerr << "Socket is dead, aborting transfer\n";
         file.close();
         return "";
     }
@@ -849,9 +719,6 @@ std::string GetHandler::readLargeFileChunked(std::ifstream& file) {
         std::memcpy(combinedBuffer.data() + increment_value, "0\r\n\r\n", 5);
         increment_value += 5;
     }
-    
-    std::cout << "^^^^^^^^^^=> | " << bytesRead << " |<=^^^^^^^^^\n";
-    std::cout << "Total chunk size: " << totalChunkSize << std::endl;
     ssize_t bytesSent = send(client_fd, combinedBuffer.data(), totalChunkSize,MSG_NOSIGNAL);
     if (bytesSent <= 0) {
         std::cout << "Chunk data send error: " << strerror(errno) << std::endl;
@@ -897,10 +764,6 @@ bool GetHandler::getCgiCheck() const
 
 std::string GetHandler::generateResponse(const std::string& content,ParsRequest &request_data) {
     (void)request_data;
-    std::cout << "generateResponsecall\n";
-    std::cout << "check_put_header : " << check_put_header << std::endl;
-    std::cout << "check_if : " << check_if << std::endl;
-    std::cout << "existent_folder : " << existent_folder << std::endl;
     if(cgi_error == true)
     {
         final_res.clear();
@@ -908,7 +771,6 @@ std::string GetHandler::generateResponse(const std::string& content,ParsRequest 
     }
     if(!content.empty() && cgi_check)
     {
-        std::cout << "condition1\n";
         final_res += content;
         if(cgi_flag == 5)
             is_true_parse = true;
@@ -916,7 +778,6 @@ std::string GetHandler::generateResponse(const std::string& content,ParsRequest 
     }
     else if (!content.empty())
     {
-        std::cout << "condition2\n";
         is_true_parse = true;
         final_res += content;
         use_final_res = true;
@@ -951,8 +812,7 @@ std::string GetHandler::createRedirectResponse(int statusCode, const std::string
     std::stringstream response;
     
     response << "HTTP/1.1 " << statusCode << " ";
-    
-    // Add status text
+
     switch(statusCode) {
         case 301: response << "Moved Permanently"; break;
         case 302: response << "Found"; break;

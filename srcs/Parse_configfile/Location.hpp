@@ -17,12 +17,10 @@ private:
     size_t client_max_body_size;      
     std::map<std::string, std::string> cgi_pass; 
     std::map<int, std::string> redirection; 
-    bool redirect;                     
-
+    bool redirect;
 public:
     Location();
     ~Location();
-
     void setPath(const std::string& p);
     void setRoot(const std::string& r);
     void addMethod(const std::string& method);
@@ -42,7 +40,6 @@ public:
     size_t getClientMaxBodySize() const;
     const std::map<std::string, std::string>& getCgiPass() const;
     bool isValid() const;
-    /////////////
     void setRedirect();
     bool hasRedirect() const;
     void setRedirection(const int& status, const std::string& path);
