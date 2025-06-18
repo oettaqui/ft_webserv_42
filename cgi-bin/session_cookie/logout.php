@@ -9,6 +9,6 @@ session_destroy();
 setcookie('user_login', '', time() - 3600, '/');
 
 // Redirect to login page
-echo '<script>window.location.href="http://localhost:8888/cgi-bin/login.php";</script>';
+echo '<script>window.location.href="http://localhost:8888/cgi-bin/session_cookie/login.php";</script>';
 exit();
 ?>

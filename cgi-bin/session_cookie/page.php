@@ -5,7 +5,7 @@ session_start();
 // Check if user is logged in (session and cookie)
 if (!isset($_SESSION['username']) || !isset($_COOKIE['user_login'])) {
     // Redirect to login if not authenticated
-    echo '<script>window.location.href="http://localhost:8888/cgi-bin/login.php";</script>';
+    echo '<script>window.location.href="http://localhost:8888/cgi-bin/session_cookie/login.php";</script>';
     exit();
 }
 
@@ -87,7 +87,7 @@ $username = $_SESSION['username'];
         </div>
         
         <br>
-        <a href="http://localhost:8888/cgi-bin/logout.php" class="logout-btn">Logout</a>
+        <a href="http://localhost:8888/cgi-bin/session_cookie/logout.php" class="logout-btn">Logout</a>
     </div>
 </body>
 </html>

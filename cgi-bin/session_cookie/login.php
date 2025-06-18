@@ -1,31 +1,22 @@
 <?php
-// login.php
 session_start();
 
-// Check if user is already logged in
 if (isset($_SESSION['username']) && isset($_COOKIE['user_login'])) {
-    echo '<script>window.location.href="http://localhost:8888/cgi-bin/page.php";</script>';
+    echo '<script>window.location.href="http://localhost:8888/cgi-bin/session_cookie/page.php";</script>';
     exit();
 }
 
 $error = '';
 
-// Process login form
 if ($_POST) {
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
-    
-    // Simple validation (you should use proper authentication in production)
     if (!empty($username) && !empty($password)) {
-        // Create session
         $_SESSION['username'] = $username;
         $_SESSION['logged_in'] = true;
-        
-        // Create cookie (expires in 1 hour)
         setcookie('user_login', $username, time() + 3600, '/');
-        
-        // Redirect to page.php
-        echo '<script>window.location.href="http://localhost:8888/cgi-bin/page.php";</script>';
+
+        echo '<script>window.location.href="http://localhost:8888/cgi-bin/session_cookie/page.php";</script>';
         exit();
     } else {
         $error = 'Please enter both username and password';
