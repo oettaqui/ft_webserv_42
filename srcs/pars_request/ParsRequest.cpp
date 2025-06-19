@@ -1018,7 +1018,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 
     
             }else if (method == "POST" && !is_chunked && is_boundary){
-                std::cout << "boundary\n";
                 std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
                 if (contentTypeIt != headers.end()) {
                     contentType = contentTypeIt->second;

@@ -424,8 +424,8 @@ void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_r
     tPos = body.find(terminator);
     if (tPos != std::string::npos){
 
-        if (tPos >= 2 && body.substr(tPos-2, 2) == "\r\n") {
-            std::string before_terminator = body.substr(0, tPos-2);
+        if (tPos >= 2 && body.substr(tPos - 2, 2) == "\r\n") {
+            std::string before_terminator = body.substr(0, tPos - 2);
             this->check = 1;
             processBoundaryData(before_terminator, data_req, location_path);
         } else {
@@ -457,11 +457,17 @@ void PostHandler::processBoundaryData(std::string& initBody, ParsRequest &data_r
                     std::map<std::string, std::string>::iterator itT = contentTypes.find(contentType);
                     if (itT != contentTypes.end()) {
                         extension = itT->second;
-                    } 
+                    }else
+                        extension = "";
                     if (this->file.is_open())
                     {
                         this->file.flush();
                         this->file.close();
+                    }
+                    if (extension.empty())
+                    {
+                        this->status = 400;
+                        return;
                     }
                     this->filename = createUniqueFile(extension, location_path);
                     if (this->status == 404)
