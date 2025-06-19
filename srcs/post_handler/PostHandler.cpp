@@ -231,6 +231,9 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
 
     LocationAndPath = getCorrectPath(locations, data_req.getPath());
     correctPath = LocationAndPath.first;
+    
+   
+        
     size_t Ppos = correctPath.find(".");
     if ( Ppos != std::string::npos && Ppos + 1 < correctPath.length() && correctPath[Ppos + 1] != '/' && Ppos == 0)
     {
@@ -561,7 +564,14 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
         correctPath = upload_store_path;
     location_path = correctPath;
     if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
-    
+        if(location.hasRedirect() == true)
+        {
+            const std::map<int, std::string>::const_iterator redirection = location.getRedirection().begin();
+            std::string content = createRedirectResponse(redirection->first,redirection->second);
+            data_req.setResponses(content);
+            data_req.setFlagRedirect();
+            return ;
+        }
         std::string body = initBody; 
         processBoundaryData(body, data_req, location_path);
     } else {
@@ -783,6 +793,8 @@ std::pair<std::string, Location> PostHandler::getCorrectPath(const std::map<std:
         if (lastSlash == std::string::npos || lastSlash == 0) {
             if (lastSlash == 0 && tmp.length() > 0){
                 rest = tmp.substr(1, tmp.length()) + rest;
+                if(!rest.empty())
+                    break;
                 tmp = "/";
             }
             else
@@ -828,24 +840,35 @@ std::string PostHandler::url_decode(std::string url) {
 
 std::string PostHandler::createRedirectResponse(int statusCode, const std::string& location) {
     std::stringstream response;
-    
-    response << "HTTP/1.1 " << statusCode << " ";
-    
-
-    switch(statusCode) {
-        case 301: response << "Moved Permanently"; break;
-        case 302: response << "Found"; break;
-        case 303: response << "See Other"; break;
-        case 307: response << "Temporary Redirect"; break;
-        case 308: response << "Permanent Redirect"; break;
-        default: response << "Redirect"; break;
+    bool isRedirect = (statusCode == 301 || statusCode == 302 || 
+                      statusCode == 303 || statusCode == 307 || 
+                      statusCode == 308);
+    if (isRedirect) {
+        response << "HTTP/1.1 " << statusCode << " ";
+        switch(statusCode) {
+            case 301: response << "Moved Permanently"; break;
+            case 302: response << "Found"; break;
+            case 303: response << "See Other"; break;
+            case 307: response << "Temporary Redirect"; break;
+            case 308: response << "Permanent Redirect"; break;
+        }
+        response << "\r\n";
+        response << "Location: " << location << "\r\n";
+        response << "Content-Length: 0\r\n";
+        response << "Connection: close\r\n";
+        response << "\r\n";
+        
+    } 
+    else {
+        std::string body = location;
+        response << "HTTP/1.1 " << statusCode << " ";
+        response << "Unknown";
+        response << "\r\n";
+        response << "Content-Type: text/plain\r\n";
+        response << "Content-Length: " << body.length() << "\r\n";
+        response << "Connection: close\r\n";
+        response << "\r\n";
+        response << body;
     }
-    
-    response << "\r\n";
-    response << "Location: " << location << "\r\n";
-    response << "Content-Length: 0\r\n";
-    response << "Connection: close\r\n";
-    response << "\r\n";
-    
     return response.str();
 }

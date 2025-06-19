@@ -227,8 +227,8 @@ bool ConfigParser::parseLocation(std::ifstream& file, const std::string& locatio
             int statusCode = atoi(statusStr.c_str());
             if (statusCode < 300 || statusCode >= 400) {
                 std::cerr << "Warning: Invalid redirect status code " << statusCode 
-                        << " - using 301 instead" << std::endl;
-                statusCode = 301;
+                        << " - using 301 instead 🐸" << std::endl;
+                return false;
             }
             location.setRedirection(statusCode, redirectPath);
             location.setRedirect();

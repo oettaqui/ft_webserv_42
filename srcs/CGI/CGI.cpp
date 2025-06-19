@@ -84,11 +84,8 @@ std::string CGI::executeScript(){
 
     if (flag >= 0 && flag <= 4) {
         if (isTimeout()) {
-            
-            std::cout << "CGI timeout exceeded, terminating process\n";
             if (pid > 0) {
-                kill(pid, SIGTERM);  
-                // usleep(100000);
+                kill(pid, SIGTERM);
                 kill(pid, SIGKILL);
                 waitpid(pid, NULL, 0);
             }
@@ -275,7 +272,6 @@ std::string CGI::executeScript(){
             output.append(buffer, bytesRead);
         if (bytesRead <= 0 || output.empty())
         {
-            std::cout << "end of file 1\n";
             flag = 5;
             return "";
         }

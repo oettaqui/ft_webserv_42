@@ -422,7 +422,6 @@ void ParsRequest::parseHeaders(const std::string& header_section) {
     }else{
         if (method == "POST")
         {
-            std::cout << "content type not found " << std::endl;
             is_valid = false;
             header_parsed = false;
             this->status = 400;
@@ -586,7 +585,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     use_final_res = true;
                 }
             }
-
             server_it = parser.getServer_parser(this->host,this->port);
             if(server_it == parser.getServers().end())
             {
@@ -642,6 +640,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     if(FlagRedirect)
                     {
                         is_Complet = true;
+                        use_final_res = true;
                         return ;   
                     }
                     
@@ -852,6 +851,12 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 if (!postHandler)
                     postHandler = new PostHandler();
                 postHandler->initialize(*this, parser);
+                if(FlagRedirect)
+                {
+                    is_Complet = true;
+                    use_final_res = true;
+                    return ;   
+                }
                 if (postHandler->getStatus() != 200 )
                 {
                     this->status = postHandler->getStatus();
@@ -993,8 +998,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     std::map<std::string, std::string> passCGI = postHandler->getCgiPassFomPost();
                     if (!ext.empty())
                     {
-                        std::cout << ext << std::endl;
-                        std::cout << pos << std::endl;
                         std::map<std::string, std::string>::iterator passCGIIT = passCGI.find( "." + ext);
                         if (passCGIIT != passCGI.end()){
                             data.CorrectPassCGI = passCGIIT->second;
@@ -1041,6 +1044,12 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 postHandler->setTer( "--" + boundaryValue + "--");
                 postHandler->setExpextedLength(contentLength);
                 postHandler->initBoundary(body, *this, parser);
+                if(FlagRedirect)
+                {
+                    is_Complet = true;
+                    use_final_res = true;
+                    return ;   
+                }
                 if (postHandler->getStatus() != 200)
                 {
                     this->status = postHandler->getStatus();

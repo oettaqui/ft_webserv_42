@@ -284,7 +284,7 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
             {
                 const std::map<int, std::string>::const_iterator redirection = location_concerned.getRedirection().begin();
                 content = createRedirectResponse(redirection->first,redirection->second);
-                generateResponse(content, request_data);
+                return generateResponse(content, request_data);
             }
             if(location_concerned.getAutoindex() == true && location_concerned.getPath() == check_string)
             {
@@ -339,7 +339,7 @@ std::string DeleteHandler::handleDeleteRequest(ParsRequest &request_data,ConfigP
             {
                 const std::map<int, std::string>::const_iterator redirection = location_concerned.getRedirection().begin();
                 content = createRedirectResponse(redirection->first,redirection->second);
-                generateResponse(content, request_data);
+                return generateResponse(content, request_data);
             }
             if(location_concerned.getAutoindex() == true && request_data.getPath() == "/")
             {
@@ -547,24 +547,36 @@ bool DeleteHandler::get_use_final_res() const
 
 std::string DeleteHandler::createRedirectResponse(int statusCode, const std::string& location) {
     std::stringstream response;
-    
-    response << "HTTP/1.1 " << statusCode << " ";
-
-    switch(statusCode) {
-        case 301: response << "Moved Permanently"; break;
-        case 302: response << "Found"; break;
-        case 303: response << "See Other"; break;
-        case 307: response << "Temporary Redirect"; break;
-        case 308: response << "Permanent Redirect"; break;
-        default: response << "Redirect"; break;
+    bool isRedirect = (statusCode == 301 || statusCode == 302 || 
+                      statusCode == 303 || statusCode == 307 || 
+                      statusCode == 308);
+    if (isRedirect) {
+        response << "HTTP/1.1 " << statusCode << " ";
+        switch(statusCode) {
+            case 301: response << "Moved Permanently"; break;
+            case 302: response << "Found"; break;
+            case 303: response << "See Other"; break;
+            case 307: response << "Temporary Redirect"; break;
+            case 308: response << "Permanent Redirect"; break;
+        }
+        response << "\r\n";
+        response << "Location: " << location << "\r\n";
+        response << "Content-Length: 0\r\n";
+        response << "Connection: close\r\n";
+        response << "\r\n";
+        
+    } 
+    else {
+        std::string body = location;
+        response << "HTTP/1.1 " << statusCode << " ";
+        response << "Unknown";
+        response << "\r\n";
+        response << "Content-Type: text/plain\r\n";
+        response << "Content-Length: " << body.length() << "\r\n";
+        response << "Connection: close\r\n";
+        response << "\r\n";
+        response << body;
     }
-    
-    response << "\r\n";
-    response << "Location: " << location << "\r\n";
-    response << "Content-Length: 0\r\n";
-    response << "Connection: close\r\n";
-    response << "\r\n";
-    
     return response.str();
 }
 
