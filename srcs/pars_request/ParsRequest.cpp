@@ -30,6 +30,7 @@ ParsRequest::ParsRequest() {
     statusMessages[408] = "Request Timeout";
     statusMessages[411] = "Length Required";
     statusMessages[413] = "Payload Too Large";
+    statusMessages[415] = "Unsupported Media Type";
     statusMessages[414] = "URI Too Long";
     statusMessages[500] = "Internal Server Error";
     statusMessages[501] = "Not Implemented";
@@ -133,6 +134,12 @@ ParsRequest::ParsRequest() {
                      "\r\n"
                      "<html><head><title>URI Too Long</title></head>"
                      "<body><h1>Request URI too long</h1></body></html>";
+    statusMap[415] = "HTTP/1.1 415 Unsupported Media Type\r\n"
+                     "Content-Type: text/html\r\n"
+                     "Connection: close\r\n"
+                     "\r\n"
+                     "<html><head><title>Unsupported Media Type</title></head>"
+                     "<body><h1>Unsupported Media Type</h1></body></html>";
     
     statusMap[500] = "HTTP/1.1 500 Internal Server Error\r\n"
                      "Content-Type: text/html\r\n"
@@ -549,7 +556,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
     if (!header_parsed) {
         size_t header_end = requestContent.find("\r\n\r\n");
         if (header_end == std::string::npos) {
-
             this->flagTimeOUT = true;
             return;
             

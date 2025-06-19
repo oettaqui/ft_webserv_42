@@ -290,8 +290,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
             location_path = correctPath;
         else
             location_path = l;
- 
-
 
         if (c != 1){
             if (this->autoIndex)
@@ -349,8 +347,10 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
                     this->extension = fileN.substr(pointP + 1, fileN.length());
             }
         }
-        else
+        else{
             status = 415;
+            return;
+        }
            
     }
     if (expectedLength > maxBodySize && maxBodySize > 0 && expectedLength > 0){
