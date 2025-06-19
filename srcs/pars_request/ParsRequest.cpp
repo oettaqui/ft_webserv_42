@@ -1012,7 +1012,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 
     
             }else if (method == "POST" && !is_chunked && is_boundary){
-    
+                std::cout << "boundary\n";
                 std::map<std::string, std::string>::iterator contentTypeIt = headers.find("Content-Type");
                 if (contentTypeIt != headers.end()) {
                     contentType = contentTypeIt->second;
@@ -1036,6 +1036,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 postHandler->setTer( "--" + boundaryValue + "--");
                 postHandler->setExpextedLength(contentLength);
                 postHandler->initBoundary(body, *this, parser);
+                std::cout << "ERROR " << postHandler->getStatus() << std::endl;
                 if (postHandler->getStatus() != 200)
                 {
                     this->status = postHandler->getStatus();

@@ -525,6 +525,7 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
 
     LocationAndPath = getCorrectPath(locations, data_req.getPath());
     correctPath = LocationAndPath.first;
+    
     if (correctPath.empty()){
         this->status = 404;
         return;
@@ -533,6 +534,10 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
     Location location ;
     location = LocationAndPath.second;
     std::vector<std::string> allow_methods = location.getMethods();
+    std::string upload_store_path = location.getUploadStore();
+    if (!upload_store_path.empty())
+        correctPath = upload_store_path;
+    location_path = correctPath;
     if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
     
         std::string body = initBody; 
@@ -541,9 +546,6 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
         status = 405;
         return;
     }
-    std::string upload_store_path = location.getUploadStore();
-    if (!upload_store_path.empty())
-        correctPath = upload_store_path;
     if (location.getCgi())
     {
         if (data_req.isBoundary())
@@ -560,8 +562,8 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
     }else{
         this->isCGI = false;
     }
-    location_path = correctPath;
-
+    
+    
 }
 
 
