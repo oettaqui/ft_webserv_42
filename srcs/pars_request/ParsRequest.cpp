@@ -1042,7 +1042,6 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                 postHandler->setTer( "--" + boundaryValue + "--");
                 postHandler->setExpextedLength(contentLength);
                 postHandler->initBoundary(body, *this, parser);
-                std::cout << "ERROR " << postHandler->getStatus() << std::endl;
                 if (postHandler->getStatus() != 200)
                 {
                     this->status = postHandler->getStatus();

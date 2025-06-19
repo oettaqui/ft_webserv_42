@@ -533,19 +533,6 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
     std::string location_path = "";
     Location location ;
     location = LocationAndPath.second;
-    std::vector<std::string> allow_methods = location.getMethods();
-    std::string upload_store_path = location.getUploadStore();
-    if (!upload_store_path.empty())
-        correctPath = upload_store_path;
-    location_path = correctPath;
-    if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
-    
-        std::string body = initBody; 
-        processBoundaryData(body, data_req, location_path);
-    } else {
-        status = 405;
-        return;
-    }
     if (location.getCgi())
     {
         if (data_req.isBoundary())
@@ -562,7 +549,19 @@ void PostHandler::initBoundary(const std::string& initBody, ParsRequest &data_re
     }else{
         this->isCGI = false;
     }
+    std::vector<std::string> allow_methods = location.getMethods();
+    std::string upload_store_path = location.getUploadStore();
+    if (!upload_store_path.empty())
+        correctPath = upload_store_path;
+    location_path = correctPath;
+    if (std::find(allow_methods.begin(), allow_methods.end(), "POST") != allow_methods.end()) {
     
+        std::string body = initBody; 
+        processBoundaryData(body, data_req, location_path);
+    } else {
+        status = 405;
+        return;
+    }
     
 }
 
@@ -669,7 +668,7 @@ void PostHandler::processBufferedData() {
                 }
                 
                 
-                if (buffer[pos] != '\r' || buffer[pos+1] != '\n') {
+                if (buffer[pos] != '\r' || buffer[pos + 1] != '\n') {
                     
                     chunkState = END_OF_CHUNKS;
                     isComplete = true;
