@@ -175,7 +175,8 @@ void WebServer::getResponse(int fd, ConfigParser &parser)
         {
             if(p->get_use_final_res() == true)
             {
-                write_buffers[fd] = p->getResponses().find(fd)->second;
+                if (!p->getFlagTimeOUT())
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
                 if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
                     std::string& res = write_buffers[fd];
                     ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
@@ -234,6 +235,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
             
                 write_buffers[fd] = timeout_response;
                 clients_mode[fd] =  true;
+                p->set_use_final_res();
                 return;
             }else if (p->getFlagTimeOUT())
             {

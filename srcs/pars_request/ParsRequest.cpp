@@ -1335,3 +1335,4 @@ bool ParsRequest::getFlagParsingHeader() const { return header_parsed; }
 
 int ParsRequest::getStatus() const { return status; }
 bool ParsRequest::get_use_final_res() const{return use_final_res;}
+void ParsRequest::set_use_final_res() { use_final_res = true;}

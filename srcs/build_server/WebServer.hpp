@@ -16,9 +16,8 @@
 #define MAX_EVENTS 10
 #define BUFFER_SIZE 1024
 
-#define REQUEST_TIMEOUT 7000000
-#define CLIENT_TIMEOUT_MS 1000000
-
+#define REQUEST_TIMEOUT 30000
+#define CLIENT_TIMEOUT_MS 60000
 
 class WebServer {
     private:
@@ -28,7 +27,7 @@ class WebServer {
         std::map<int, std::string > req_clients;
         std::map<int, ParsRequest* > clients;
         std::map<int, std::string> write_buffers;
-        // time out 
+        
         std::map<int, time_t> client_request_start;
         std::map<int, time_t> client_last_activity;
         std::map<int,bool> clients_mode;

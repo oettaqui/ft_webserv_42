@@ -114,6 +114,7 @@ class ParsRequest{
         size_t getFileSize(const std::string& filename);
         std::string normalizePath(const std::string& path);
         bool get_use_final_res() const;
+        void set_use_final_res();
     };
 
 #endif
