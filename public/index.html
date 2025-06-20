@@ -3,217 +3,612 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebServ - C++98 HTTP Server</title>
+    <title>Webserv Project</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
     <style>
         :root {
-            --primary: #4361ee;
-            --primary-dark: #3a56d4;
-            --dark: #2b2d42;
-            --light: #f8f9fa;
+            --primary: #6c5ce7;
+            --primary-light: #a29bfe;
+            --primary-dark: #5649be;
+            --secondary: #00cec9;
+            --dark: #0f0e17;
+            --darker: #0a0a12;
+            --light: #fffffe;
+            --gray: #a7a9be;
+            --success: #00b894;
+            --danger: #d63031;
         }
         
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            background-color: var(--light);
-            color: var(--dark);
+            font-family: 'Space Grotesk', sans-serif;
+            line-height: 1.6;
+            color: var(--light);
+            background-color: var(--dark);
+            overflow-x: hidden;
+        }
+        
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            background-color: var(--darker);
         }
         
         .container {
-            width: 100%;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 1rem;
+            padding: 0 20px;
         }
         
         header {
-            background-color: var(--dark);
-            color: white;
-            padding: 2rem 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        header p {
-            font-size: 1.1rem;
-            opacity: 0.8;
-        }
-        
-        .nav-tabs {
-            display: flex;
-            margin-top: 2rem;
-            border-radius: 8px 8px 0 0;
-            overflow: hidden;
-        }
-        
-        .nav-tab {
-            padding: 0.8rem 1.5rem;
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
+            position: relative;
+            padding: 120px 0 80px;
             text-align: center;
-            flex: 1;
+            background: linear-gradient(to bottom, rgba(15, 14, 23, 0.9), rgba(15, 14, 23, 0.7));
+            clip-path: polygon(0 0, 100% 0, 100% 90%, 0 100%);
+            margin-bottom: 50px;
+            z-index: 1;
         }
         
-        .nav-tab:hover {
-            background-color: rgba(255, 255, 255, 0.2);
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary-light), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(108, 92, 231, 0.3);
         }
         
-        .nav-tab.active {
-            background-color: var(--primary);
-        }
-        
-        main {
-            padding: 2rem 0;
-        }
-        
-        .card {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-        
-        h2 {
-            color: var(--primary);
-            margin-bottom: 1rem;
-            font-size: 1.8rem;
-        }
-        
-        p {
-            margin-bottom: 1.5rem;
-            line-height: 1.6;
-        }
-        
-        .btn-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-top: 1.5rem;
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            color: var(--gray);
         }
         
         .btn {
-            padding: 0.8rem 1.5rem;
-            border: none;
-            border-radius: 6px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
             display: inline-block;
-            font-size: 1rem;
+            background: linear-gradient(45deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 14px 32px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(108, 92, 231, 0.4);
         }
         
         .btn-primary {
-            background-color: var(--primary);
-            color: white;
+            background: linear-gradient(45deg, var(--secondary), #00a8b5);
+            box-shadow: 0 4px 15px rgba(0, 206, 201, 0.3);
         }
         
         .btn-primary:hover {
-            background-color: var(--primary-dark);
+            box-shadow: 0 10px 25px rgba(0, 206, 201, 0.4);
         }
         
-        .btn-outline {
-            background-color: transparent;
-            border: 2px solid var(--primary);
-            color: var(--primary);
+        .btn-group {
+            margin-top: 40px;
         }
         
-        .btn-outline:hover {
-            background-color: var(--primary);
-            color: white;
+        section {
+            padding: 100px 0;
+            position: relative;
         }
         
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .badge {
+        h2 {
+            font-size: 2.8rem;
+            margin-bottom: 60px;
+            text-align: center;
+            color: var(--light);
+            position: relative;
             display: inline-block;
-            padding: 0.3rem 0.6rem;
-            border-radius: 50px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-left: 0.5rem;
+            left: 50%;
+            transform: translateX(-50%);
         }
         
-        .badge-primary {
-            background-color: var(--primary);
-            color: white;
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            border-radius: 3px;
         }
         
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
         
-        @media (max-width: 768px) {
-            .nav-tabs {
-                flex-direction: column;
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 40px 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(108, 92, 231, 0.2);
+            border-color: rgba(108, 92, 231, 0.3);
+        }
+        
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--primary-light);
+        }
+        
+        .feature-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: var(--secondary);
+        }
+        
+        .feature-card p {
+            color: var(--gray);
+        }
+        
+        .test-section {
+            background: linear-gradient(to bottom, rgba(15, 14, 23, 0.9), rgba(15, 14, 23, 0.9)), 
+                        url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            text-align: center;
+            padding: 100px 0;
+            clip-path: polygon(0 10%, 100% 0, 100% 90%, 0 100%);
+            margin: 50px 0;
+        }
+        
+        .test-section h2 {
+            color: var(--light);
+        }
+        
+        .test-section p {
+            max-width: 700px;
+            margin: 0 auto 40px;
+            opacity: 0.9;
+            color: var(--gray);
+        }
+        
+        .test-form {
+            max-width: 700px;
+            margin: 0 auto;
+            background: rgba(15, 14, 23, 0.8);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--light);
+            font-weight: 500;
+        }
+        
+        .form-group select, 
+        .form-group input {
+            width: 100%;
+            padding: 14px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--light);
+            transition: all 0.3s ease;
+        }
+        
+        .form-group select:focus, 
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.3);
+        }
+        
+        .form-group textarea {
+            width: 100%;
+            padding: 14px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--light);
+            min-height: 150px;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.3);
+        }
+        
+        footer {
+            background-color: var(--darker);
+            padding: 80px 0 30px;
+            text-align: center;
+            clip-path: polygon(0 10%, 100% 0, 100% 100%, 0 100%);
+            margin-top: 50px;
+        }
+        
+        .creators {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            flex-wrap: wrap;
+            margin-top: 60px;
+        }
+        
+        .creator {
+            max-width: 220px;
+            transition: all 0.3s ease;
+        }
+        
+        .creator:hover {
+            transform: translateY(-5px);
+        }
+        
+        .creator img {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px;
+            border: 5px solid var(--primary);
+            box-shadow: 0 10px 30px rgba(108, 92, 231, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .creator:hover img {
+            border-color: var(--secondary);
+            box-shadow: 0 10px 30px rgba(0, 206, 201, 0.3);
+        }
+        
+        .creator h3 {
+            margin-bottom: 8px;
+            font-size: 1.4rem;
+            color: var(--light);
+        }
+        
+        .creator p {
+            color: var(--gray);
+            font-size: 1rem;
+        }
+        
+        .copyright {
+            margin-top: 80px;
+            color: var(--gray);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        /* Glow effects */
+        .glow {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.3;
+            z-index: -1;
+        }
+        
+        .glow-1 {
+            width: 300px;
+            height: 300px;
+            background: var(--primary);
+            top: -100px;
+            right: -100px;
+        }
+        
+        .glow-2 {
+            width: 400px;
+            height: 400px;
+            background: var(--secondary);
+            bottom: -150px;
+            left: -150px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            h1 {
+                font-size: 2.8rem;
             }
             
-            .btn-group {
-                flex-direction: column;
+            h2 {
+                font-size: 2.2rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            header {
+                padding: 80px 0 60px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            h2 {
+                font-size: 1.8rem;
+                margin-bottom: 40px;
+            }
+            
+            .hero p {
+                font-size: 1.1rem;
             }
             
             .btn {
-                width: 100%;
-                text-align: center;
+                padding: 12px 24px;
+            }
+            
+            section {
+                padding: 60px 0;
+            }
+            
+            .test-form {
+                padding: 30px;
+            }
+            
+            .creator img {
+                width: 140px;
+                height: 140px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .creators {
+                gap: 40px;
+            }
+            
+            .test-form {
+                padding: 20px;
             }
         }
     </style>
 </head>
-
 <body>
-    <header>
+    <div id="particles-js"></div>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+    
+    <header class="hero">
         <div class="container">
-            <h1>WebServ <span class="badge badge-primary">C++98</span></h1>
-            <p>A lightweight, high-performance HTTP server implementation</p>
-            
-            <div class="nav-tabs">
-                <div class="nav-tab active" data-tab="home">Home</div>
-                <div class="nav-tab" data-tab="get">GET</div>
-                <div class="nav-tab" data-tab="post">POST</div>
-                <div class="nav-tab" data-tab="delete">DELETE</div>
+            <h1>Webserv Project</h1>
+            <p class="hero-text">This is when you finally understand why a URL starts with HTTP</p>
+            <div class="btn-group">
+                <a href="" class="btn">Explore Features</a>
             </div>
         </div>
     </header>
-    
-    <main>
-        <div class="container">
-            <!-- Home Tab -->
-            <div class="tab-content active" id="home">
-                <div class="card">
-                    <h2>Welcome to WebServ</h2>
-                    <p>
-                        WebServ is a high-performance HTTP server built with C++98. This testing interface allows you to experiment with different HTTP methods and request types to ensure your server implementation meets the requirements.
-                    </p>
-                    <p>
-                        Use the navigation tabs above to test different HTTP methods including GET, POST, and DELETE requests with various encoding methods.
-                    </p>
-                    
-                    <div class="btn-group">
-                        <a class="btn btn-primary" href="./post.html">Test POST Requests</a>
-                        <button class="btn btn-outline">Test GET Requests</button>
-                        <button class="btn btn-outline">Test DELETE Requests</button>
-                    </div>
-                </div>
+
+    <section id="about" class="container">
+        <h2>About the Project</h2>
+        <p style="text-align: center; max-width: 800px; margin: 0 auto 40px; color: var(--gray);">
+            The Webserv project involves creating a high-performance HTTP server in C++98 that implements
+            core HTTP protocol functionality. This custom server handles multiple ports, supports various
+            HTTP methods (GET, POST, DELETE), manages file uploads, executes CGI scripts, and maintains
+            non-blocking I/O operations for optimal performance.
+        </p>
+    </section>
+
+    <section id="features" class="container">
+        <h2>Core Features</h2>
+        <div class="features">
+            <div class="feature-card">
+                <div class="icon">🚀</div>
+                <h3>HTTP/1.1 Compliant</h3>
+                <p>Full implementation of HTTP 1.1 protocol with support for GET, POST, and DELETE methods. Compatible with all modern web browsers.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="icon">⚡</div>
+                <h3>Non-Blocking Architecture</h3>
+                <p>Uses poll() or equivalent system calls to handle all I/O operations without blocking, ensuring maximum efficiency and scalability.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="icon">🔧</div>
+                <h3>Flexible Configuration</h3>
+                <p>Customizable through configuration files to set ports, server names, error pages, client limits, and route-specific rules.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="icon">📁</div>
+                <h3>Advanced File Handling</h3>
+                <p>Serves static content, handles file uploads, manages directory listings, and supports default index files.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="icon">🛡️</div>
+                <h3>Robust Error Handling</h3>
+                <p>Comprehensive error pages and accurate HTTP status codes. Designed to remain stable under heavy load.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="icon">🔗</div>
+                <h3>CGI Integration</h3>
+                <p>Executes CGI scripts (PHP, Python, etc.) with proper environment setup and directory context.</p>
             </div>
         </div>
-    </main>
-    
+    </section>
 
+   
+
+    <footer>
+        <div class="container">
+            <h2>Project Creators</h2>
+            <div class="creators">
+                <div class="creator">
+                    <img src="https://cdn.intra.42.fr/users/5a42369fbbe485ff39d2e96338308d5d/oettaqui.jpeg" alt="Oussama Ettaqui">
+                    <h3>Oussama Ettaqui</h3>
+                    <p>wa3ar</p>
+                </div>
+                
+                <div class="creator">
+                    <img src="https://cdn.intra.42.fr/users/fc658c95b748cf3b25f7ca24c0befc6b/bchokri.jpeg" alt="Badr Chokri">
+                    <h3>Badr Eddine Chokri</h3>
+                    <p>tahowa wa3ar</p>
+                </div>
+            </div>
+            
+            <div class="copyright">
+                &copy; 2023 Webserv Project. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize particles.js
+        document.addEventListener('DOMContentLoaded', function() {
+            particlesJS('particles-js', {
+                "particles": {
+                    "number": {
+                        "value": 80,
+                        "density": {
+                            "enable": true,
+                            "value_area": 800
+                        }
+                    },
+                    "color": {
+                        "value": "#a29bfe"
+                    },
+                    "shape": {
+                        "type": "circle",
+                        "stroke": {
+                            "width": 0,
+                            "color": "#000000"
+                        },
+                        "polygon": {
+                            "nb_sides": 5
+                        }
+                    },
+                    "opacity": {
+                        "value": 0.5,
+                        "random": false,
+                        "anim": {
+                            "enable": false,
+                            "speed": 1,
+                            "opacity_min": 0.1,
+                            "sync": false
+                        }
+                    },
+                    "size": {
+                        "value": 3,
+                        "random": true,
+                        "anim": {
+                            "enable": false,
+                            "speed": 40,
+                            "size_min": 0.1,
+                            "sync": false
+                        }
+                    },
+                    "line_linked": {
+                        "enable": true,
+                        "distance": 150,
+                        "color": "#6c5ce7",
+                        "opacity": 0.4,
+                        "width": 1
+                    },
+                    "move": {
+                        "enable": true,
+                        "speed": 2,
+                        "direction": "none",
+                        "random": false,
+                        "straight": false,
+                        "out_mode": "out",
+                        "bounce": false,
+                        "attract": {
+                            "enable": false,
+                            "rotateX": 600,
+                            "rotateY": 1200
+                        }
+                    }
+                },
+                "interactivity": {
+                    "detect_on": "canvas",
+                    "events": {
+                        "onhover": {
+                            "enable": true,
+                            "mode": "grab"
+                        },
+                        "onclick": {
+                            "enable": true,
+                            "mode": "push"
+                        },
+                        "resize": true
+                    },
+                    "modes": {
+                        "grab": {
+                            "distance": 140,
+                            "line_linked": {
+                                "opacity": 1
+                            }
+                        },
+                        "bubble": {
+                            "distance": 400,
+                            "size": 40,
+                            "duration": 2,
+                            "opacity": 8,
+                            "speed": 3
+                        },
+                        "repulse": {
+                            "distance": 200,
+                            "duration": 0.4
+                        },
+                        "push": {
+                            "particles_nb": 4
+                        },
+                        "remove": {
+                            "particles_nb": 2
+                        }
+                    }
+                },
+                "retina_detect": true
+            });
+            
+            
+        });
+    </script>
 </body>
 </html>

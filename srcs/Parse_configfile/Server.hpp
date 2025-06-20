@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 #include <string.h>
-#include <sstream>     // For std::istringstream
+#include <sstream>
 #include <iostream>
 #include "unistd.h"
 #include "cstdlib"
@@ -40,10 +40,8 @@ class Server {
         const std::map<int, std::string>& getErrorPages() const;
         const std::string& getRoot() const;
         const std::map<std::string, Location>& getLocations() const;
-
         bool isValid() const;
         bool parse_host(const std::string &host_p) const;
-        bool hasRequiredLocations() const;
 };
 
 #endif

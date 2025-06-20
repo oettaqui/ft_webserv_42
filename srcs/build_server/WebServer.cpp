@@ -1,33 +1,10 @@
 #include "WebServer.hpp"
 
-const std::string HTML_RESPONSE = 
-"HTTP/1.1 200 OK\r\n"
-"Content-Type: text/html\r\n"
-"Connection: close\r\n\r\n"
-"<!DOCTYPE html>\r\n"
-    "<html>\r\n"
-    "<head>\r\n"
-    "    <title>Hello World</title>\r\n"
-    "</head>\r\n"
-    "<body>\r\n"
-    "    <h1>Hello World</h1>\r\n"
-    "</body>\r\n"
-    "</html>\r\n";
-
-
-const std::string HTML_BADREQUEST = 
-"HTTP/1.1 400 Bad Request\r\n"
-"Content-Type: text/html\r\n"
-"Connection: close\r\n\r\n"
-"<!DOCTYPE html>\r\n"
-    "<html>\r\n"
-    "<head>\r\n"
-    "    <title>Bad Request</title>\r\n"
-    "</head>\r\n"
-    "<body>\r\n"
-    "    <h1>Bad Request</h1>\r\n"
-    "</body>\r\n"
-    "</html>\r\n";
+long WebServer::getCurrentTimeMs() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
 
 bool WebServer::setNonBlocking(int sockfd) {
     int flags = fcntl(sockfd, F_GETFL, 0);
@@ -43,9 +20,12 @@ bool WebServer::setNonBlocking(int sockfd) {
 }
 
 
-bool WebServer::addToEpoll(int sockfd) {
+bool WebServer::addToEpoll(int sockfd,int flag) {
     struct epoll_event event;
-    event.events = EPOLLIN | EPOLLET;
+    if(flag == 1)
+        event.events = EPOLLIN | EPOLLOUT;
+    else
+        event.events = EPOLLIN;
     event.data.fd = sockfd;
     
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sockfd, &event) == -1) {
@@ -55,19 +35,27 @@ bool WebServer::addToEpoll(int sockfd) {
     return true;
 }
 
+bool WebServer::isSocketAlive(int sockfd) {
+    int error = 0;
+    socklen_t len = sizeof(error);
+    int retval = getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len);
+    
+    if (retval != 0 || error != 0) {
+        return false;
+    }
+    
+    return true;
+}
+
 void WebServer::handleNewConnection(int server_fd) {
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
     
-    while (true) { 
         int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
-        if (client_fd == -1) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                break;
-            } else {
-                std::cerr << "Accept failed: " << strerror(errno) << std::endl;
-                break;
-            }
+        if (client_fd == -1) 
+        {
+            std::cerr << "Accept failed: " << strerror(errno) << std::endl;
+            return;
         }
         
         std::cout << "New connection from " << inet_ntoa(client_addr.sin_addr) 
@@ -75,93 +63,218 @@ void WebServer::handleNewConnection(int server_fd) {
                   
         if (!setNonBlocking(client_fd)) {
             close(client_fd);
-            continue;
         }
         
-        if (!addToEpoll(client_fd)) {
+        if (!addToEpoll(client_fd,1)) {
             close(client_fd);
-            continue;
         }
         clients[client_fd] = new ParsRequest();
-    }
+        client_request_start[client_fd] = getCurrentTimeMs();
+        client_last_activity[client_fd] = getCurrentTimeMs();
+        clients_mode[client_fd] = false;
 }
 
-void WebServer::getResponse(int fd)
+void WebServer::getResponse(int fd, ConfigParser &parser)
 {
-    if (write_buffers.find(fd) == write_buffers.end()) {
-        return;
-    }
-    
-    std::string& res = write_buffers[fd];
-    // std::cout << res << std::endl;
-    ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
-    
-    if (bytes_sent == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            return;
-        }
-        std::cerr << "send failed: " << strerror(errno) << std::endl;
-        closeConnection(fd);
-        return;
-    }
-    
-
-    write_buffers.erase(fd);
-    
-    std::cout << "Response sent successfully to client: " << fd << std::endl;
-    usleep(100000);
-    closeConnection(fd);
-}
-void WebServer::handleClientData(int fd, ConfigParser &parser) {
-
-    char buffer[BUFFER_SIZE];
-    memset(buffer, 0, BUFFER_SIZE);
-    ssize_t bytes_read;
-    
-    while (true) {
-        bytes_read = read(fd, buffer, BUFFER_SIZE);
-        if (bytes_read <= 0) {
-            if (errno == EAGAIN  || errno != EWOULDBLOCK) {
-                std::cerr << "Failed read operation " << std::endl;
-                break;
-            }
-            else
+    ParsRequest* p = clients[fd];
+    if(p)
+    {
+        client_last_activity[fd] = getCurrentTimeMs();
+        if(p->getErrorFromConfig() && !p->getErrorReadComplete())
+        {
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty())
             {
-                write_buffers[fd] = HTML_BADREQUEST;
-                // closeConnection(fd);
-                std::cout << "Client disconnected: hhhh" << fd << std::endl;
-                break;
-
-            }
+                std::string& res = write_buffers[fd];
+                    ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                    if (bytes_sent <= 0) {
+                        std::cerr << "send failed: " << strerror(errno) << std::endl;
+                        clients_mode[fd] = false;
+                        closeConnection(fd);
+                        return;
+                    }
+                    write_buffers.erase(fd);
+                }
+                p->parse("",fd, parser);
         }
-        else {
-            std::string req;
-            req.append(buffer, bytes_read);
-            ParsRequest* p = clients[fd];
-            p->parse(req,fd, parser);
-            if(!p->isValid())
+        else if(p->getMethod() == "GET" && p->isComplet() == false && p->getFlagParsingHeader() && !p->getErrorFromConfig())
+        {
+            if(p->getCGIState())
             {
-                if(p->getMethod() == "GET")
-                    write_buffers[fd] = p->getResponses().find(fd)->second;
-                else
-                    write_buffers[fd] = HTML_BADREQUEST;
-                return;
+                write_buffers[fd] = p->getResponses().find(fd)->second;
+                if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                    std::string& res = write_buffers[fd];
+                    ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                    if (bytes_sent <= 0) {
+                        std::cerr << "send failed: " << strerror(errno) << std::endl;
+                        clients_mode[fd] = false;
+                        closeConnection(fd);
+                        return;
+                    }
+                    write_buffers.erase(fd);
+                }
+            }
+            p->parse("",fd, parser);
+        }
+        else if (p->getMethod() == "GET" && p->getCGIState() && p->isComplet() == true && !p->getErrorFromConfig()){
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                std::string& res = write_buffers[fd];
+                ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                if (bytes_sent <= 0) {
+                    std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    clients_mode[fd] = false;
+                    closeConnection(fd);
+                    return;
+                }
+                write_buffers.erase(fd);
             }
             
-            if (p->isComplet()) {
-                std::cout << "Complete request received, preparing response" << std::endl;
-                std::cout << "Method : |" << p->getMethod() << "|" << std::endl;
-                if(p->getMethod() == "GET")
-                    write_buffers[fd] = p->getResponses().find(fd)->second;
-                else
-                    write_buffers[fd] = HTML_RESPONSE;
-                break;
-            }
+            std::cout << "Response sent successfully to client: " << fd << std::endl;
+            clients_mode[fd] = false;
+            closeConnection(fd);
         }
+        else if ((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == false && p->getFlagParsingHeader()) && !p->getErrorFromConfig())
+        {
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                std::string& res = write_buffers[fd];
+                ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                if (bytes_sent <= 0) {
+                    std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    clients_mode[fd] = false;
+                    closeConnection(fd);
+                    return;
+                }
+                write_buffers.erase(fd);
+            } 
+            p->parse("",fd, parser);    
+        }
+        else if (((p->getMethod() == "POST" && p->getCGIState() && p->isComplet() == true)
+        || (p->getMethod() == "POST" && p->isComplet() == true && p->getFlagRedirect())) && !p->getErrorFromConfig()){;
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                std::string& res = write_buffers[fd];
+                ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                if (bytes_sent <= 0) {
+                    std::cerr << "send failed: " << strerror(errno) << std::endl;
+                    clients_mode[fd] = false;
+                    closeConnection(fd);
+                    return;
+                }
+                write_buffers.erase(fd);
+            }
+            
+            std::cout << "Response sent successfully to client: " << fd << std::endl;
+            clients_mode[fd] = false;
+            closeConnection(fd);
+        }
+        else if(p->getMethod() == "DELETE" && p->isComplet() == false && p->getFlagParsingHeader() && !p->getErrorFromConfig())
+            p->parse("",fd, parser);
+        else
+        {
+            if(p->get_use_final_res() == true)
+            {
+                if (!p->getFlagTimeOUT())
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+                if (!(write_buffers.find(fd) == write_buffers.end()) && !write_buffers[fd].empty()) {
+                    std::string& res = write_buffers[fd];
+                    ssize_t bytes_sent = send(fd, res.c_str(), res.length(), 0);
+                    if (bytes_sent <= 0) {
+                        std::cerr << "send failed: " << strerror(errno) << std::endl;
+                        closeConnection(fd);
+                        clients_mode[fd] = false;
+                        return;
+                    }
+                    write_buffers.erase(fd);
+                }
+            }
+            std::cout << "Response sent successfully to client: " << fd << std::endl;
+            clients_mode[fd] = false;
+            closeConnection(fd);
+        }
+    }
+    else
+    {
+        clients_mode[fd] = false;
+        closeConnection(fd);
+    }
+}
+void WebServer::handleClientData(int fd, ConfigParser &parser) {
+    
+    char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+    ssize_t bytes_read = read(fd, buffer, BUFFER_SIZE);
+    
+    if (bytes_read <= 0) {
+        closeConnection(fd);
+        std::cout << "Client disconnected1: " << fd << std::endl;
+        return;
+    }
+    else
+    {
+        std::string req;
+        req.append(buffer, bytes_read);
+        ParsRequest* p = clients[fd];
+        p->parse(req, fd, parser);
+        client_last_activity[fd] = getCurrentTimeMs();
+        if(!p->isValid()){
+            if(p->getErrorFromConfig())
+            {
+                clients_mode[fd] =  true;
+                return ;
+            }
+            if (p->getFlagTimeOUT() && getCurrentTimeMs() - client_request_start[fd] > REQUEST_TIMEOUT) {
+                std::string timeout_response = 
+                    "HTTP/1.1 408 Request Timeout\r\n"
+                    "Content-Type: text/html\r\n"
+                    "Content-Length: 62\r\n"
+                    "Connection: close\r\n"
+                    "\r\n"
+                    "<html><body><h1>408 Request Timeout</h1></body></html>";
+            
+                write_buffers[fd] = timeout_response;
+                clients_mode[fd] =  true;
+                p->set_use_final_res();
+                return;
+            }else if (p->getFlagTimeOUT())
+            {
+                clients_mode[fd] =  false;
+                return;
+            }
+            if(p->getMethod() == "GET" && p->getFlagParsingHeader())
+            {
+               
+                if (!p->getResponses().find(fd)->second.empty())
+                    write_buffers[fd] = p->getResponses().find(fd)->second;
+            }
+            else if(p->getMethod() == "DELETE"  && p->getFlagParsingHeader())
+                write_buffers[fd] = p->getResponses().find(fd)->second;
+            else
+                write_buffers[fd] = p->getResponses().find(fd)->second;
+            clients_mode[fd] =  true;
+            return;
+        }
+        else if (p->isComplet()) 
+        {
+            write_buffers[fd] = p->getResponses().find(fd)->second;
+            clients_mode[fd] =  true;
+            return ;
+        }
+        else if (p->getMethod() == "POST" && p->getCGIState() && !p->isComplet())
+        {
+            clients_mode[fd] =  true;
+            return ;
+        }
+        else if(p->getMethod() == "GET" || p->getCGIState())
+        {
+            clients_mode[fd] =  true;
+            return ;
+        }     
     }
 }
 
-WebServer::WebServer() : epoll_fd(-1) {}
+WebServer::WebServer() : epoll_fd(-1){}
         
 WebServer::~WebServer() {
     for (std::vector<int>::const_iterator it = server_fds.begin(); it != server_fds.end(); it++)
@@ -177,7 +290,10 @@ void WebServer::linking_servers(ConfigParser &parser)
     for (std::vector<Server>::const_iterator it = parser.getServers().begin(); it != parser.getServers().end(); ++it) {
         if (!this->initialize(it)) {
             std::vector<std::string>::const_iterator it_names = it->getServerNames().begin();
-            std::cerr << "Failed to initialize server " << *it_names << std::endl;
+            if(it_names != it->getServerNames().end())
+                std::cerr << "Failed to initialize server " << *it_names << std::endl;
+            else
+                std::cerr << "Failed to initialize server with host : " << it->getHost() << " and port : " << it->getPort() << std::endl;
         }
     }
     this->run(parser);
@@ -205,10 +321,7 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
     else if(strcmp("dump-ubuntu-benguerir",server->getHost().c_str()) == 0)
         server_addr.sin_addr.s_addr = inet_addr("127.0.1.1"); 
     else
-    {
-        std::cout << "*****> " << server->getHost().c_str() << "<*****" << std::endl;
         server_addr.sin_addr.s_addr = inet_addr(server->getHost().c_str()); 
-    }
     server_addr.sin_port = htons(server->getPort());
     if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
         std::cerr << "Bind failed: " << strerror(errno) << std::endl;
@@ -226,19 +339,21 @@ bool WebServer::initialize(std::vector<Server>::const_iterator &server) {
             return false;
         }
     }
-    if (!addToEpoll(server_fd)) {
+    if (!addToEpoll(server_fd,2)) {
         return false;
     }
     server_fds.push_back(server_fd);
     std::vector<std::string>::const_iterator it_names = server->getServerNames().begin();
-    std::cerr << "server " << *it_names << " is alive on port " << server->getPort() << " and host " << server->getHost() << std::endl;
+    if(it_names != server->getServerNames().end())
+        std::cerr << "server " << *it_names << " is alive on port " << server->getPort() << " and host " << server->getHost() << std::endl;
+    else
+        std::cerr << "this server is alive on port " << server->getPort() << " and host " << server->getHost() << std::endl;
     return true;
 }
 
 void WebServer::closeConnection(int fd) {
     std::cout << "Closing connection fd: " << fd << std::endl;
-    
-
+    usleep(10000);
     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 
     shutdown(fd,SHUT_RDWR);
@@ -252,6 +367,8 @@ void WebServer::closeConnection(int fd) {
         clients.erase(fd);
     }
     write_buffers.erase(fd);
+    client_request_start.erase(fd);
+    client_last_activity.erase(fd);
 }
 
 void WebServer::run(ConfigParser &parser) {
@@ -259,7 +376,7 @@ void WebServer::run(ConfigParser &parser) {
     int check = 0;
     while (true) 
     {
-        int num_events = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+        int num_events = epoll_wait(epoll_fd, events, MAX_EVENTS, 500);
         if (num_events == -1) {
             std::cerr << "epoll_wait failed: " << strerror(errno) << std::endl;
             break;
@@ -273,10 +390,40 @@ void WebServer::run(ConfigParser &parser) {
                 }
             }
             if(check == 0) {
-                handleClientData(events[i].data.fd, parser);
-                getResponse(events[i].data.fd);
+                if ((events[i].events & EPOLLIN) && clients_mode[events[i].data.fd] == false) {
+                    handleClientData(events[i].data.fd, parser);
+                }
+                if((events[i].events & EPOLLOUT ) && clients_mode[events[i].data.fd] == true)
+                {
+                    getResponse(events[i].data.fd,parser);
+                }
+                if ((events[i].events & EPOLLERR) || 
+                    (events[i].events & EPOLLHUP) ) {
+                    closeConnection(events[i].data.fd);
+                }
             }
             check = 0;
         }
+        checkInactiveClients();
+    }
+}
+
+
+
+void WebServer::checkInactiveClients() {
+    std::vector<int> to_close;
+    
+    for (std::map<int, long>::iterator it = client_last_activity.begin(); 
+         it != client_last_activity.end(); ++it) {
+        int fd = it->first;
+        long last_activity = it->second;
+        if (getCurrentTimeMs() - last_activity > CLIENT_TIMEOUT_MS) {
+            std::cout << "Client " << fd << " timed out" << std::endl;
+            to_close.push_back(fd);
+        }
+    }
+    
+    for (std::vector<int>::iterator it = to_close.begin(); it != to_close.end(); ++it) {
+        closeConnection(*it);
     }
 }
