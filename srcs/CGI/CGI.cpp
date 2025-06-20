@@ -9,8 +9,6 @@ CGI::CGI(){
     this->startTime = getCurrentTimeMs();
     size = 0;
     totat_bytes_read = 0;
-    
-    
 
 }
 
@@ -112,7 +110,6 @@ std::string CGI::executeScript(){
             if (envVars["REQUEST_METHOD"] == "POST") {
                if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
-                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
                 this->status = 500;
@@ -124,7 +121,6 @@ std::string CGI::executeScript(){
             if (envVars["REQUEST_METHOD"] == "POST") {
                 if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
-                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
             this->status = 500;
@@ -135,7 +131,6 @@ std::string CGI::executeScript(){
             if (envVars["REQUEST_METHOD"] == "POST") {
                 if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
-                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
             flag = 5;
@@ -168,18 +163,12 @@ std::string CGI::executeScript(){
                     std::cerr << "Failed to redirect stdin with freopen" << std::endl;
                     exit(1);
                 }
-            } else {
-                if (freopen("/dev/null", "r", stdin) == NULL) {
-                    std::cerr << "Failed to redirect stdin to /dev/null" << std::endl;
-                    exit(1);
-                }
             }
             close(pipeFd[0]);
-            dup2(pipeFd[1], STDOUT_FILENO);
+            dup2(pipeFd[1], 1);
             close(pipeFd[1]);
             execve(argv[0], argv, &envp[0]);
             perror("execve failed");
-            std::cerr << "Error execve failed" << std::endl;
             exit(1);
             
         }
@@ -195,7 +184,6 @@ std::string CGI::executeScript(){
                 if (envVars["REQUEST_METHOD"] == "POST") {
                    if (unlink(this->file.c_str()) != 0) {
                         perror("Error deleting the file");
-                        std::cerr << "Error deleting the file" << std::endl;
                     }
                 }
                 flag = 5;
@@ -208,7 +196,6 @@ std::string CGI::executeScript(){
             if (envVars["REQUEST_METHOD"] == "POST") {
                 if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
-                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
             flag = 5;
@@ -220,7 +207,6 @@ std::string CGI::executeScript(){
             if (envVars["REQUEST_METHOD"] == "POST") {
                 if (unlink(this->file.c_str()) != 0) {
                     perror("Error deleting the file");
-                    std::cerr << "Error deleting the file" << std::endl;
                 }
             }
         }
