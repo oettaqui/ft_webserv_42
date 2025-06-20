@@ -285,7 +285,6 @@ long CGI::getCurrentTimeMs() {
 }
 
 bool CGI::isTimeout() {
-    if (startTime == 0) return false;
     long currentTime = getCurrentTimeMs();
     return (currentTime - startTime) > (timeoutSeconds * 1000);
 }
