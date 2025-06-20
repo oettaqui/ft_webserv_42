@@ -36,6 +36,7 @@ private:
     int timeoutSeconds;
     ssize_t size;
     ssize_t totat_bytes_read;
+    char **envp;
 
 
 public:

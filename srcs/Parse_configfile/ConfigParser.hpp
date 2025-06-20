@@ -5,6 +5,7 @@
 #include <string>
 #include "Server.hpp"
 #include <cstdlib>
+#include <algorithm>
 
 class ConfigParser {
     private:

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <csignal>
 #include <cstring>
 #include <unistd.h>
 #include <sys/types.h>
@@ -21,6 +22,7 @@
 
 class WebServer {
     private:
+
         std::vector<int>  server_fds;
         int epoll_fd;
         struct epoll_event events[MAX_EVENTS];
@@ -31,7 +33,7 @@ class WebServer {
         std::map<int, time_t> client_request_start;
         std::map<int, time_t> client_last_activity;
         std::map<int,bool> clients_mode;
-
+        
         bool setNonBlocking(int sockfd);
         bool addToEpoll(int sockfd,int flag);
         void handleNewConnection(int server_fd);
@@ -40,6 +42,8 @@ class WebServer {
         void closeConnection(int fd);
         long getCurrentTimeMs();
     public:
+        static WebServer* instance;
+        bool running;
         WebServer();
         ~WebServer() ;
         bool initialize(std::vector<Server>::const_iterator &server) ;
@@ -47,4 +51,7 @@ class WebServer {
         void run(ConfigParser &parser);
         void checkInactiveClients();
         bool isSocketAlive(int sockfd);
+        void sig();
+        static void signalHandler(int signum);
+        void cleanup();
     };

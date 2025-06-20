@@ -590,6 +590,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             {
                 if(status != 414)
                     status = 400;
+                std::cout << this->host << this->port << std::endl;
                 this->responses[client_fd] = statusMap[this->status];
                 use_final_res = true;
                 is_valid = false;

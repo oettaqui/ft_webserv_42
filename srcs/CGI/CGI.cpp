@@ -9,6 +9,7 @@ CGI::CGI(){
     this->startTime = getCurrentTimeMs();
     size = 0;
     totat_bytes_read = 0;
+    this->envp = NULL;
 
 }
 
@@ -21,6 +22,9 @@ CGI::~CGI(){
         close(pipeFd[0]);
         close(pipeFd[1]);
     }
+    for (size_t i = 0; this->envp[i]; ++i)
+        free(this->envp[i]);
+    delete[] this->envp;
    
 }
 
@@ -140,7 +144,7 @@ std::string CGI::executeScript(){
         flag = 1;
     }else if (flag == 1)
     {
-        char **envp = buildEnvp(this->envVars);
+        this->envp = buildEnvp(this->envVars);
         char* argv[3];
         argv[0] = (char*)this->passCgi.c_str();
         argv[1] = (char*)this->scriptPath.c_str();
@@ -150,7 +154,7 @@ std::string CGI::executeScript(){
             std::cerr << "Error fork failed" << std::endl;
             this->status = 500;
             for (size_t i = 0; envp[i]; ++i)
-            free(envp[i]);
+                free(envp[i]);
             delete[] envp;
             flag = 5;
             return "";

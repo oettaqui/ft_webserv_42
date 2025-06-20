@@ -1,4 +1,5 @@
 #include "WebServer.hpp"
+WebServer* WebServer::instance = NULL;
 
 long WebServer::getCurrentTimeMs() {
     struct timeval tv;
@@ -274,7 +275,7 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
     }
 }
 
-WebServer::WebServer() : epoll_fd(-1){}
+WebServer::WebServer() : epoll_fd(-1), running(true){}
         
 WebServer::~WebServer() {
     for (std::vector<int>::const_iterator it = server_fds.begin(); it != server_fds.end(); it++)
@@ -283,6 +284,12 @@ WebServer::~WebServer() {
             close(*it);
     }
     if (epoll_fd != -1) close(epoll_fd);
+    std::map<int, ParsRequest*>::iterator it = clients.begin();
+    while (it != clients.end()) {
+        delete it->second;
+        ++it;
+    }
+    clients.clear();
 }
 
 void WebServer::linking_servers(ConfigParser &parser)
@@ -372,9 +379,11 @@ void WebServer::closeConnection(int fd) {
 }
 
 void WebServer::run(ConfigParser &parser) {
+    this->instance = this;
     std::cout << "Server(s) running..." << std::endl;
     int check = 0;
-    while (true) 
+    signal(SIGINT, WebServer::signalHandler);
+    while (running) 
     {
         int num_events = epoll_wait(epoll_fd, events, MAX_EVENTS, 500);
         if (num_events == -1) {
@@ -406,9 +415,32 @@ void WebServer::run(ConfigParser &parser) {
         }
         checkInactiveClients();
     }
+   
+    cleanup();
 }
 
 
+void WebServer::signalHandler(int signum) {
+    if (signum == SIGINT && WebServer::instance) {
+        WebServer::instance->running = false;
+    }
+}
+
+void WebServer::cleanup() {
+    for (std::vector<int>::const_iterator it = server_fds.begin(); it != server_fds.end(); it++)
+    {
+        if (*it != -1) 
+            close(*it);
+    }
+    if (epoll_fd != -1) close(epoll_fd);
+    std::map<int, ParsRequest*>::iterator it = clients.begin();
+    while (it != clients.end()) {
+        delete it->second;
+        ++it;
+    }
+    clients.clear();
+
+}
 
 void WebServer::checkInactiveClients() {
     std::vector<int> to_close;
@@ -427,3 +459,4 @@ void WebServer::checkInactiveClients() {
         closeConnection(*it);
     }
 }
+

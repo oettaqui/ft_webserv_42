@@ -256,6 +256,7 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
             "</body>\n"
             "</html>";
     contentLength = html.length();
+    closedir(dir);
     generate_header(0);
     return html;
 }
@@ -733,7 +734,7 @@ std::string GetHandler::readLargeFileChunked(std::ifstream& file) {
         std::memcpy(combinedBuffer.data() + increment_value, "0\r\n\r\n", 5);
         increment_value += 5;
     }
-    ssize_t bytesSent = send(client_fd, combinedBuffer.data(), totalChunkSize,MSG_NOSIGNAL);
+    ssize_t bytesSent = send(client_fd, combinedBuffer.data(), totalChunkSize,0);
     if (bytesSent <= 0) {
         std::cerr << "Chunk data send error: " << strerror(errno) << std::endl;
         close(client_fd);

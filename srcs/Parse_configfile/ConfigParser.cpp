@@ -264,6 +264,11 @@ std::vector<Server>::iterator ConfigParser::getServer_parser(const std::string &
             return it;
         else if(it->getHost() == "dump-ubuntu-benguerir"  && host_p == "127.0.1.1" && it->getPort() == port_p)
             return it;
+        else if(std::find(it->getServerNames().begin(), it->getServerNames().end(), host_p) != it->getServerNames().end()
+        && it->getPort() == port_p)
+        {
+            return it;
+        }
     }
     return servers.end();
 }
@@ -277,6 +282,11 @@ const Server& ConfigParser::getServer(const std::string &host_p, const int& port
             return *it;
         else if(it->getHost() == "dump-ubuntu-benguerir"  && host_p == "127.0.1.1" && it->getPort() == port_p)
             return *it;
+        else if(std::find(it->getServerNames().begin(), it->getServerNames().end(), host_p) != it->getServerNames().end()
+        && it->getPort() == port_p)
+        {
+            return *it;
+        }
     }
     return sv_default;
 }
