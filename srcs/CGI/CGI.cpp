@@ -14,17 +14,16 @@ CGI::CGI(){
 }
 
 CGI::~CGI(){
-    if (flag >= 1 && flag <= 3 && pid > 0) {
-        kill(pid, SIGKILL);
-        waitpid(pid, NULL, 0);
-    }
     if (flag >= 1 && pipeFd[0] >= 0) {
         close(pipeFd[0]);
         close(pipeFd[1]);
     }
-    for (size_t i = 0; this->envp[i]; ++i)
-        free(this->envp[i]);
-    delete[] this->envp;
+    if (this->envp)
+    {
+        for (size_t i = 0; this->envp[i]; ++i)
+            free(this->envp[i]);
+        delete[] this->envp;
+    }
    
 }
 

@@ -231,7 +231,6 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
 
     LocationAndPath = getCorrectPath(locations, data_req.getPath());
     correctPath = LocationAndPath.first;
-    
    
         
     size_t Ppos = correctPath.find(".");
@@ -266,7 +265,14 @@ void PostHandler::initialize(ParsRequest &data_req, ConfigParser &parser) {
     location = LocationAndPath.second;
     std::string upload_store_path = location.getUploadStore();
     if (!upload_store_path.empty() && !location.getCgi())
-        correctPath = upload_store_path;
+    {
+        if (size_t pos_= correctPath.find_last_of('/') != std::string::npos){
+            std::string r = correctPath.substr(0, pos_);
+            std::string s = correctPath.substr(pos_ + 1, correctPath.length());
+            correctPath = r + "/" + upload_store_path + s;
+        }else
+            correctPath = upload_store_path;
+    }
     std::vector<std::string> allow_methods = location.getMethods();
     if(std::find(allow_methods.begin(), allow_methods.end(), "POST") == allow_methods.end())
     {

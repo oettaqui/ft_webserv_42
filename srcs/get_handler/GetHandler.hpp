@@ -20,10 +20,9 @@
 #include "../pars_request/ParsRequest.hpp"
 #include <iostream>
 #include <vector>
-#include <dirent.h>   // For opendir, readdir, closedir 
-#include <sys/stat.h> // For stat (file information)
+#include <dirent.h>
+#include <sys/stat.h>
 #include <algorithm>
-///////////
 #include "../CGI/CGI.hpp"
 #include "../CGI/DataCGI.hpp"
 
@@ -61,10 +60,8 @@ class GetHandler {
         ssize_t size;
         bool is_true_parse;
         ssize_t contentLength;
-        ///
         CGI *cgiHandler;
         bool autoIndex;
-        //
         std::string final_res;
         bool cgi_check;
         int cgi_flag;
@@ -90,12 +87,9 @@ class GetHandler {
         std::string readLargeFileChunked(std::ifstream& file);
         std::string readSmallFile(std::ifstream& file);
         bool get_is_true_parse() const;
-        ////
         std::string url_encode_question_marks(std::string url);
         bool isSocketAlive(int sockfd);
-        ////
         std::string createRedirectResponse(int statusCode, const std::string& location);
-        /////
         bool getCgiCheck() const;
         bool get_use_final_res() const;
 

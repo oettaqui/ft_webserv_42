@@ -273,6 +273,8 @@ ParsRequest::~ParsRequest() {
         delete getHandler;
     if(deleteHandler)
         delete deleteHandler;
+    // if(cgiHandler)
+    //     delete cgiHandler;
 }
 
 
@@ -588,9 +590,8 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
             server_it = parser.getServer_parser(this->host,this->port);
             if(server_it == parser.getServers().end())
             {
-                if(status != 414)
+                if(status == 200)
                     status = 400;
-                std::cout << this->host << this->port << std::endl;
                 this->responses[client_fd] = statusMap[this->status];
                 use_final_res = true;
                 is_valid = false;
@@ -759,6 +760,8 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                                 }
                                 this->responses[client_fd] = statusMap[this->status];
                                 use_final_res = true;
+                                if(cgiHandler)
+                                    delete cgiHandler;
                                 return;
                             }
                     }
@@ -969,6 +972,8 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         }
                         this->responses[client_fd] = statusMap[this->status];
                         use_final_res = true;
+                        if(cgiHandler)
+                            delete cgiHandler;
                         return;
                     }
                 }
@@ -1166,6 +1171,8 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                             return;
                         }
                         is_Complet = true;
+                        if(cgiHandler)
+                            delete cgiHandler;
                     }
                     
                 }
@@ -1246,6 +1253,8 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                     this->flagCGI = cgiHandler->getCGIFlag();
                     if (this->flagCGI == 5){
                         if(responses[client_fd].empty()){
+                            if(cgiHandler)
+                                delete cgiHandler;
                             responses[client_fd] = statusMap[this->status];
                         }
                         if (this->status != 200){
@@ -1281,6 +1290,8 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
                         return;
                     }
                         is_Complet = true;
+                        if(cgiHandler)
+                            delete cgiHandler;
                     }
                     
                 }

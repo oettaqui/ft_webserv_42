@@ -209,7 +209,6 @@ void WebServer::handleClientData(int fd, ConfigParser &parser) {
     
     if (bytes_read <= 0) {
         closeConnection(fd);
-        std::cout << "Client disconnected1: " << fd << std::endl;
         return;
     }
     else

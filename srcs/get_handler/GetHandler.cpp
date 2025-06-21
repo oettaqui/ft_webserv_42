@@ -118,7 +118,7 @@ void GetHandler::storeContentTypes(ParsRequest &request_data) {
     contentTypes["ttf"] = "font/ttf";
     contentTypes["otf"] = "font/otf";
     contentTypes["eot"] = "application/vnd.ms-fontobject";
-    contentTypes["php"] = "text";
+    contentTypes["php"] = "text/x-perl";
     contentTypes["py"] = "text/x-python";
     contentTypes["java"] = "text/x-java-source";
     contentTypes["c"] = "text/x-c";
@@ -256,8 +256,8 @@ std::string GetHandler::generateAttractivePage(const std::vector<std::string>& i
             "</body>\n"
             "</html>";
     contentLength = html.length();
-    closedir(dir);
     generate_header(0);
+    closedir(dir);
     return html;
 }
 std::vector<std::string> GetHandler::split(const std::string& str, char delim) const {
@@ -689,7 +689,6 @@ std::string GetHandler::readLargeFileChunked(std::ifstream& file) {
     size_t increment_value = 0;
     
     if (!isSocketAlive(client_fd)) {
-        std::cerr << "Socket is dead, aborting transfer\n";
         file.close();
         return "";
     }
@@ -734,9 +733,8 @@ std::string GetHandler::readLargeFileChunked(std::ifstream& file) {
         std::memcpy(combinedBuffer.data() + increment_value, "0\r\n\r\n", 5);
         increment_value += 5;
     }
-    ssize_t bytesSent = send(client_fd, combinedBuffer.data(), totalChunkSize,0);
+    ssize_t bytesSent = send(client_fd, combinedBuffer.data(), totalChunkSize,MSG_NOSIGNAL);
     if (bytesSent <= 0) {
-        std::cerr << "Chunk data send error: " << strerror(errno) << std::endl;
         close(client_fd);
         file.close();
         return "";
