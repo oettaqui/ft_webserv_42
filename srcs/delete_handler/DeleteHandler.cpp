@@ -140,6 +140,7 @@ std::string DeleteHandler::generateAttractivePage(const std::string &base_path) 
                             "    <h1>Successfully deleted directory</h1>\r\n"
                             "</body>\r\n"
                             "</html>\r\n";
+        contentLength = 171;
         generate_header();
     }
     else
@@ -393,7 +394,6 @@ std::string DeleteHandler::readSmallFile(std::ifstream& file) {
     final_res += content;
     ssize_t bytesSent = send(client_fd, final_res.c_str(), final_res.length(), 0);
     if (bytesSent <= 0) {
-        std::cout << "Send error : " << strerror(errno) << std::endl;
         close(client_fd);
         file.close();
         return "";
@@ -448,6 +448,7 @@ std::string DeleteHandler::readFile(const std::string& filePath) {
                             "    <h1>Successfully deleted file</h1>\r\n"
                             "</body>\r\n"
                             "</html>\r\n";
+        contentLength = 161;
         generate_header();
     }
     else

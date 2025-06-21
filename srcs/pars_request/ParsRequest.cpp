@@ -1321,6 +1321,7 @@ void ParsRequest::parse(const std::string& request,int client_fd, ConfigParser &
         responses[client_fd] = response;
         if(deleteHandler->get_is_true_parse() == true)
             is_Complet = true;
+        use_final_res = deleteHandler->get_use_final_res();
     }
             
 
